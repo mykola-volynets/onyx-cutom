@@ -1,3 +1,5 @@
+// custom_extensions/frontend/next.config.js OR (more likely) /home/dev/onyx/web/next.config.js
+
 // Get Onyx Web Version
 const { version: package_version } = require("./package.json"); // version from package.json
 const env_version = process.env.ONYX_VERSION; // version from env variable
@@ -71,10 +73,11 @@ const nextConfig = {
   },
   async rewrites() {
     return [
+      // This was the original set of rewrites you provided
       {
         source: "/api/docs/:path*", // catch /api/docs and /api/docs/...
         destination: `${
-          process.env.INTERNAL_URL || "http://localhost:8080"
+          process.env.INTERNAL_URL || "http://localhost:8080" // Default for local dev if INTERNAL_URL not set
         }/docs/:path*`,
       },
       {
@@ -93,22 +96,17 @@ const nextConfig = {
   },
 };
 
-// Sentry configuration for error monitoring:
-// - Without SENTRY_AUTH_TOKEN and NEXT_PUBLIC_SENTRY_DSN: Sentry is completely disabled
-// - With both configured: Capture errors and limited performance data
-
-// Determine if Sentry should be enabled
+// Sentry configuration (remains the same)
 const sentryEnabled = Boolean(
   process.env.SENTRY_AUTH_TOKEN && process.env.NEXT_PUBLIC_SENTRY_DSN
 );
 
-// Sentry webpack plugin options
 const sentryWebpackPluginOptions = {
   org: process.env.SENTRY_ORG || "onyx",
   project: process.env.SENTRY_PROJECT || "data-plane-web",
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: !sentryEnabled, // Silence output when Sentry is disabled
-  dryRun: !sentryEnabled, // Don't upload source maps when Sentry is disabled
+  silent: !sentryEnabled,
+  dryRun: !sentryEnabled,
   ...(sentryEnabled && {
     sourceMaps: {
       include: ["./.next"],
@@ -121,5 +119,4 @@ const sentryWebpackPluginOptions = {
   }),
 };
 
-// Export the module with conditional Sentry configuration
 module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions);
