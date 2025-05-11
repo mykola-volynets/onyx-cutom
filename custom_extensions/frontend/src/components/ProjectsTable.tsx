@@ -9,7 +9,7 @@ import Link from 'next/link'; // Use Next.js Link
 import { Link as LinkIcon, FileText, RefreshCw } from 'lucide-react';
 
 // Use environment variable for backend URL
-const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || 'http://localhost:8001';
+const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL;
 
 interface MicroProduct {
   name: string;
@@ -36,9 +36,9 @@ const ProjectsTable: React.FC = () => {
     const fetchProjects = async () => {
       setLoading(true);
       setError(null);
-      console.log("Fetching projects from:", `${CUSTOM_BACKEND_URL}/api/custom/projects`);
+      console.log("Fetching projects from:", `${CUSTOM_BACKEND_URL}/projects`);
       try {
-        const response = await fetch(`${CUSTOM_BACKEND_URL}/api/custom/projects`);
+        const response = await fetch(`${CUSTOM_BACKEND_URL}/projects`);
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
@@ -60,7 +60,7 @@ const ProjectsTable: React.FC = () => {
   // Function to handle PDF download click (builds full URL)
   const handlePdfClick = (pdfPath: string | undefined) => {
     if (pdfPath) {
-      window.open(`${CUSTOM_BACKEND_URL}${pdfPath}`, '_blank');
+      window.open(`${CUSTOM_BACKEND_URL}${pdfPath.startsWith('/') ? '' : '/'}${pdfPath.replace('/api/custom', '')}`, '_blank');
     } else {
       alert("PDF link not available.");
     }

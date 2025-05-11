@@ -9,7 +9,7 @@ import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { MicroProductDetail, TrainingPlanData, Section } from '@/types/trainingPlan'; // Assuming Section is exported
 
-const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || 'http://localhost:8001';
+const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL;
 
 type MicroProductRouteParams = {
   projectSlug: string;
@@ -28,7 +28,7 @@ export default function MicroProductDetailPage() {
     setErrorMessage(null);
     setMicroProductData(null);
 
-    const apiUrl = `${CUSTOM_BACKEND_URL}/api/custom/microproducts/${projectSlug}/${productSlug}/${microProductSlug}`;
+    const apiUrl = `${CUSTOM_BACKEND_URL}/microproducts/${projectSlug}/${productSlug}/${microProductSlug}`;
     console.log("Fetching microproduct details from:", apiUrl);
 
     try {

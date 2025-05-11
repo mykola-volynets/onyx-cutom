@@ -26,6 +26,8 @@ origins = [
      "http://localhost:3000",
      "http://custom_frontend:3001",
      "http://localhost:3001",
+     "http://143.198.59.56:3000",
+     "http://143.198.59.56:3001",
 ]
 app.add_middleware(
      CORSMiddleware,
@@ -199,7 +201,7 @@ mock_projects_base_data: List[ProjectEntry] = [
             name='План обучения для мастеров маникюра',
             slug=create_slug('План обучения для мастеров маникюра'),
             webLinkPath=f"/projects/{create_slug('Vogue Lash Spa')}/{create_slug('Стратегия')}/{create_slug('План обучения для мастеров маникюра')}",
-            pdfLinkPath=f"/api/custom/pdf/{create_slug('Vogue Lash Spa_Стратегия_План обучения')}",
+            pdfLinkPath=f"/pdf/{create_slug('Vogue Lash Spa_Стратегия_План обучения для мастеров маникюра')}",
             # details=None # Details will be loaded on demand
         )
     ),
@@ -313,7 +315,7 @@ async def download_micro_product_pdf_by_slug(document_slug: str):
     target_project_slug : Optional[str] = None
     target_product_slug : Optional[str] = None
 
-    expected_pdf_path = f"/api/custom/pdf/{document_slug}"
+    expected_pdf_path = f"/pdf/{document_slug}"
 
     for project in mock_projects_base_data:
          # Check if the pdfLinkPath in the mock data matches the requested path
