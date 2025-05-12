@@ -5,3 +5,5 @@ pydantic-settings
 httpx
 psycopg2-binary
 pyppeteer
+Jinja2
+

@@ -4,114 +4,107 @@ import asyncio
 import os
 from fastapi import HTTPException
 import logging
+from pathlib import Path
+from jinja2 import Environment, FileSystemLoader, select_autoescape # Import Jinja2
 
-# Attempt to import settings, provide dummy if not found
+# Attempt to import settings (as before)
 try:
     from app.core.config import settings
 except ImportError:
-    class DummySettings:
-        CUSTOM_FRONTEND_URL = os.environ.get("CUSTOM_FRONTEND_URL", "http://custom_frontend:3001")
+    class DummySettings: CUSTOM_FRONTEND_URL = os.environ.get("CUSTOM_FRONTEND_URL", "http://custom_frontend:3001")
     settings = DummySettings()
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PDF_OUTPUT_DIR = "/tmp/generated_pdfs"
-os.makedirs(PDF_OUTPUT_DIR, exist_ok=True)
+PDF_CACHE_DIR = Path("/tmp/pdf_cache")
+PDF_CACHE_DIR.mkdir(exist_ok=True)
 
-POSSIBLE_CHROMIUM_PATHS = [
-    '/usr/bin/chromium-browser', # Often on Debian/Ubuntu
-    '/usr/bin/chromium',         # Sometimes this name
-]
+CHROME_EXEC_PATH = '/usr/bin/chromium' # Or use find_chrome_executable()
 
-def find_chrome_executable():
-    # Check environment variable first (allows override in Dockerfile or docker-compose)
-    env_path = os.environ.get('PUPPETEER_EXECUTABLE_PATH')
-    if env_path and os.path.exists(env_path):
-        logger.info(f"Using Chromium executable from ENV: {env_path}")
-        return env_path
-    for path in POSSIBLE_CHROMIUM_PATHS:
-        if os.path.exists(path):
-            logger.info(f"Found Chromium executable at: {path}")
-            return path
-    logger.warning("Could not automatically find system-installed Chromium executable. Pyppeteer will try its default.")
-    return None # Let Pyppeteer try its default behavior
+# --- Setup Jinja2 Environment ---
+# Assuming your templates are in a 'templates' subdirectory relative to this file or your main.py
+TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates") # Adjust if main.py is not in app/
+if not os.path.exists(TEMPLATE_DIR): # Fallback if main.py is in app/ and templates is sibling to app/
+    TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "templates")
 
-CHROME_EXEC_PATH = find_chrome_executable()
 
-async def generate_pdf_from_frontend_url(page_url: str, output_filename: str) -> str:
+logger.info(f"PDF Template Directory expected at: {TEMPLATE_DIR}")
+if not os.path.isdir(TEMPLATE_DIR):
+    logger.error(f"Jinja2 TEMPLATE_DIR does not exist: {TEMPLATE_DIR}")
+    # Create a dummy one for the service to not crash on import, but PDF will fail
+    os.makedirs(TEMPLATE_DIR, exist_ok=True)
+
+jinja_env = Environment(
+    loader=FileSystemLoader(TEMPLATE_DIR),
+    autoescape=select_autoescape(['html', 'xml'])
+)
+# --- End Jinja2 Setup ---
+
+async def generate_pdf_from_html_template(
+    template_name: str,
+    context_data: dict,
+    output_filename: str,
+    use_cache: bool = True
+) -> str:
+    pdf_path_in_cache = PDF_CACHE_DIR / output_filename
+    if use_cache and pdf_path_in_cache.exists():
+        logger.info(f"PDF CACHE: Serving cached PDF: {pdf_path_in_cache}")
+        return str(pdf_path_in_cache)
+
     browser = None
     page = None
-    pdf_path = os.path.join(PDF_OUTPUT_DIR, output_filename)
-    logger.info(f"Attempting PDF generation for URL: {page_url}")
-    logger.info(f"Output path: {pdf_path}")
+    temp_pdf_path = os.path.join("/tmp", f"temp_html_pdf_{output_filename}")
 
-    launch_options = {
-        'headless': True,
-        'args': [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--no-zygote',
-            # Potentially add:
-            # '--single-process', # For older Docker versions or resource-constrained environments
-            # '--disable-software-rasterizer',
-            # '--font-render-hinting=none' # Can help with font rendering issues
-        ],
-        'dumpio': True # Log browser process stderr/stdout to FastAPI console
-    }
-    if CHROME_EXEC_PATH:
-        launch_options['executablePath'] = CHROME_EXEC_PATH
-        logger.info(f"Launching pyppeteer with explicit executablePath: {CHROME_EXEC_PATH}")
+    logger.info(f"PDF GEN (from HTML template): Rendering template '{template_name}'")
+    logger.info(f"PDF GEN: Temp output at {temp_pdf_path}, final cache at {pdf_path_in_cache}")
 
     try:
-        logger.info(f"Pyppeteer launch options: {launch_options}")
-        browser = await pyppeteer.launch(**launch_options)
-        logger.info("Browser launched successfully.")
-        browser_version = await browser.version()
-        logger.info(f"Browser version: {browser_version}")
-
-        browser.on('disconnected', lambda: logger.warning('Browser disconnected event fired.'))
-
-        page = await browser.newPage()
-        logger.info("New page created.")
-        await page.setViewport({'width': 1200, 'height': 800, 'deviceScaleFactor': 1}) # Common viewport
-
-        page.on('console', lambda msg: logger.info(f'BROWSER CONSOLE: {msg.type().upper()}: {msg.text()}'))
-        page.on('pageerror', lambda err: logger.error(f'BROWSER PAGEERROR: {err}'))
-        page.on('requestfailed', lambda req: logger.warning(f'BROWSER REQUESTFAILED: {req.url()} error: {req.failure().errorText}'))
-
-
-        logger.info(f"Navigating to {page_url}")
-        await page.goto(page_url, {'waitUntil': 'domcontentloaded', 'timeout': 90000})
-        logger.info(f"Page navigation completed for {page_url}")
-
-        await asyncio.sleep(3) # Give extra time for any final JS rendering
-        logger.info("Additional delay completed. Generating PDF...")
-
-        await page.pdf({
-            'path': pdf_path,
-            'format': 'A4',
-            'printBackground': True,
-            'margin': {'top': '20px', 'right': '20px', 'bottom': '20px', 'left': '20px'}
-        })
-        logger.info(f"PDF generated successfully at {pdf_path}")
-
-    except pyppeteer.errors.TimeoutError as e:
-         logger.error(f"Timeout error during PDF generation for {page_url}: {e}")
-         raise HTTPException(status_code=504, detail=f"PDF generation timed out: {e}")
+        template = jinja_env.get_template(template_name)
+        html_content = template.render(details=context_data) # Pass data as 'details' to match template
+        logger.info("HTML content rendered from template.")
     except Exception as e:
-        logger.error(f"Error during PDF generation for {page_url}: {e}", exc_info=True)
+        logger.error(f"Error rendering HTML template '{template_name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to render PDF template: {e}")
+
+    launch_options = {
+        'headless': 'new', 'args': ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--js-flags=--max-old-space-size=512', '--single-process', '--disable-extensions', '--disable-background-networking', '--disable-default-apps', '--disable-sync', '--disable-translate', '--hide-scrollbars', '--metrics-recording-only', '--mute-audio', '--no-first-run', '--safeBrowse-disable-auto-update'], 'dumpio': True, 'executablePath': CHROME_EXEC_PATH
+    }
+
+    try:
+        browser = await pyppeteer.launch(**launch_options)
+        logger.info(f"Browser launched for HTML content. Version: {await browser.version()}")
+        page = await browser.newPage()
+        logger.info("New page created for HTML content.")
+        
+        # Set content from string - waitUntil option is important
+        await page.setContent(html_content)
+        logger.info("HTML content set in Pyppeteer page.")
+        
+        # Optional: Add a small delay for rendering complex CSS if any
+        await asyncio.sleep(2)
+
+        logger.info("Generating PDF from HTML content...")
+        await page.pdf({
+            'path': temp_pdf_path, 'format': 'A4', 'printBackground': True,
+            'margin': {'top': '20px', 'right': '20px', 'bottom': '20px', 'left': '20px'},
+            'preferCSSPageSize': True
+        })
+        logger.info(f"PDF generated from HTML successfully at {temp_pdf_path}")
+
+        if os.path.exists(pdf_path_in_cache): os.remove(pdf_path_in_cache)
+        os.rename(temp_pdf_path, pdf_path_in_cache)
+        logger.info(f"PDF from HTML moved to cache: {pdf_path_in_cache}")
+        return str(pdf_path_in_cache)
+    except Exception as e:
+        logger.error(f"Error during PDF generation from HTML: {e}", exc_info=True)
         if browser and browser.process and browser.process.returncode is not None:
-             logger.error(f"Browser process exited with code: {browser.process.returncode}")
-             raise HTTPException(status_code=500, detail=f"PDF generation failed: Browser process exited unexpectedly (code {browser.process.returncode}).")
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {e}")
+             logger.error(f"Browser process (HTML) exited with code: {browser.process.returncode}")
+        if os.path.exists(temp_pdf_path):
+            try: os.remove(temp_pdf_path)
+            except OSError: pass
+        raise HTTPException(status_code=500, detail=f"PDF generation from HTML failed: {str(e)[:200]}")
     finally:
         if page and not page.isClosed(): await page.close()
-        if browser and browser.isConnected():
-            logger.info("Closing browser in finally block.")
-            await browser.close()
-            logger.info("Browser closed in finally.")
-    return pdf_path
+        if browser: await browser.close(); logger.info("Browser for HTML PDF closed.")
