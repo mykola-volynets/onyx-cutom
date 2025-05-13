@@ -1,4 +1,4 @@
-// custom_extensions/frontend/next.config.js OR (more likely) /home/dev/onyx/web/next.config.js
+// /home/dev/onyx/web/next.config.js
 
 // Get Onyx Web Version
 const { version: package_version } = require("./package.json"); // version from package.json
@@ -73,26 +73,27 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      // This was the original set of rewrites you provided
-      {
-        source: "/api/docs/:path*", // catch /api/docs and /api/docs/...
-        destination: `${
-          process.env.INTERNAL_URL || "http://localhost:8080" // Default for local dev if INTERNAL_URL not set
-        }/docs/:path*`,
-      },
-      {
-        source: "/api/docs", // if you also need the exact /api/docs
-        destination: `${
-          process.env.INTERNAL_URL || "http://localhost:8080"
-        }/docs`,
-      },
-      {
-        source: "/openapi.json",
-        destination: `${
-          process.env.INTERNAL_URL || "http://localhost:8080"
-        }/openapi.json`,
-      },
-    ];
+    // Keep the specific rules for docs/openapi first
+    {
+      source: "/api/docs/:path*", 
+      destination: `${process.env.INTERNAL_URL || "http://localhost:8080"}/docs/:path*`,
+    },
+    {
+      source: "/api/docs", 
+      destination: `${process.env.INTERNAL_URL || "http://localhost:8080"}/docs`,
+    },
+    {
+      source: "/openapi.json",
+      destination: `${process.env.INTERNAL_URL || "http://localhost:8080"}/openapi.json`,
+    },
+    // ------
+    // Proxy all other /api/* requests to the backend api_server
+    {
+      source: '/api/:path*', // Match any path starting with /api/
+      destination: 'http://api_server:8080/api/:path*'  // Proxy it
+    }
+    // --------------------
+  ];
   },
 };
 

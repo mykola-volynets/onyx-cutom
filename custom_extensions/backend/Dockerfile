@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     xdg-utils \
     chromium \
+    fonts-inter \
     # Clean up
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
