@@ -1,0 +1,334 @@
+services:
+  api_server:
+    image: onyxdotapp/onyx-backend:${IMAGE_TAG:-latest}
+    build:
+      context: ../../backend # Relative to deployment/docker_compose/
+      dockerfile: Dockerfile
+    command: >
+      /bin/sh -c "
+      alembic upgrade head &&
+      echo \"Starting Onyx Api Server\" &&
+      uvicorn onyx.main:app --host 0.0.0.0 --port 8080"
+    depends_on:
+      relational_db: # Add conditions or healthchecks to these dependencies for robustness
+        condition: service_started # Or service_healthy if relational_db has a healthcheck
+      index:
+        condition: service_started
+      cache:
+        condition: service_started
+      inference_model_server:
+        condition: service_started
+    restart: always
+    ports:
+      - "8080:8080" # Kept for direct debugging, Nginx will use internal api_server:8080
+    env_file:
+      - .env
+    environment: # Key environment variables from your .env will be used here
+      - AUTH_TYPE=${AUTH_TYPE:-basic} # Your .env uses basic
+      - POSTGRES_HOST=relational_db
+      - VESPA_HOST=index
+      - REDIS_HOST=cache
+      - MODEL_SERVER_HOST=${MODEL_SERVER_HOST:-inference_model_server}
+      - WEB_DOMAIN=${WEB_DOMAIN} # Pass WEB_DOMAIN for backend use (e.g. auth redirects)
+      # Add any other necessary env vars from the .dev file's api_server if missing from your .env
+      # and relevant to your setup. For example:
+      - ENCRYPTION_KEY_SECRET=${ENCRYPTION_KEY_SECRET}
+      - SESSION_EXPIRE_TIME_SECONDS=${SESSION_EXPIRE_TIME_SECONDS}
+      # ... (other variables from your .env like GEN_AI_*, AWS_*, etc. will be loaded via env_file)
+    healthcheck: # Recommended for api_server
+      test: ["CMD-SHELL", "nc -z localhost 8080 || exit 1"] # Basic TCP check
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+    volumes:
+      - api_server_logs:/var/log
+
+  background:
+    image: onyxdotapp/onyx-backend:${IMAGE_TAG:-latest}
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    command: >
+      /bin/sh -c "
+      if [ -f /etc/ssl/certs/custom-ca.crt ]; then
+        update-ca-certificates;
+      fi &&
+      /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"
+    depends_on: # Add conditions or healthchecks
+      relational_db:
+        condition: service_started
+      index:
+        condition: service_started
+      cache:
+        condition: service_started
+      api_server: # Background might need api_server to be healthy
+        condition: service_healthy
+      inference_model_server:
+        condition: service_started
+      indexing_model_server:
+        condition: service_started
+    restart: always
+    env_file:
+      - .env # Most env vars will come from here
+    environment:
+      # Ensure critical vars are listed if not in .env or need specific defaults
+      - POSTGRES_HOST=relational_db
+      - VESPA_HOST=index
+      - REDIS_HOST=cache
+      - MODEL_SERVER_HOST=${MODEL_SERVER_HOST:-inference_model_server}
+      - INDEXING_MODEL_SERVER_HOST=${INDEXING_MODEL_SERVER_HOST:-indexing_model_server}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - background_logs:/var/log
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  web_server:
+    image: onyxdotapp/onyx-web-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../../web
+      dockerfile: Dockerfile
+      args: # Ensure these are populated from your .env or have defaults
+        - NODE_OPTIONS=${NODE_OPTIONS:-}
+        - NEXT_PUBLIC_DISABLE_STREAMING=${NEXT_PUBLIC_DISABLE_STREAMING:-false}
+        - NEXT_PUBLIC_NEW_CHAT_DIRECTS_TO_SAME_PERSONA=${NEXT_PUBLIC_NEW_CHAT_DIRECTS_TO_SAME_PERSONA:-false}
+        - NEXT_PUBLIC_POSITIVE_PREDEFINED_FEEDBACK_OPTIONS=${NEXT_PUBLIC_POSITIVE_PREDEFINED_FEEDBACK_OPTIONS:-}
+        - NEXT_PUBLIC_NEGATIVE_PREDEFINED_FEEDBACK_OPTIONS=${NEXT_PUBLIC_NEGATIVE_PREDEFINED_FEEDBACK_OPTIONS:-}
+        - NEXT_PUBLIC_DISABLE_LOGOUT=${NEXT_PUBLIC_DISABLE_LOGOUT:-}
+        - NEXT_PUBLIC_THEME=${NEXT_PUBLIC_THEME:-}
+        - NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED=${NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED:-}
+        # - NEXT_PUBLIC_API_BASE_URL= # REMOVED - Nginx will handle proxying
+    depends_on:
+      api_server:
+        condition: service_healthy # Wait for api_server to be healthy
+    restart: always
+    # No 'ports' needed here, Nginx will proxy to its internal port 3000
+    env_file:
+      - .env
+    environment:
+      - INTERNAL_URL=http://api_server:8080 # For server-side calls if web_server makes them directly
+      - WEB_DOMAIN=${WEB_DOMAIN} # Pass WEB_DOMAIN for server-side use
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  # NGINX - This service acts as a reverse proxy
+  nginx:
+    image: nginx:1.25.3-alpine # Using a slightly newer Nginx, adjust if needed
+    restart: always
+    depends_on:
+      api_server:
+        condition: service_healthy # Nginx should wait for api_server to be healthy
+      web_server: # web_server doesn't have a healthcheck, so it just waits for it to start.
+                  # The run-nginx.sh script often handles more granular waiting for api_server
+        condition: service_started
+    environment:
+      # This DOMAIN var is typically used by the app.conf.template.dev in Nginx
+      - DOMAIN=${WEB_DOMAIN_NO_PROTOCOL:-143.198.59.56} # Nginx often needs just the domain name
+      # If your nginx template uses WEB_DOMAIN directly:
+      # - WEB_DOMAIN=${WEB_DOMAIN}
+    ports:
+      - "80:80" # Main entry point for your application
+      # You can add this back if you want localhost:3000 to also route through Nginx
+      # - "3000:80" # This makes http://localhost:3000 hit Nginx too
+    volumes:
+      # YOU MUST PROVIDE THESE NGINX CONFIG FILES
+      # Get them from the Onyx GitHub repo (deployment/data/nginx/)
+      # and place them in a directory like '../data/nginx' relative to this compose file.
+      - ../data/nginx:/etc/nginx/conf.d
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+    command: > # This command is typical for Onyx's Nginx setup
+      /bin/sh -c "dos2unix /etc/nginx/conf.d/run-nginx.sh
+      && chmod +x /etc/nginx/conf.d/run-nginx.sh
+      && /etc/nginx/conf.d/run-nginx.sh app.conf.template.dev"
+
+  relational_db:
+    image: postgres:15.2-alpine
+    command: -c 'max_connections=250'
+    restart: always
+    env_file:
+      - .env # POSTGRES_USER, POSTGRES_PASSWORD will come from here
+    ports: # Expose for direct access if needed, but not required for app operation via Nginx
+      - "5432:5432"
+    volumes:
+      - db_volume:/var/lib/postgresql/data
+    healthcheck: # Recommended
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-onyx_db} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  inference_model_server:
+    image: onyxdotapp/onyx-model-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile.model_server
+    command: >
+      /bin/sh -c "if [ \"${DISABLE_MODEL_SERVER:-false}\" = \"True\" ]; then
+        echo 'Skipping service...';
+        exit 0;
+      else
+        exec uvicorn model_server.main:app --host 0.0.0.0 --port 9000;
+      fi"
+    restart: on-failure
+    env_file: # Add env_file if it needs common vars, or list them explicitly
+      - .env
+    environment:
+      - MIN_THREADS_ML_MODELS=${MIN_THREADS_ML_MODELS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - model_cache_huggingface:/root/.cache/huggingface/
+      - inference_model_server_logs:/var/log
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  indexing_model_server:
+    image: onyxdotapp/onyx-model-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile.model_server
+    command: >
+      /bin/sh -c "if [ \"${DISABLE_MODEL_SERVER:-false}\" = \"True\" ]; then
+        echo 'Skipping service...';
+        exit 0;
+      else
+        exec uvicorn model_server.main:app --host 0.0.0.0 --port 9000;
+      fi"
+    restart: on-failure
+    env_file: # Add env_file if it needs common vars
+      - .env
+    environment:
+      - MIN_THREADS_ML_MODELS=${MIN_THREADS_ML_MODELS:-}
+      - INDEXING_ONLY=True
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - VESPA_SEARCHER_THREADS=${VESPA_SEARCHER_THREADS:-1}
+    volumes:
+      - indexing_huggingface_model_cache:/root/.cache/huggingface/
+      - indexing_model_server_logs:/var/log
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  index: # Vespa
+    image: vespaengine/vespa:8.277.17
+    restart: always
+    ports: # Expose for direct access if needed
+      - "19071:19071"
+      - "8081:8081"
+    volumes:
+      - vespa_volume:/opt/vespa/var
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  cache: # Redis
+    image: redis:7.4-alpine
+    restart: always
+    ports: # Expose for direct access if needed
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  # --- Custom Extension Services ---
+  custom_frontend:
+    build:
+      context: ../../custom_extensions/frontend
+      dockerfile: Dockerfile
+      args:
+        # This will likely need to point to your custom_backend via its host port
+        # OR, if Nginx is configured to also proxy your custom_backend, it could be:
+        # - NEXT_PUBLIC_API_BASE_URL_ARG=http://143.198.59.56/api/custom (if Nginx proxies /api/custom)
+        # For now, assuming direct access to custom_backend's exposed port:
+        - NEXT_PUBLIC_API_BASE_URL_ARG=http://143.198.59.56:8001/api/custom
+    ports:
+      - "3001:3001" # Keep direct access to custom_frontend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      # This tells custom_frontend how to reach custom_backend *within the Docker network*
+      - NEXT_PUBLIC_CUSTOM_BACKEND_URL=http://custom_backend:8001/api/custom
+      - PORT=3001
+    depends_on:
+      custom_backend: # Assuming custom_backend should be up first
+        condition: service_started # Add healthcheck to custom_backend if possible
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  custom_backend:
+    build:
+      context: ../../custom_extensions/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001" # Keep direct access to custom_backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@relational_db:5432/${POSTGRES_DB:-onyx_db}
+      # This is how custom_backend can find custom_frontend *within the Docker network*
+      - CUSTOM_FRONTEND_URL=http://custom_frontend:3001
+    shm_size: '2gb'
+    depends_on:
+      relational_db:
+        condition: service_healthy # Custom backend needs healthy DB
+      api_server:
+        condition: service_healthy # If it calls the main Onyx API
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    volumes:
+      - ../../custom_extensions/backend:/app
+
+volumes:
+  db_volume:
+  vespa_volume:
+  model_cache_huggingface:
+  indexing_huggingface_model_cache:
+  api_server_logs:
+  background_logs:
+  inference_model_server_logs:
+  indexing_model_server_logs:
+  custom_frontend_logs:
+  custom_backend_logs:
