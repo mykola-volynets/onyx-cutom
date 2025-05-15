@@ -117,6 +117,169 @@ CANONICAL_ATTRIBUTE_FIELDS = {
     "hours": ["duration", "время", "тривалість", "час", "duración", "tiempo"],
 }
 
+def extract_float_time(time_str_from_new):
+    """
+    Extracts a float number of hours from a time string like "1 час", "0.5 часа".
+    Returns 0.0 if time_str_from_new is None or cannot be parsed.
+    """
+    if not time_str_from_new:
+        return 0.0
+    match = re.search(r'([\d,\.]+)', time_str_from_new)
+    if match:
+        num_str = match.group(1).replace(',', '.')
+        try:
+            return float(num_str)
+        except ValueError:
+            return 0.0
+    return 0.0
+
+
+def format_lesson_time_display(time_float):
+    """
+    Formats lesson time for display, e.g., "1 час", "0.5 часа".
+    """
+    if time_float == 1.0:
+        return "1 час"
+    # For 0.5, 1.5, etc., or other whole numbers not equal to 1.
+    # text_old uses "0.5 часа", "1.5 часа"
+    # For simplicity, and matching the common pattern in text_old lesson times
+    if str(time_float).endswith('.0'):
+        num = int(time_float)
+        if num == 1:
+            return f"{num} час"
+        return f"{num} часа"  # e.g. 2 часа
+    return f"{time_float} часа"
+
+
+def format_total_time_display(time_float):
+    """
+    Formats total module or program time, e.g., "6.5 часов", "12 часов".
+    """
+    # text_old examples: "6.5 часов", "5.5 часов", "12 часов"
+    if str(time_float).endswith('.0'):
+        return f"{int(time_float)} часов"
+    return f"{time_float} часов"
+
+
+def transform_text_new_to_old(new_text):
+    """
+    Transforms text from the 'new_text' format to the 'text_old' format.
+
+    Args:
+        new_text (str): The input text in the new Markdown-like format.
+
+    Returns:
+        str: The transformed text in the old format.
+    """
+    output_lines = []
+
+    module_pattern = re.compile(
+        r"## (Модуль (\d+): ([^\n]+))\n"    # Module Title (full, number, name)
+    	r"\s*"                              # ALLOW OPTIONAL WHITESPACE/BLANK LINES HERE
+        r"\*\*Общее время:\*\* [^\n]+\n"     # Original total time
+    	r"\*\*Количество уроков:\*\* (\d+)\n\n" # Original lesson count
+    	r"### Уроки\n"
+    	r"([\s\S]*?)"                       # Lessons block
+        r"(?=\n## |\Z)",                    # Lookahead
+        re.MULTILINE
+    )
+
+    lesson_pattern = re.compile(
+        r"^- \*\*(.*?)\*\*\n"                                     # Group 1: Lesson Title
+        # Optional fields now robustly handle line endings:
+        r"(?:\s+- \*\*Время:\*\* ([^\n\r]*)(?:\r?\n|$))?"          # Group 2: Time text
+        r"(?:\s+- \*\*Проверка знаний:\*\* ([^\n\r]*)(?:\r?\n|$))?"  # Group 3: Knowledge Check text
+        r"(?:\s+- \*\*Источник:\*\* ([^\n\r]*)(?:\r?\n|$))?",     # Group 4: Source text
+        re.MULTILINE
+    )
+
+    overall_total_lessons = 0
+    overall_total_time_float = 0.0
+    module_count = 0
+
+    for module_match in module_pattern.finditer(new_text):
+        module_count += 1
+        full_module_title = module_match.group(1).strip()
+        module_num = module_match.group(2)
+        # module_name_part = module_match.group(3).strip() # Not directly used if full_module_title is used
+        # declared_lesson_count = int(module_match.group(4)) # Can be used for verification
+        lessons_block = module_match.group(5)
+
+        # Special handling for Module 1 title
+        if full_module_title.startswith("Модуль 1:"):
+            output_lines.append(f"{full_module_title}. Vogue Lash Spa")
+        else:
+            output_lines.append(full_module_title)
+
+        output_lines.append("")  # Empty line after module title
+
+        module_lessons_text = []
+        lesson_counter_in_module = 0
+        current_module_total_time_float = 0.0
+
+        for lesson_match in lesson_pattern.finditer(lessons_block):
+            lesson_counter_in_module += 1
+            overall_total_lessons += 1
+
+            lesson_title = lesson_match.group(1).strip()
+            time_str = lesson_match.group(2).strip() if lesson_match.group(2) else None
+            proverka_str = lesson_match.group(3).strip() if lesson_match.group(3) else None
+            istochnik_str = lesson_match.group(4).strip() if lesson_match.group(4) else None
+
+            module_lessons_text.append(f"Урок {module_num}.{lesson_counter_in_module}: “{lesson_title}”")
+            module_lessons_text.append("")  # Empty line after lesson title
+
+            # Проверка знаний
+            if proverka_str:
+                # Replace ", " with " + " for multiple items like "Видео, Тест"
+                proverka_formatted = proverka_str.replace(", ", " + ")
+                module_lessons_text.append(f"- Проверка знаний: {proverka_formatted}")
+            else:
+                module_lessons_text.append("- Проверка знаний: [ДАННЫЕ ОТСУТСТВУЮТ]")
+
+            # Наличие контента (missing in new_text)
+            module_lessons_text.append("- Наличие контента: [ДАННЫЕ О НАЛИЧИИ КОНТЕНТА ОТСУТСТВУЮТ]")
+
+            # Источник информации
+            if istochnik_str:
+                if istochnik_str == "Создано с нуля":
+                    istochnik_formatted = "Создание с нуля"
+                elif istochnik_str == "Существующие инструкции":
+                    istochnik_formatted = "Существующая инструкция"
+                else:
+                    istochnik_formatted = istochnik_str
+                module_lessons_text.append(f"- Источник информации: {istochnik_formatted}")
+            else:
+                module_lessons_text.append("- Источник информации: [ДАННЫЕ ОТСУТСТВУЮТ]")
+
+            # Время
+            lesson_time_float = extract_float_time(time_str)
+            current_module_total_time_float += lesson_time_float
+            if time_str:  # Ensure there was a time string to format
+                module_lessons_text.append(f"- Время: {format_lesson_time_display(lesson_time_float)}")
+            else:
+                module_lessons_text.append("- Время: [ДАННЫЕ ОТСУТСТВУЮТ]")
+
+            module_lessons_text.append("")  # Empty line after each lesson's details
+
+        # Add module total time
+        output_lines.append(f"Общее время на модуль: {format_total_time_display(current_module_total_time_float)}")
+        output_lines.append("")  # Empty line
+
+        # Add all parsed lessons for this module
+        output_lines.extend(module_lessons_text)
+
+        overall_total_time_float += current_module_total_time_float
+
+    # Add "Итог по всей программе"
+    # output_lines.append("Итог по всей программе:")
+    # output_lines.append("")
+    # output_lines.append(f"- Всего модулей: {module_count}")
+    # output_lines.append(f"- Всего уроков: {overall_total_lessons}")
+    # output_lines.append(f"- Общее время на реализацию программы: {format_total_time_display(overall_total_time_float)}")
+
+    return "\n".join(output_lines)
+
 def get_canonical_field(raw_key: str) -> Optional[str]:
     raw_key_lower = raw_key.lower().strip()
     for canonical_name, variations in CANONICAL_ATTRIBUTE_FIELDS.items():
@@ -148,9 +311,10 @@ def parse_content_available_versatile(text_val: str) -> dict:
     if text_lower in ["да", "yes", "так", "sí"]: return {"type": "yes", "text": "100%"}
     if text_lower in ["нет", "no", "ні"]: return {"type": "no", "text": text_val.strip()}
     if "%" in text_val: return {"type": "percentage", "text": text_val.strip()}
-    return {"type": "unknown_availability", "text": text_val.strip()}
+    return {"type": "yes", "text": "100%"}
 
 def parse_training_plan_from_string(content_str: str) -> Optional[TrainingPlanDetails]:
+    content_str = transform_text_new_to_old(content_str)
     if not content_str or not content_str.strip(): return None
 
     plan_data = {"mainTitle": None, "sections": []}
@@ -194,7 +358,7 @@ def parse_training_plan_from_string(content_str: str) -> Optional[TrainingPlanDe
             section_id_counter += 1 # Always increment counter for internal use or fallback
             
             # Use parsed ID if available, otherwise use the counter with "№"
-            display_section_id = parsed_section_id_text if parsed_section_id_text else f"№{section_id_counter}"
+            display_section_id = parsed_section_id_text if parsed_section_id_text else str(section_id_counter)
             
             # Clean title parts
             title_parts = re.match(r"([^.]*?)(?:\.\s+(.+))?$", module_title_candidate)
@@ -213,7 +377,7 @@ def parse_training_plan_from_string(content_str: str) -> Optional[TrainingPlanDe
                 plan_data["mainTitle"] = title_part2 if title_part2 else title_part1
             
             current_section_dict = {
-                "id": display_section_id, # Use parsed or formatted counter ID
+                "id": f"№{display_section_id}", # Use parsed or formatted counter ID
                 "title": full_section_title,
                 "totalHours": 0.0, "lessons": []
             }
