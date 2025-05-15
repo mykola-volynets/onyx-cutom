@@ -5,30 +5,30 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link'; // Use Next.js Link
+import Link from 'next/link';
 import { Link as LinkIcon, FileText, RefreshCw } from 'lucide-react';
 
-// Use environment variable for backend URL
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL;
 
+// Reverted to the interfaces that ProjectsTable.tsx originally expected
 interface MicroProduct {
   name: string;
-  slug: string; // Expect slug
-  webLinkPath?: string; // Expect path based on slugs
-  pdfLinkPath?: string; // Expect path based on slugs
-  details?: any;
+  slug: string;
+  webLinkPath?: string;
+  pdfLinkPath?: string;
+  details?: any; // Or your specific TrainingPlanData type if details are ever populated in this list view
 }
 
 interface ProjectEntry {
   projectName: string;
-  projectSlug: string; // Expect slug
-  product: string;
-  productSlug: string; // Expect slug
+  projectSlug: string;
+  product: string; // Maps to product_type from DB, transformed by backend
+  productSlug: string;
   microProduct: MicroProduct;
 }
 
 const ProjectsTable: React.FC = () => {
-  const [projectsData, setProjectsData] = useState<ProjectEntry[]>([]);
+  const [projectsData, setProjectsData] = useState<ProjectEntry[]>([]); // Use original ProjectEntry
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,15 +36,28 @@ const ProjectsTable: React.FC = () => {
     const fetchProjects = async () => {
       setLoading(true);
       setError(null);
-      console.log("Fetching projects from:", `${CUSTOM_BACKEND_URL}/projects`);
+      // const projectsApiUrl = `${CUSTOM_BACKEND_URL}/projects`;
+      const projectsApiUrl = `/api/custom-projects-backend/projects`;
+      console.log("Fetching projects from:", projectsApiUrl);
       try {
-        const response = await fetch(`${CUSTOM_BACKEND_URL}/projects`);
+        const headers: HeadersInit = {};
+        // Placeholder for sending dev user ID if your get_current_onyx_user_id in backend uses it
+        const devUserId = "dummy-onyx-user-id-007"; // You'd get this from auth context ideally
+        if (devUserId && process.env.NODE_ENV === 'development') { // Example condition
+            headers['X-Dev-Onyx-User-ID'] = devUserId;
+        }
+        // If you implement actual token-based auth, add Authorization header here:
+        // const token = getOnyxAuthToken(); // Implement this
+        // if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(projectsApiUrl, { headers });
+        
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
-        const data: ProjectEntry[] = await response.json();
-        console.log("Fetched projects data:", data); // Log fetched data
+        const data: ProjectEntry[] = await response.json(); // Expecting ProjectEntry structure now
+        console.log("Fetched projects data (expected ProjectEntry structure):", data);
         setProjectsData(data);
       } catch (e: any) {
         console.error("Failed to fetch projects:", e);
@@ -57,16 +70,22 @@ const ProjectsTable: React.FC = () => {
     fetchProjects();
   }, []);
 
-  // Function to handle PDF download click (builds full URL)
   const handlePdfClick = (pdfPath: string | undefined) => {
     if (pdfPath) {
-      window.open(`${CUSTOM_BACKEND_URL}${pdfPath.startsWith('/') ? '' : '/'}${pdfPath.replace('/api/custom', '')}`, '_blank');
+      // The backend now constructs pdfLinkPath like "pdf/generated-slug"
+      // The actual /api/custom/pdf/{document_slug} endpoint in backend still uses MICROPRODUCT_DATA_FILES
+      // For this to work with new DB entries, that PDF endpoint needs updating
+      // or pdfPath needs to be a full URL if generated differently.
+      // Assuming pdfPath is relative to CUSTOM_BACKEND_URL/api/custom/
+      const fullPdfUrl = `${CUSTOM_BACKEND_URL}${pdfPath.startsWith('/') ? '' : '/'}${pdfPath.replace('/api/custom', '')}`;
+      console.log("Attempting to open PDF: ", fullPdfUrl);
+      window.open(fullPdfUrl, '_blank');
+
     } else {
-      alert("PDF link not available.");
+      alert("PDF link not available for this item.");
     }
   };
 
-  // Function to handle Refresh click (Placeholder - TODO: Implement API call)
   const handleRefreshClick = (projectSlug: string, productSlug: string, microProductSlug: string) => {
       alert(`TODO: Implement Refresh API Call for: ${projectSlug}/${productSlug}/${microProductSlug}`);
   };
@@ -101,33 +120,27 @@ const ProjectsTable: React.FC = () => {
           </thead>
           <tbody className="text-gray-700">
             {projectsData.map((item, index) => {
-              // Ensure all slugs are present before creating links/buttons
-              const hasRequiredSlugs = item.projectSlug && item.productSlug && item.microProduct?.slug;
-
-              // Construct detail page URL using slugs
-              const detailPageUrl = hasRequiredSlugs
-                ? `/projects/${item.projectSlug}/${item.productSlug}/${item.microProduct.slug}`
-                : '#'; // Fallback if slugs are missing
+              // webLinkPath is now constructed by the backend and included in item.microProduct
+              const detailPageUrl = item.microProduct?.webLinkPath || '#';
 
               return (
-                <tr key={`${item.projectSlug}-${item.productSlug}-${item.microProduct?.slug}-${index}`} // More stable key
+                <tr key={`${item.projectSlug}-${item.productSlug}-${item.microProduct?.slug}-${index}`}
                     className={`${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 border-b border-gray-200`}>
                   <td className="text-left py-3 px-4">{item.projectName}</td>
-                  <td className="text-left py-3 px-4">{item.product}</td>
+                  <td className="text-left py-3 px-4">{item.product}</td> {/* Expects item.product */}
                   <td className="text-left py-3 px-4">{item.microProduct?.name || 'N/A'}</td>
                   <td className="text-center py-3 px-4">
-                    {hasRequiredSlugs ? (
+                    {item.microProduct?.webLinkPath ? (
                       <Link href={detailPageUrl} legacyBehavior>
                         <a target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 inline-block">
                           <LinkIcon size={18} />
                         </a>
                       </Link>
                     ) : (
-                      '-'
+                      <span className="text-gray-400"><LinkIcon size={18} /></span>
                     )}
                   </td>
                   <td className="text-center py-3 px-4">
-                     {/* Use onClick handler to build full URL */}
                     <button
                         onClick={() => handlePdfClick(item.microProduct?.pdfLinkPath)}
                         disabled={!item.microProduct?.pdfLinkPath}
@@ -138,9 +151,9 @@ const ProjectsTable: React.FC = () => {
                   </td>
                   <td className="text-center py-3 px-4">
                     <button
-                      onClick={() => hasRequiredSlugs && handleRefreshClick(item.projectSlug, item.productSlug, item.microProduct.slug)}
-                      disabled={!hasRequiredSlugs}
-                      className={`text-gray-600 hover:text-gray-800 ${!hasRequiredSlugs ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={() => item.projectSlug && item.productSlug && item.microProduct?.slug && handleRefreshClick(item.projectSlug, item.productSlug, item.microProduct.slug)}
+                      disabled={!(item.projectSlug && item.productSlug && item.microProduct?.slug)}
+                      className={`text-gray-600 hover:text-gray-800 ${!(item.projectSlug && item.productSlug && item.microProduct?.slug) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <RefreshCw size={18} />
                     </button>

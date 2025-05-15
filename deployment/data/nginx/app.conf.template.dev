@@ -1,18 +1,10 @@
 # Log format to include request latency
 log_format custom_main '$remote_addr - $remote_user [$time_local] "$request" '
-                '$status $body_bytes_sent "$http_referer" '
-                '"$http_user_agent" "$http_x_forwarded_for" '
-                'rt=$request_time';
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for" '
+                      'rt=$request_time';
 
 upstream api_server {
-    # fail_timeout=0 means we always retry an upstream even if it failed
-    # to return a good HTTP response
-
-    # for UNIX domain socket setups
-    #server unix:/tmp/gunicorn.sock fail_timeout=0;
-
-    # for a TCP configuration
-    # TODO: use gunicorn to manage multiple processes
     server ${ONYX_BACKEND_API_HOST}:8080 fail_timeout=0;
 }
 
@@ -20,51 +12,89 @@ upstream web_server {
     server ${ONYX_WEB_SERVER_HOST}:3000 fail_timeout=0;
 }
 
+upstream custom_frontend_server {
+    server custom_frontend:3001 fail_timeout=0; 
+}
+
+upstream custom_backend_server {
+    server custom_backend:8001 fail_timeout=0;
+}
+
 server {
     listen 80 default_server;
 
-    client_max_body_size 5G;    # Maximum upload size
+    client_max_body_size 5G;
 
     access_log /var/log/nginx/access.log custom_main;
+    error_log /var/log/nginx/error.log warn;
 
-    # Match both /api/* and /openapi.json in a single rule
+    location = /nginx_health {
+        return 200 "healthy\n";
+        access_log off;
+    }
+
+    # Location for Custom Frontend UI
+    location /custom-projects-ui/ {
+        proxy_pass http://custom_frontend_server; 
+        
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_buffering off;
+        proxy_redirect off;
+        proxy_pass_request_headers on;
+    }
+
+    # Location for Custom Backend API
+    # Use ^~ for higher precedence for this prefix match
+    location ^~ /api/custom-projects-backend/ { # ADDED ^~ modifier
+        proxy_pass http://custom_backend_server/api/custom/; # Path replacement
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Connection ""; 
+        proxy_buffering off;
+        proxy_redirect off;
+        proxy_pass_request_headers on;
+    }
+
+    # Original Onyx API Server location
+    # This should now only be matched if the more specific /api/custom-projects-backend/ is not.
     location ~ ^/(api|openapi.json)(/.*)?$ {
-        # Rewrite /api prefixed matched paths
-        rewrite ^/api(/.*)$ $1 break;
+        rewrite ^/api(/.*)$ $1 break; 
 
-        # misc headers
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
         proxy_set_header Host $host;
-
-        # need to use 1.1 to support chunked transfers
         proxy_http_version 1.1;
         proxy_buffering off;
-
-        # we don't want nginx trying to do something clever with
-        # redirects, we set the Host: header above already.
         proxy_redirect off;
         proxy_pass http://api_server;
     }
 
+    # Original Onyx Web Server location (main UI)
     location / {
-        # misc headers
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
         proxy_set_header Host $host;
-
         proxy_http_version 1.1;
-
-        # we don't want nginx trying to do something clever with
-        # redirects, we set the Host: header above already.
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_redirect off;
         proxy_pass http://web_server;
     }
-
 }

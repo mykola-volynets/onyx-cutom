@@ -283,6 +283,41 @@ export const AIMessage = ({
     );
   }, [content]);
 
+  const handleAddToProjects = () => {
+    let messageText = "";
+    if (typeof finalContentProcessed === 'string') {
+      messageText = finalContentProcessed;
+    } else if (markdownRef.current) {
+      messageText = markdownRef.current.innerText || markdownRef.current.textContent || "";
+    } else if (typeof content === 'string') {
+      messageText = content;
+    }
+
+    if (!messageText.trim() && typeof finalContentProcessed !== 'string' && typeof content !== 'string' && !markdownRef.current) {
+      console.warn("Could not extract simple text from AI message for 'Add to projects'.");
+      // Decide if you want to proceed with empty/placeholder or alert the user
+    }
+
+    // 1. Generate a unique key for sessionStorage
+    const storageKey = `ai_response_for_project_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+  
+    // 2. Save the AI response text to sessionStorage
+    try {
+      sessionStorage.setItem(storageKey, messageText.trim());
+    } catch (e) {
+      console.error("Error saving to sessionStorage:", e);
+      // Fallback or alert user if storage is full or disabled
+      alert("Could not temporarily store AI response. It might be too large or web storage is disabled.");
+      return;
+    }
+
+    // 3. Construct the target URL with the key
+    const targetUrl = `http://143.198.59.56:8088/custom-projects-ui/add-to-project?responseKey=${encodeURIComponent(storageKey)}`;
+  
+    // 4. Open the new tab
+    window.open(targetUrl, "_blank");
+  };
+
   // Extract thinking content
   const thinkingContent = useMemo(() => {
     if (!hasThinkingTokens) return "";
@@ -795,6 +830,20 @@ export const AIMessage = ({
                               />
                             </CustomTooltip>
                           )}
+			  <button
+    			    onClick={handleAddToProjects}
+			    title="Add to projects" // Tooltip via title attribute
+			    className="p-1.5 rounded-lg hover:bg-background-strong cursor-pointer" // Basic styling to somewhat match others
+			    style={{ // More explicit styling if needed
+		  	      marginLeft: '4px', // Adjust spacing as needed
+		  	      padding: '6px 8px',
+			      fontSize: '12px',
+		  	      border: '1px solid #ccc', // Example border
+			      borderRadius: '4px',
+			    }}
+			  >
+			    Add to projects
+			  </button>
                         </TooltipGroup>
                       </div>
                     ) : (
