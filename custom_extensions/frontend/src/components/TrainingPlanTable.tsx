@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import React from 'react';
-import { X, HelpCircle } from 'lucide-react'; // Keep HelpCircle for a true default
+import { X, HelpCircle } from 'lucide-react'; 
 import { TrainingPlanData, Section, Lesson } from '@/types/trainingPlan';
 
 // --- Custom SVG Icons (Keep your existing icon definitions) ---
@@ -31,13 +31,11 @@ const NewPracticeIcon = ({ color = '#FF1414', className = '' }) => (
 );
 // --- End Icons ---
 
-
-// --- StatusBadge Component (CORRECTED) ---
+// --- StatusBadge Component ---
 const StatusBadge = ({ type, text, columnContext }: { type: string; text: string; columnContext?: 'check' | 'contentAvailable' }) => {
   const iconColor = '#FF1414'; 
   const defaultIconSize = "w-4 h-4";
 
-  // 1. "Наличие контента" (Content Available) column always shows a pie chart
   if (columnContext === 'contentAvailable') {
     return (
       <div className="inline-flex items-center space-x-1">
@@ -47,7 +45,6 @@ const StatusBadge = ({ type, text, columnContext }: { type: string; text: string
     );
   }
 
-  // 2. "Проверка знаний" (Knowledge Check) column logic & other types
   switch (type) {
     case 'test':
     case 'video_test':
@@ -63,20 +60,14 @@ const StatusBadge = ({ type, text, columnContext }: { type: string; text: string
     case 'practice_discussion':
     case 'oral_quiz': 
     case 'photo_analysis':
-    case 'other_check': // If backend specifically marks generic checks as 'other_check'
+    case 'other_check': 
       return ( <div className="inline-flex items-center space-x-1.5"> <NewPracticeIcon color={iconColor} className={`${defaultIconSize} shrink-0`} /> <span className="text-xs font-medium text-gray-700">{text}</span> </div> );
     
-    // These cases are for when columnContext is NOT 'contentAvailable'
-    // or if StatusBadge is used elsewhere without columnContext.
-    // If types like 'no' or 'unknown_availability' appear for 'check' column, they'll use HelpCircle.
-    case 'percent': // This type might appear for non-contentAvailable contexts
+    case 'percent': 
     case 'yes': 
     case 'none': 
     case 'no': 
     case 'unknown_availability': 
-        // The 'if' condition that caused the TypeScript error is removed from here.
-        // These types, if not for 'contentAvailable' column, will default to HelpCircle.
-        // If they are for 'contentAvailable', the top 'if' block already handled them.
         return ( <div className="inline-flex items-center space-x-1.5"> <HelpCircle size={14} style={{ color: iconColor }} className="shrink-0"/> <span className="text-xs font-medium text-gray-700">{text || type}</span> </div> );
 
     default: 
@@ -88,13 +79,35 @@ interface TrainingPlanTableProps {
   initialData?: TrainingPlanData | null;
 }
 
-// --- Main Component (TrainingPlanTable) ---
+// Translations for column headers
+const columnHeaders = {
+  ru: {
+    moduleAndLessons: "Модуль и уроки",
+    knowledgeCheck: "Проверка знаний",
+    contentAvailability: "Наличие контента",
+    source: "Источник информации",
+    time: "Время",
+  },
+  en: {
+    moduleAndLessons: "Module and Lessons",
+    knowledgeCheck: "Knowledge Check",
+    contentAvailability: "Content Availability",
+    source: "Information Source",
+    time: "Time",
+  },
+};
+
+
 const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) => {
-  // ... (rest of the TrainingPlanTable component remains the same as in response #40)
   const iconBaseColor = '#FF1414'; 
-  const dataToDisplay = initialData;
+  const dataToDisplay = initialData; // Already expecting TrainingPlanData
   const sections = dataToDisplay?.sections;
   const mainTitle = dataToDisplay?.mainTitle;
+
+  // Determine language for headers, default to 'ru'
+  const lang = dataToDisplay?.detectedLanguage === 'en' ? 'en' : 'ru';
+  const headers = columnHeaders[lang];
+
 
   if (!dataToDisplay || !sections || sections.length === 0) {
      return <div className="p-8 text-center">No training plan data available.</div>;
@@ -109,12 +122,13 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) =>
             </div>
          )}
 
+        {/* MODIFIED Headers to use dynamic translations */}
         <div className="grid grid-cols-10 gap-0 text-gray-500 p-4 text-xs font-semibold items-center border-b border-gray-200 uppercase tracking-wider">
-            <div className="col-span-10 sm:col-span-4 pr-2 border-r border-gray-300">Модуль и уроки</div>
-            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">Проверка знаний</div>
-            <div className="col-span-5 sm:col-span-1 text-left px-2 border-r border-gray-300">Наличие контента</div>
-            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">Источник информации</div>
-            <div className="col-span-5 sm:col-span-1 text-center px-2">Время</div>
+            <div className="col-span-10 sm:col-span-4 pr-2 border-r border-gray-300">{headers.moduleAndLessons}</div>
+            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">{headers.knowledgeCheck}</div>
+            <div className="col-span-5 sm:col-span-1 text-left px-2 border-r border-gray-300">{headers.contentAvailability}</div>
+            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">{headers.source}</div>
+            <div className="col-span-5 sm:col-span-1 text-center px-2">{headers.time}</div>
         </div>
 
         <div className="text-sm">

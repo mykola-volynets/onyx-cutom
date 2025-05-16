@@ -62,11 +62,9 @@
 <body class="bg-gray-50 font-sans">
     <div class="p-4 md:p-8">
         <div class="shadow-lg rounded-lg overflow-hidden border border-gray-200 bg-white w-full">
-            {% if details.mainTitle %}
             <div class="bg-gray-800 text-white p-4">
-                <h1 class="text-xl md:text-2xl font-bold">{{ details.mainTitle }}</h1>
+                <h1 class="text-xl md:text-2xl font-bold">{{ details.details.mainTitle}}</h1>
             </div>
-            {% endif %}
 
             <div class="grid grid-cols-10 gap-0 text-gray-500 p-4 text-xs font-semibold items-center border-b border-gray-200 uppercase tracking-wider">
                 <div class="col-span-10 sm:col-span-3 pr-2 py-3 border-r border-gray-300">Модуль и уроки</div> <div class="col-span-5 sm:col-span-2 text-left px-2 py-3 border-r border-gray-300">Проверка знаний</div>
@@ -75,7 +73,7 @@
             </div>
 
             <div class="text-sm">
-                {% for section in details.sections %}
+                {% for section in details.details.sections %}
                 <div>
                     <div class="grid grid-cols-10 gap-0 bg-gray-100 p-4 font-semibold items-center border-t border-gray-200">
                         <div class="col-span-10 sm:col-span-9 flex items-center space-x-2 pr-2 border-r border-gray-300">

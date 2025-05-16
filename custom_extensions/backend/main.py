@@ -72,7 +72,13 @@ app.add_middleware(CORSMiddleware, allow_origins=list(set(origins)), allow_crede
 class StatusInfo(BaseModel): type: str = "unknown"; text: str = ""; model_config = {"from_attributes": True}
 class LessonDetail(BaseModel): title: str; check: StatusInfo = Field(default_factory=StatusInfo); contentAvailable: StatusInfo = Field(default_factory=StatusInfo); source: str = ""; hours: float = 0.0; model_config = {"from_attributes": True}
 class SectionDetail(BaseModel): id: str; title: str; totalHours: float = 0.0; lessons: List[LessonDetail] = Field(default_factory=list); model_config = {"from_attributes": True}
-class TrainingPlanDetails(BaseModel): mainTitle: Optional[str] = None; sections: List[SectionDetail] = Field(default_factory=list); model_config = {"from_attributes": True}
+# MODIFIED TrainingPlanDetails to include detectedLanguage
+class TrainingPlanDetails(BaseModel): 
+    mainTitle: Optional[str] = None
+    sections: List[SectionDetail] = Field(default_factory=list)
+    detectedLanguage: Optional[str] = None  # <-- ADDED
+    model_config = {"from_attributes": True}
+
 class MicroProductApiResponse(BaseModel): name: str; slug: str; webLinkPath: Optional[str] = None; pdfLinkPath: Optional[str] = None; details: Optional[TrainingPlanDetails] = None; model_config = {"from_attributes": True}
 class ProjectApiResponse(BaseModel): projectName: str; projectSlug: str; product: str; productSlug: str; microProduct: MicroProductApiResponse; model_config = {"from_attributes": True}
 class ProjectCreateRequest(BaseModel): projectName: str; product: str; microProduct: str; aiResponse: str
@@ -178,7 +184,7 @@ LANG_CONFIG = {
 }
 
 
-def detect_language(text, configs):
+def detect_language(text: str, configs: Dict[str, Dict[str, str]]) -> str: # Added type hint for clarity
     en_score = 0
     ru_score = 0
     # Check for prominent keywords from each language
@@ -211,34 +217,8 @@ def detect_language(text, configs):
 
     return 'ru'  # Default language if still ambiguous
 
-
-def extract_float_time(time_str_from_new):
-    if not time_str_from_new:
-        return 0.0
-    match = re.search(r'([\d,\.]+)', time_str_from_new)
-    if match:
-        num_str = match.group(1).replace(',', '.')
-        try:
-            return float(num_str)
-        except ValueError:
-            return 0.0
-    return 0.0
-
-
-def format_lesson_time_display(time_float, lang_cfg):
-    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
-    if time_float == 1.0:
-        return f"1 {lang_cfg['TIME_UNIT_SINGULAR']}"
-    else:
-        return f"{num_str} {lang_cfg['TIME_UNIT_DECIMAL_PLURAL']}"
-
-
-def format_total_time_display(time_float, lang_cfg):
-    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
-    return f"{num_str} {lang_cfg['TIME_UNIT_GENERAL_PLURAL']}"
-
-
-def transform_text_new_to_old(new_text, lang_configs=LANG_CONFIG):
+# MODIFIED transform_text_new_to_old to return detected_lang as well
+def transform_text_new_to_old(new_text: str, lang_configs: Dict = LANG_CONFIG) -> tuple[str, str]:
     detected_lang = detect_language(new_text, lang_configs)
     lang_cfg = lang_configs[detected_lang]
 
@@ -259,9 +239,8 @@ def transform_text_new_to_old(new_text, lang_configs=LANG_CONFIG):
     try:
         module_pattern = re.compile(module_pattern_str, re.MULTILINE)
     except Exception as e:
-        # In a production setting, you might want to log this error more formally
         # print(f"ERROR: Failed to compile module_pattern: {e}")
-        return ""  # Or raise an exception
+        return "", detected_lang  # Or raise an exception
 
     lesson_item_prefix_re = lang_cfg['LESSON_ITEM_PREFIX_RE']
     lesson_title_regex = rf"{lesson_item_prefix_re}\s*\*\*(.*?)\*\*\n"
@@ -276,12 +255,12 @@ def transform_text_new_to_old(new_text, lang_configs=LANG_CONFIG):
         lesson_pattern = re.compile(lesson_pattern_str, re.MULTILINE)
     except Exception as e:
         # print(f"ERROR: Failed to compile lesson_pattern: {e}")
-        return ""
+        return "", detected_lang
 
     module_match_count = 0
     for module_match in module_pattern.finditer(new_text):
         module_match_count += 1
-
+        # ... (rest of the loop remains the same as original)
         full_module_title = module_match.group(1).strip()
         module_num_str = module_match.group(2)
         lessons_block = module_match.group(5)
@@ -340,11 +319,7 @@ def transform_text_new_to_old(new_text, lang_configs=LANG_CONFIG):
                 module_lessons_text.append(f"- {lang_cfg['OUTPUT_TIME']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
 
             module_lessons_text.append("")
-
-        # Add a check for no lessons found if lessons_block was not empty
-        # if lesson_counter_in_module == 0 and len(lessons_block.strip()) > 0 :
-        #     print(f"INFO: No lessons found for non-empty lessons_block in module {module_num_str}.") # Or log this
-
+        
         output_lines.append(
             f"{lang_cfg['OUTPUT_MODULE_TOTAL_TIME']}: {format_total_time_display(current_module_total_time_float, lang_cfg)}")
         output_lines.append("")
@@ -354,8 +329,6 @@ def transform_text_new_to_old(new_text, lang_configs=LANG_CONFIG):
         else:
             output_lines.extend(module_lessons_text)
 
-    # if module_match_count == 0:
-    #     print("INFO: No modules were found in the input text.") # Or log this
 
     final_text_output = ""
     if output_lines:
@@ -363,10 +336,35 @@ def transform_text_new_to_old(new_text, lang_configs=LANG_CONFIG):
         final_text_output = re.sub(r'\n\n+', '\n\n', temp_output).strip()
         if final_text_output:
             final_text_output += "\n"
-    # else:
-    #     print("INFO: No output generated as no modules/lessons were parsed.") # Or log this
+    
+    return final_text_output, detected_lang
 
-    return final_text_output
+
+def extract_float_time(time_str_from_new):
+    if not time_str_from_new:
+        return 0.0
+    match = re.search(r'([\d,\.]+)', time_str_from_new)
+    if match:
+        num_str = match.group(1).replace(',', '.')
+        try:
+            return float(num_str)
+        except ValueError:
+            return 0.0
+    return 0.0
+
+
+def format_lesson_time_display(time_float, lang_cfg):
+    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
+    if time_float == 1.0:
+        return f"1 {lang_cfg['TIME_UNIT_SINGULAR']}"
+    else:
+        return f"{num_str} {lang_cfg['TIME_UNIT_DECIMAL_PLURAL']}"
+
+
+def format_total_time_display(time_float, lang_cfg):
+    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
+    return f"{num_str} {lang_cfg['TIME_UNIT_GENERAL_PLURAL']}"
+
 
 def get_canonical_field(raw_key: str) -> Optional[str]:
     raw_key_lower = raw_key.lower().strip()
@@ -401,25 +399,24 @@ def parse_content_available_versatile(text_val: str) -> dict:
     if "%" in text_val: return {"type": "percentage", "text": text_val.strip()}
     return {"type": "yes", "text": "100%"}
 
-def parse_training_plan_from_string(content_str: str, main_table_title: str) -> Optional[TrainingPlanDetails]:
-    content_str = transform_text_new_to_old(content_str)
-    if not content_str or not content_str.strip(): return None
+# MODIFIED parse_training_plan_from_string to also return detected language
+def parse_training_plan_from_string(original_content_str: str, main_table_title: str) -> Optional[TrainingPlanDetails]:
+    transformed_content_str, detected_lang = transform_text_new_to_old(original_content_str) # Capture detected_lang
+    if not transformed_content_str or not transformed_content_str.strip(): 
+        return TrainingPlanDetails(mainTitle=f"Content for {main_table_title} not parsable/empty", sections=[], detectedLanguage=detected_lang or 'ru')
 
-    plan_data = {"mainTitle": main_table_title, "sections": []}
+
+    plan_data = {"mainTitle": main_table_title, "sections": [], "detectedLanguage": detected_lang} # Add detectedLanguage here
     current_section_dict: Optional[Dict[str, Any]] = None
     current_lesson_dict: Optional[Dict[str, Any]] = None
-    section_id_counter = 0 # This will be used for "№" + counter
+    section_id_counter = 0 
     total_hours_explicitly_set_for_section = False
     
-    lines = content_str.splitlines()
+    lines = transformed_content_str.splitlines()
     program_summary_keywords = ["итог по всей программе", "program summary:", "підсумок програми", "resumen del programa"]
 
-    # Regex to capture the explicit module number (like №1, 1, 2.1) if present, then the title
-    # It looks for "Module/Модуль/Módulo", then optional "№" or "#", then captures digits/dots (ID), then ":" or "-", then title.
     module_line_regex = r"^\s*(?:###\s*\*\*)?(?:Модуль|Module|Módulo)\s*(?:№|#)?\s*([\w\d.]+)\s*[:\-]\s*(.+)$"
-    # Fallback if no explicit number after "Module" but still a title (e.g. "### **Module: Title**")
     module_line_no_id_regex = r"^\s*(?:###\s*\*\*)?(?:Модуль|Module|Módulo)\s*[:\-]*\s*([^#*(].*?)(?:\s*\*\*)?$"
-
 
     for line_num, line_raw in enumerate(lines, 1):
         line = line_raw.strip()
@@ -431,24 +428,18 @@ def parse_training_plan_from_string(content_str: str, main_table_title: str) -> 
         parsed_section_id_text = None
 
         if module_match:
-            parsed_section_id_text = module_match.group(1).strip() # Captured ID like "1", "2", "1.1"
+            parsed_section_id_text = module_match.group(1).strip() 
             module_title_candidate = module_match.group(2).strip()
-        else: # Try fallback if no explicit ID was found but it's a module line
+        else: 
             module_fallback_match = re.match(module_line_no_id_regex, line, re.IGNORECASE | re.UNICODE)
             if module_fallback_match:
                 module_title_candidate = module_fallback_match.group(1).strip()
-                # If no ID parsed, we use the counter
-                # section_id_counter will be incremented below if this path is taken
-
-        if module_title_candidate: # If it's a module line (either with parsed ID or just title)
+        
+        if module_title_candidate: 
             if current_section_dict: plan_data["sections"].append(current_section_dict)
-            
-            section_id_counter += 1 # Always increment counter for internal use or fallback
-            
-            # Use parsed ID if available, otherwise use the counter with "№"
+            section_id_counter += 1 
             display_section_id = parsed_section_id_text if parsed_section_id_text else str(section_id_counter)
             
-            # Clean title parts
             title_parts = re.match(r"([^.]*?)(?:\.\s+(.+))?$", module_title_candidate)
             title_part1 = module_title_candidate
             title_part2 = None
@@ -458,14 +449,14 @@ def parse_training_plan_from_string(content_str: str, main_table_title: str) -> 
                     title_part2 = title_parts.group(2).strip().strip('.:-* ').strip()
 
             full_section_title = title_part1
-            if title_part2 and title_part1 and title_part2.lower() != title_part1.lower(): # Avoid appending if context is already in title_part1
+            if title_part2 and title_part1 and title_part2.lower() != title_part1.lower(): 
                 full_section_title = f"{title_part1}{'. ' if not title_part1.endswith('.') else ' '}{title_part2}"
             
             if not plan_data["mainTitle"]:
                 plan_data["mainTitle"] = title_part2 if title_part2 else title_part1
             
             current_section_dict = {
-                "id": f"№{display_section_id}", # Use parsed or formatted counter ID
+                "id": f"№{display_section_id}", 
                 "title": full_section_title,
                 "totalHours": 0.0, "lessons": []
             }
@@ -518,10 +509,18 @@ def parse_training_plan_from_string(content_str: str, main_table_title: str) -> 
     if not plan_data.get("mainTitle") and plan_data["sections"]: 
         plan_data["mainTitle"] = plan_data["sections"][0]["title"].split('.')[0].strip()
 
-    try: return TrainingPlanDetails(**plan_data)
-    except Exception as e: print(f"Error Pydantic TrainingPlanDetails: {e}. Data: {plan_data}"); traceback.print_exc(); return TrainingPlanDetails(mainTitle=plan_data.get("mainTitle") or "Parse Error", sections=[])
+    # Ensure detectedLanguage is part of the data being passed to TrainingPlanDetails
+    plan_data_with_lang = {**plan_data, "detectedLanguage": detected_lang}
 
-# --- API Endpoints (Unchanged from previous response) ---
+    try: 
+        return TrainingPlanDetails(**plan_data_with_lang)
+    except Exception as e: 
+        print(f"Error Pydantic TrainingPlanDetails: {e}. Data: {plan_data_with_lang}")
+        traceback.print_exc()
+        return TrainingPlanDetails(mainTitle=plan_data_with_lang.get("mainTitle") or "Parse Error", sections=[], detectedLanguage=detected_lang)
+
+
+# --- API Endpoints ---
 @app.post("/api/custom/projects/add", response_model=ProjectDB, status_code=201)
 async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
     insert_query = """INSERT INTO projects (onyx_user_id, project_name, product_type, microproduct_type, microproduct_content, created_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING id, onyx_user_id, project_name, product_type, microproduct_type, microproduct_content, created_at;"""
@@ -541,6 +540,7 @@ async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_
             pn, pt, mpt = r_dict.get('project_name','N/A'), r_dict.get('product_type','N/A'), r_dict.get('microproduct_type','N/A')
             ps, pts_slug, mpts_slug = create_slug(pn), create_slug(pt), create_slug(mpt)
             wlp, pdflp = f"/projects/{ps}/{pts_slug}/{mpts_slug}", f"pdf/{create_slug(f'{pn}_{pt}_{mpt}')}"
+            # Pass detected language to MicroProductApiResponse if available, though it's more relevant for details
             mpa = MicroProductApiResponse(name=mpt, slug=mpts_slug, webLinkPath=wlp, pdfLinkPath=pdflp, details=None)
             pra = ProjectApiResponse(projectName=pn, projectSlug=ps, product=pt, productSlug=pts_slug, microProduct=mpa)
             transformed_projects.append(pra)
@@ -571,12 +571,24 @@ async def get_microproduct_detail_from_db(
         microproduct_content_str = found_project_row.get('microproduct_content')
 
         details_data: Optional[TrainingPlanDetails] = None
+        detected_language_for_response = 'ru' # Default
+
         if microproduct_content_str:
+            # parse_training_plan_from_string now returns TrainingPlanDetails which includes detectedLanguage
             parsed_details_obj = parse_training_plan_from_string(microproduct_content_str, project_name_from_db)
-            if parsed_details_obj: details_data = parsed_details_obj
-            else: details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_name_from_db} not parsable/empty", sections=[])
-        else: details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_name_from_db}", sections=[])
+            if parsed_details_obj:
+                details_data = parsed_details_obj
+                detected_language_for_response = details_data.detectedLanguage or 'ru'
+            else: # Should not happen if parse_training_plan_from_string always returns an object
+                details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_name_from_db} not parsable/empty", sections=[], detectedLanguage=detected_language_for_response)
+        else:
+            details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_name_from_db}", sections=[], detectedLanguage=detected_language_for_response)
         
+        # Ensure details_data.detectedLanguage is set
+        if details_data and not details_data.detectedLanguage and microproduct_content_str:
+             _, detected_lang_fallback = transform_text_new_to_old(microproduct_content_str)
+             details_data.detectedLanguage = detected_lang_fallback
+
         web_link_path = f"/projects/{project_slug}/{product_slug}/{micro_product_slug}"
         pdf_doc_identifier_slug = create_slug(f"{project_name_from_db}_{product_type_from_db}_{microproduct_name_from_db}")
         pdf_link_path = f"pdf/{pdf_doc_identifier_slug}"
@@ -593,20 +605,43 @@ async def get_microproduct_detail_from_db(
 async def download_micro_product_pdf_from_db( document_slug: str, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
     print(f"PDF req for slug: {document_slug}, user {onyx_user_id}")
     async with pool.acquire() as conn: user_projects_raw = await conn.fetch("SELECT * FROM projects WHERE onyx_user_id = $1", onyx_user_id)
-    target_row = None; mp_name_for_pdf = "document"
+    target_row = None; mp_name_for_pdf = "document"; project_name_for_pdf = "Project"
     for r_dict in [dict(r) for r in user_projects_raw]:
         pn, pt, mpt = r_dict['project_name'], r_dict.get('product_type',''), r_dict.get('microproduct_type','')
         current_pdf_slug = create_slug(f"{pn}_{pt}_{mpt}")
-        if current_pdf_slug == document_slug: target_row = r_dict; mp_name_for_pdf = mpt or pn; break
+        if current_pdf_slug == document_slug: 
+            target_row = r_dict
+            mp_name_for_pdf = mpt or pn
+            project_name_for_pdf = pn # Capture project name for title
+            break
     if not target_row: raise HTTPException(status_code=404, detail=f"PDF def not found: {document_slug}")
 
     content_str = target_row.get('microproduct_content')
-    details_pdf: Optional[TrainingPlanDetails] = parse_training_plan_from_string(content_str, pn) if content_str else None
-    if not details_pdf: details_pdf = TrainingPlanDetails(mainTitle=f"No/unparsable content for PDF of '{mp_name_for_pdf}'", sections=[])
+    # Pass project_name_for_pdf as main_table_title for PDF context
+    details_pdf: Optional[TrainingPlanDetails] = parse_training_plan_from_string(content_str, project_name_for_pdf) if content_str else None
+    print('details_pdf', details_pdf)
+    
+    if not details_pdf: 
+        # If parsing failed or no content, create a default TrainingPlanDetails with the detected language if possible
+        detected_lang_for_empty_pdf = 'ru'
+        if content_str: # Try to detect language even if parsing to TrainingPlanDetails failed
+            _, detected_lang_for_empty_pdf = transform_text_new_to_old(content_str)
+
+        details_pdf = TrainingPlanDetails(
+            mainTitle=f"No/unparsable content for PDF of '{mp_name_for_pdf}'", 
+            sections=[],
+            detectedLanguage=detected_lang_for_empty_pdf
+        )
     
     pdf_cache_fn, user_friendly_fn = f"{document_slug}.pdf", f"{create_slug(mp_name_for_pdf)}.pdf"
     try:
+        # Ensure context_data_for_pdf includes the detected language
         context_data_for_pdf = details_pdf.model_dump(exclude_none=True) if details_pdf else {}
+        if 'details' not in context_data_for_pdf: # Ensure 'details' key exists for template
+             context_data_for_pdf = {'details': context_data_for_pdf}
+        if 'detectedLanguage' not in context_data_for_pdf['details'] and details_pdf:
+            context_data_for_pdf['details']['detectedLanguage'] = details_pdf.detectedLanguage or 'ru'
+        print('CUSTOM LOG', context_data_for_pdf)
         pdf_path = await generate_pdf_from_html_template("training_plan_pdf_template.html", context_data_for_pdf, pdf_cache_fn)
         if not os.path.exists(pdf_path): raise HTTPException(status_code=500, detail="PDF file not found post-gen.")
         return FileResponse(path=pdf_path, filename=user_friendly_fn, media_type='application/pdf')

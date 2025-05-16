@@ -23,6 +23,7 @@ export interface Section {
 export interface TrainingPlanData {
   mainTitle?: string;
   sections: Section[];
+  detectedLanguage?: string; // <-- ADDED
 }
 
 export interface MicroProductDetail {
@@ -30,5 +31,5 @@ export interface MicroProductDetail {
   slug: string;
   webLinkPath?: string;
   pdfLinkPath?: string;
-  details?: TrainingPlanData | null; // This is the structure from the parser
+  details?: TrainingPlanData | null; 
 }
