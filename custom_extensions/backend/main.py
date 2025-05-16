@@ -111,17 +111,108 @@ def create_slug(text: Optional[str]) -> str:
 
 # --- MULTI-LANGUAGE PARSER SECTION (REFINED Module ID) ---
 CANONICAL_ATTRIBUTE_FIELDS = {
-    "check": ["knowledge check", "проверка знаний", "перевірка знань", "verificación de conocimientos", "control de conocimientos"],
-    "contentAvailable": ["content available", "наличие контента", "наявність контенту", "contenido disponible"],
+    "check": ["knowledge assessment", "проверка знаний", "перевірка знань", "verificación de conocimientos",
+              "control de conocimientos"],
+    "contentAvailable": ["content availability", "наличие контента", "наявність контенту", "contenido disponible"],
     "source": ["information source", "источник информации", "джерело інформації", "fuente de información"],
-    "hours": ["duration", "время", "тривалість", "час", "duración", "tiempo"],
+    "hours": ["time", "время", "тривалість", "час", "duración", "tiempo"],
 }
 
+LANG_CONFIG = {
+    'ru': {
+        'MODULE_KEYWORD': "Модуль",
+        'TOTAL_TIME_KEYWORD': "Общее время",
+        'LESSONS_COUNT_KEYWORD': "Количество уроков",
+        'LESSONS_HEADER_KEYWORD': "Уроки",
+        'TIME_KEYWORD': "Время",
+        'ASSESSMENT_KEYWORD': "Проверка знаний",
+        'SOURCE_KEYWORD': "Источник",
+        'OUTPUT_LESSON_PREFIX': "Урок",
+        'OUTPUT_ASSESSMENT': "Проверка знаний",
+        'OUTPUT_CONTENT_AVAIL': "Наличие контента",
+        'OUTPUT_SOURCE_INFO': "Источник информации",
+        'OUTPUT_TIME': "Время",
+        'OUTPUT_MODULE_TOTAL_TIME': "Общее время на модуль",
+        'PLACEHOLDER_CONTENT_MISSING': "[ДАННЫЕ О НАЛИЧИИ КОНТЕНТА ОТСУТСТВУЮТ]",
+        'PLACEHOLDER_DATA_MISSING': "[ДАННЫЕ ОТСУТСТВУЮТ]",
+        'MAP_SOURCE_CREATED': "Создано с нуля",
+        'MAP_SOURCE_CREATED_TO': "Создание с нуля",
+        'MAP_SOURCE_EXISTING_INSTRUCTIONS': "Существующие инструкции",
+        'MAP_SOURCE_EXISTING_INSTRUCTIONS_TO': "Существующая инструкция",
+        'MAP_SOURCE_EXISTING_MATERIALS': "Существующие материалы",
+        'MAP_SOURCE_EXISTING_MATERIALS_TO': "Существующие материалы",
+        'TIME_UNIT_SINGULAR': "час",
+        'TIME_UNIT_DECIMAL_PLURAL': "часа",
+        'TIME_UNIT_GENERAL_PLURAL': "часов",
+        'LESSON_ITEM_PREFIX_RE': r"^-",
+        'SPECIAL_SUFFIX_MODULE_1': ". Vogue Lash Spa"
+    },
+    'en': {
+        'MODULE_KEYWORD': "Module",
+        'TOTAL_TIME_KEYWORD': "Total Time",
+        'LESSONS_COUNT_KEYWORD': "Number of Lessons",
+        'LESSONS_HEADER_KEYWORD': "Lessons",
+        'TIME_KEYWORD': "Time",
+        'ASSESSMENT_KEYWORD': "Knowledge Assessment",
+        'SOURCE_KEYWORD': "Information Source",
+        'OUTPUT_LESSON_PREFIX': "Lesson",
+        'OUTPUT_ASSESSMENT': "Knowledge Assessment",
+        'OUTPUT_CONTENT_AVAIL': "Content Availability",
+        'OUTPUT_SOURCE_INFO': "Information Source",
+        'OUTPUT_TIME': "Time",
+        'OUTPUT_MODULE_TOTAL_TIME': "Total time for module",
+        'PLACEHOLDER_CONTENT_MISSING': "[CONTENT AVAILABILITY DATA MISSING]",
+        'PLACEHOLDER_DATA_MISSING': "[DATA MISSING]",
+        'MAP_SOURCE_CREATED': "Created from scratch",
+        'MAP_SOURCE_CREATED_TO': "Created from scratch",
+        'MAP_SOURCE_EXISTING_INSTRUCTIONS': "Existing instructions",
+        'MAP_SOURCE_EXISTING_INSTRUCTIONS_TO': "Existing instructions",
+        'MAP_SOURCE_EXISTING_MATERIALS': "Existing materials",
+        'MAP_SOURCE_EXISTING_MATERIALS_TO': "Existing materials",
+        'TIME_UNIT_SINGULAR': "hour",
+        'TIME_UNIT_DECIMAL_PLURAL': "hours",
+        'TIME_UNIT_GENERAL_PLURAL': "hours",
+        'LESSON_ITEM_PREFIX_RE': r"^\d+\.",
+        'SPECIAL_SUFFIX_MODULE_1': ""
+    }
+}
+
+
+def detect_language(text, configs):
+    en_score = 0
+    ru_score = 0
+    # Check for prominent keywords from each language
+    # More specific checks first
+    if configs['en']['MODULE_KEYWORD'] in text and \
+            configs['en']['LESSONS_HEADER_KEYWORD'] in text and \
+            configs['en']['TOTAL_TIME_KEYWORD'] in text:
+        en_score += 3
+
+    if configs['ru']['MODULE_KEYWORD'] in text and \
+            configs['ru']['LESSONS_HEADER_KEYWORD'] in text and \
+            configs['ru']['TOTAL_TIME_KEYWORD'] in text:
+        ru_score += 3
+
+    # Fallback checks if the above more specific checks yield no primary result
+    if en_score == 0 and ru_score == 0:
+        if configs['en']['MODULE_KEYWORD'] in text: en_score += 1
+        if configs['ru']['MODULE_KEYWORD'] in text: ru_score += 1
+        if configs['en']['TIME_KEYWORD'] in text: en_score += 1  # Check a common sub-item
+        if configs['ru']['TIME_KEYWORD'] in text: ru_score += 1
+
+    if en_score > ru_score and en_score > 0:
+        return 'en'
+    elif ru_score > en_score and ru_score > 0:
+        return 'ru'
+    elif en_score > 0:  # If scores are tied but English had some hits
+        return 'en'
+    elif ru_score > 0:  # If scores are tied but Russian had some hits
+        return 'ru'
+
+    return 'ru'  # Default language if still ambiguous
+
+
 def extract_float_time(time_str_from_new):
-    """
-    Extracts a float number of hours from a time string like "1 час", "0.5 часа".
-    Returns 0.0 if time_str_from_new is None or cannot be parsed.
-    """
     if not time_str_from_new:
         return 0.0
     match = re.search(r'([\d,\.]+)', time_str_from_new)
@@ -134,84 +225,73 @@ def extract_float_time(time_str_from_new):
     return 0.0
 
 
-def format_lesson_time_display(time_float):
-    """
-    Formats lesson time for display, e.g., "1 час", "0.5 часа".
-    """
+def format_lesson_time_display(time_float, lang_cfg):
+    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
     if time_float == 1.0:
-        return "1 час"
-    # For 0.5, 1.5, etc., or other whole numbers not equal to 1.
-    # text_old uses "0.5 часа", "1.5 часа"
-    # For simplicity, and matching the common pattern in text_old lesson times
-    if str(time_float).endswith('.0'):
-        num = int(time_float)
-        if num == 1:
-            return f"{num} час"
-        return f"{num} часа"  # e.g. 2 часа
-    return f"{time_float} часа"
+        return f"1 {lang_cfg['TIME_UNIT_SINGULAR']}"
+    else:
+        return f"{num_str} {lang_cfg['TIME_UNIT_DECIMAL_PLURAL']}"
 
 
-def format_total_time_display(time_float):
-    """
-    Formats total module or program time, e.g., "6.5 часов", "12 часов".
-    """
-    # text_old examples: "6.5 часов", "5.5 часов", "12 часов"
-    if str(time_float).endswith('.0'):
-        return f"{int(time_float)} часов"
-    return f"{time_float} часов"
+def format_total_time_display(time_float, lang_cfg):
+    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
+    return f"{num_str} {lang_cfg['TIME_UNIT_GENERAL_PLURAL']}"
 
 
-def transform_text_new_to_old(new_text):
-    """
-    Transforms text from the 'new_text' format to the 'text_old' format.
+def transform_text_new_to_old(new_text, lang_configs=LANG_CONFIG):
+    detected_lang = detect_language(new_text, lang_configs)
+    lang_cfg = lang_configs[detected_lang]
 
-    Args:
-        new_text (str): The input text in the new Markdown-like format.
-
-    Returns:
-        str: The transformed text in the old format.
-    """
     output_lines = []
 
-    module_pattern = re.compile(
-        r"## (Модуль (\d+): ([^\n]+))\n"    # Module Title (full, number, name)
-    	r"\s*"                              # ALLOW OPTIONAL WHITESPACE/BLANK LINES HERE
-        r"\*\*Общее время:\*\* [^\n]+\n"     # Original total time
-    	r"\*\*Количество уроков:\*\* (\d+)\n\n" # Original lesson count
-    	r"### Уроки\n"
-    	r"([\s\S]*?)"                       # Lessons block
-        r"(?=\n## |\Z)",                    # Lookahead
-        re.MULTILINE
-    )
+    module_header_parts = [
+        rf"## ({lang_cfg['MODULE_KEYWORD']} (\d+): ([^\n]+))\n",
+        r"\n",
+        rf"\*\*{lang_cfg['TOTAL_TIME_KEYWORD']}:\*\* [^\n]+\n",
+        rf"\*\*{lang_cfg['LESSONS_COUNT_KEYWORD']}:\*\* (\d+)\n",
+        r"\n",
+        rf"### {lang_cfg['LESSONS_HEADER_KEYWORD']}\n"
+    ]
+    lessons_block_capture_part = r"([\s\S]*?)"  # Group 5 for lessons_block
+    lookahead_part = r"(?=\n## |\Z)"
+    module_pattern_str = "".join(module_header_parts) + lessons_block_capture_part + lookahead_part
 
-    lesson_pattern = re.compile(
-        r"^- \*\*(.*?)\*\*\n"                                     # Group 1: Lesson Title
-        # Optional fields now robustly handle line endings:
-        r"(?:\s+- \*\*Время:\*\* ([^\n\r]*)(?:\r?\n|$))?"          # Group 2: Time text
-        r"(?:\s+- \*\*Проверка знаний:\*\* ([^\n\r]*)(?:\r?\n|$))?"  # Group 3: Knowledge Check text
-        r"(?:\s+- \*\*Источник:\*\* ([^\n\r]*)(?:\r?\n|$))?",     # Group 4: Source text
-        re.MULTILINE
-    )
+    try:
+        module_pattern = re.compile(module_pattern_str, re.MULTILINE)
+    except Exception as e:
+        # In a production setting, you might want to log this error more formally
+        # print(f"ERROR: Failed to compile module_pattern: {e}")
+        return ""  # Or raise an exception
 
-    overall_total_lessons = 0
-    overall_total_time_float = 0.0
-    module_count = 0
+    lesson_item_prefix_re = lang_cfg['LESSON_ITEM_PREFIX_RE']
+    lesson_title_regex = rf"{lesson_item_prefix_re}\s*\*\*(.*?)\*\*\n"
+    time_detail_regex = rf"(?:\s+- \*\*{lang_cfg['TIME_KEYWORD']}:\*\* ([^\n\r]*)(?:\r?\n|$))?"
+    assessment_detail_regex = rf"(?:\s+- \*\*{lang_cfg['ASSESSMENT_KEYWORD']}:\*\* ([^\n\r]*)(?:\r?\n|$))?"
+    source_detail_regex = rf"(?:\s+- \*\*{lang_cfg['SOURCE_KEYWORD']}:\*\* ([^\n\r]*)(?:\r?\n|$))?"
+    lesson_pattern_str = (lesson_title_regex +
+                          time_detail_regex +
+                          assessment_detail_regex +
+                          source_detail_regex)
+    try:
+        lesson_pattern = re.compile(lesson_pattern_str, re.MULTILINE)
+    except Exception as e:
+        # print(f"ERROR: Failed to compile lesson_pattern: {e}")
+        return ""
 
+    module_match_count = 0
     for module_match in module_pattern.finditer(new_text):
-        module_count += 1
+        module_match_count += 1
+
         full_module_title = module_match.group(1).strip()
-        module_num = module_match.group(2)
-        # module_name_part = module_match.group(3).strip() # Not directly used if full_module_title is used
-        # declared_lesson_count = int(module_match.group(4)) # Can be used for verification
+        module_num_str = module_match.group(2)
         lessons_block = module_match.group(5)
 
-        # Special handling for Module 1 title
-        if full_module_title.startswith("Модуль 1:"):
-            output_lines.append(f"{full_module_title}. Vogue Lash Spa")
-        else:
-            output_lines.append(full_module_title)
+        current_module_title_for_output = full_module_title
+        if module_num_str == "1" and lang_cfg.get('SPECIAL_SUFFIX_MODULE_1'):
+            current_module_title_for_output = f"{full_module_title}{lang_cfg['SPECIAL_SUFFIX_MODULE_1']}"
 
-        output_lines.append("")  # Empty line after module title
+        output_lines.append(current_module_title_for_output)
+        output_lines.append("")
 
         module_lessons_text = []
         lesson_counter_in_module = 0
@@ -219,66 +299,74 @@ def transform_text_new_to_old(new_text):
 
         for lesson_match in lesson_pattern.finditer(lessons_block):
             lesson_counter_in_module += 1
-            overall_total_lessons += 1
-
             lesson_title = lesson_match.group(1).strip()
             time_str = lesson_match.group(2).strip() if lesson_match.group(2) else None
             proverka_str = lesson_match.group(3).strip() if lesson_match.group(3) else None
             istochnik_str = lesson_match.group(4).strip() if lesson_match.group(4) else None
 
-            module_lessons_text.append(f"Урок {module_num}.{lesson_counter_in_module}: “{lesson_title}”")
-            module_lessons_text.append("")  # Empty line after lesson title
+            module_lessons_text.append(
+                f"{lang_cfg['OUTPUT_LESSON_PREFIX']} {module_num_str}.{lesson_counter_in_module}: “{lesson_title}”")
+            module_lessons_text.append("")
 
-            # Проверка знаний
             if proverka_str:
-                # Replace ", " with " + " for multiple items like "Видео, Тест"
                 proverka_formatted = proverka_str.replace(", ", " + ")
-                module_lessons_text.append(f"- Проверка знаний: {proverka_formatted}")
+                module_lessons_text.append(f"- {lang_cfg['OUTPUT_ASSESSMENT']}: {proverka_formatted}")
             else:
-                module_lessons_text.append("- Проверка знаний: [ДАННЫЕ ОТСУТСТВУЮТ]")
+                module_lessons_text.append(f"- {lang_cfg['OUTPUT_ASSESSMENT']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
 
-            # Наличие контента (missing in new_text)
-            module_lessons_text.append("- Наличие контента: [ДАННЫЕ О НАЛИЧИИ КОНТЕНТА ОТСУТСТВУЮТ]")
+            module_lessons_text.append(
+                f"- {lang_cfg['OUTPUT_CONTENT_AVAIL']}: {lang_cfg['PLACEHOLDER_CONTENT_MISSING']}")
 
-            # Источник информации
             if istochnik_str:
-                if istochnik_str == "Создано с нуля":
-                    istochnik_formatted = "Создание с нуля"
-                elif istochnik_str == "Существующие инструкции":
-                    istochnik_formatted = "Существующая инструкция"
+                if istochnik_str == lang_cfg.get('MAP_SOURCE_CREATED'):
+                    istochnik_formatted = lang_cfg.get('MAP_SOURCE_CREATED_TO')
+                elif istochnik_str == lang_cfg.get('MAP_SOURCE_EXISTING_INSTRUCTIONS'):
+                    istochnik_formatted = lang_cfg.get('MAP_SOURCE_EXISTING_INSTRUCTIONS_TO')
+                elif istochnik_str == lang_cfg.get('MAP_SOURCE_EXISTING_MATERIALS'):
+                    istochnik_formatted = lang_cfg.get('MAP_SOURCE_EXISTING_MATERIALS_TO')
                 else:
                     istochnik_formatted = istochnik_str
-                module_lessons_text.append(f"- Источник информации: {istochnik_formatted}")
+                module_lessons_text.append(f"- {lang_cfg['OUTPUT_SOURCE_INFO']}: {istochnik_formatted}")
             else:
-                module_lessons_text.append("- Источник информации: [ДАННЫЕ ОТСУТСТВУЮТ]")
+                module_lessons_text.append(
+                    f"- {lang_cfg['OUTPUT_SOURCE_INFO']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
 
-            # Время
             lesson_time_float = extract_float_time(time_str)
             current_module_total_time_float += lesson_time_float
-            if time_str:  # Ensure there was a time string to format
-                module_lessons_text.append(f"- Время: {format_lesson_time_display(lesson_time_float)}")
+            if time_str:
+                module_lessons_text.append(
+                    f"- {lang_cfg['OUTPUT_TIME']}: {format_lesson_time_display(lesson_time_float, lang_cfg)}")
             else:
-                module_lessons_text.append("- Время: [ДАННЫЕ ОТСУТСТВУЮТ]")
+                module_lessons_text.append(f"- {lang_cfg['OUTPUT_TIME']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
 
-            module_lessons_text.append("")  # Empty line after each lesson's details
+            module_lessons_text.append("")
 
-        # Add module total time
-        output_lines.append(f"Общее время на модуль: {format_total_time_display(current_module_total_time_float)}")
-        output_lines.append("")  # Empty line
+        # Add a check for no lessons found if lessons_block was not empty
+        # if lesson_counter_in_module == 0 and len(lessons_block.strip()) > 0 :
+        #     print(f"INFO: No lessons found for non-empty lessons_block in module {module_num_str}.") # Or log this
 
-        # Add all parsed lessons for this module
-        output_lines.extend(module_lessons_text)
+        output_lines.append(
+            f"{lang_cfg['OUTPUT_MODULE_TOTAL_TIME']}: {format_total_time_display(current_module_total_time_float, lang_cfg)}")
+        output_lines.append("")
 
-        overall_total_time_float += current_module_total_time_float
+        if module_lessons_text and module_lessons_text[-1] == "":
+            output_lines.extend(module_lessons_text[:-1])
+        else:
+            output_lines.extend(module_lessons_text)
 
-    # Add "Итог по всей программе"
-    # output_lines.append("Итог по всей программе:")
-    # output_lines.append("")
-    # output_lines.append(f"- Всего модулей: {module_count}")
-    # output_lines.append(f"- Всего уроков: {overall_total_lessons}")
-    # output_lines.append(f"- Общее время на реализацию программы: {format_total_time_display(overall_total_time_float)}")
+    # if module_match_count == 0:
+    #     print("INFO: No modules were found in the input text.") # Or log this
 
-    return "\n".join(output_lines)
+    final_text_output = ""
+    if output_lines:
+        temp_output = "\n".join(output_lines)
+        final_text_output = re.sub(r'\n\n+', '\n\n', temp_output).strip()
+        if final_text_output:
+            final_text_output += "\n"
+    # else:
+    #     print("INFO: No output generated as no modules/lessons were parsed.") # Or log this
+
+    return final_text_output
 
 def get_canonical_field(raw_key: str) -> Optional[str]:
     raw_key_lower = raw_key.lower().strip()
@@ -313,11 +401,11 @@ def parse_content_available_versatile(text_val: str) -> dict:
     if "%" in text_val: return {"type": "percentage", "text": text_val.strip()}
     return {"type": "yes", "text": "100%"}
 
-def parse_training_plan_from_string(content_str: str) -> Optional[TrainingPlanDetails]:
+def parse_training_plan_from_string(content_str: str, main_table_title: str) -> Optional[TrainingPlanDetails]:
     content_str = transform_text_new_to_old(content_str)
     if not content_str or not content_str.strip(): return None
 
-    plan_data = {"mainTitle": None, "sections": []}
+    plan_data = {"mainTitle": main_table_title, "sections": []}
     current_section_dict: Optional[Dict[str, Any]] = None
     current_lesson_dict: Optional[Dict[str, Any]] = None
     section_id_counter = 0 # This will be used for "№" + counter
@@ -484,7 +572,7 @@ async def get_microproduct_detail_from_db(
 
         details_data: Optional[TrainingPlanDetails] = None
         if microproduct_content_str:
-            parsed_details_obj = parse_training_plan_from_string(microproduct_content_str)
+            parsed_details_obj = parse_training_plan_from_string(microproduct_content_str, project_name_from_db)
             if parsed_details_obj: details_data = parsed_details_obj
             else: details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_name_from_db} not parsable/empty", sections=[])
         else: details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_name_from_db}", sections=[])
@@ -513,7 +601,7 @@ async def download_micro_product_pdf_from_db( document_slug: str, onyx_user_id: 
     if not target_row: raise HTTPException(status_code=404, detail=f"PDF def not found: {document_slug}")
 
     content_str = target_row.get('microproduct_content')
-    details_pdf: Optional[TrainingPlanDetails] = parse_training_plan_from_string(content_str) if content_str else None
+    details_pdf: Optional[TrainingPlanDetails] = parse_training_plan_from_string(content_str, pn) if content_str else None
     if not details_pdf: details_pdf = TrainingPlanDetails(mainTitle=f"No/unparsable content for PDF of '{mp_name_for_pdf}'", sections=[])
     
     pdf_cache_fn, user_friendly_fn = f"{document_slug}.pdf", f"{create_slug(mp_name_for_pdf)}.pdf"
