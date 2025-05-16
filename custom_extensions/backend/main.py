@@ -151,7 +151,7 @@ LANG_CONFIG = {
         'TIME_UNIT_DECIMAL_PLURAL': "часа",
         'TIME_UNIT_GENERAL_PLURAL': "часов",
         'LESSON_ITEM_PREFIX_RE': r"^-",
-        'SPECIAL_SUFFIX_MODULE_1': ". Vogue Lash Spa", # Restored for original text_old compliance
+        'SPECIAL_SUFFIX_MODULE_1': "", # Restored for original text_old compliance
         'SUMMARY_PROGRAM_TITLE': "Итог по всей программе:",
         'SUMMARY_TOTAL_MODULES': "Всего модулей",
         'SUMMARY_TOTAL_LESSONS': "Всего уроков",
