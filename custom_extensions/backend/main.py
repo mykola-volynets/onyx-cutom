@@ -148,8 +148,8 @@ LANG_CONFIG = {
         'MAP_SOURCE_EXISTING_MATERIALS': "Существующие материалы",
         'MAP_SOURCE_EXISTING_MATERIALS_TO': "Существующие материалы",
         'TIME_UNIT_SINGULAR': "час",
-        'TIME_UNIT_DECIMAL_PLURAL': "часа",
-        'TIME_UNIT_GENERAL_PLURAL': "часов",
+        'TIME_UNIT_DECIMAL_PLURAL': "часа", # Used for 2-4, X.Y hours in lesson display
+        'TIME_UNIT_GENERAL_PLURAL': "часов", # Used for 0, 5+ hours, and module totals
         'LESSON_ITEM_PREFIX_RE': r"^-",
         'SPECIAL_SUFFIX_MODULE_1': ". Vogue Lash Spa"
     },
@@ -176,8 +176,8 @@ LANG_CONFIG = {
         'MAP_SOURCE_EXISTING_MATERIALS': "Existing materials",
         'MAP_SOURCE_EXISTING_MATERIALS_TO': "Existing materials",
         'TIME_UNIT_SINGULAR': "hour",
-        'TIME_UNIT_DECIMAL_PLURAL': "hours",
-        'TIME_UNIT_GENERAL_PLURAL': "hours",
+        'TIME_UNIT_DECIMAL_PLURAL': "hours", # Used for X.Y hours in lesson display
+        'TIME_UNIT_GENERAL_PLURAL': "hours", # Used for totals and integer hours > 1
         'LESSON_ITEM_PREFIX_RE': r"^\d+\.",
         'SPECIAL_SUFFIX_MODULE_1': ""
     }
@@ -612,36 +612,42 @@ async def download_micro_product_pdf_from_db( document_slug: str, onyx_user_id: 
         if current_pdf_slug == document_slug: 
             target_row = r_dict
             mp_name_for_pdf = mpt or pn
-            project_name_for_pdf = pn # Capture project name for title
+            project_name_for_pdf = pn
             break
     if not target_row: raise HTTPException(status_code=404, detail=f"PDF def not found: {document_slug}")
 
     content_str = target_row.get('microproduct_content')
-    # Pass project_name_for_pdf as main_table_title for PDF context
     details_pdf: Optional[TrainingPlanDetails] = parse_training_plan_from_string(content_str, project_name_for_pdf) if content_str else None
-    print('details_pdf', details_pdf)
+    # print('details_pdf', details_pdf) # Keep for debugging if needed
     
-    if not details_pdf: 
-        # If parsing failed or no content, create a default TrainingPlanDetails with the detected language if possible
-        detected_lang_for_empty_pdf = 'ru'
-        if content_str: # Try to detect language even if parsing to TrainingPlanDetails failed
-            _, detected_lang_for_empty_pdf = transform_text_new_to_old(content_str)
+    detected_lang_for_pdf = 'ru' # Default
+    if details_pdf and details_pdf.detectedLanguage:
+        detected_lang_for_pdf = details_pdf.detectedLanguage
+    elif content_str: # Try to detect language if parsing failed but content exists
+        _, detected_lang_for_pdf = transform_text_new_to_old(content_str)
 
+    if not details_pdf: 
         details_pdf = TrainingPlanDetails(
             mainTitle=f"No/unparsable content for PDF of '{mp_name_for_pdf}'", 
             sections=[],
-            detectedLanguage=detected_lang_for_empty_pdf
+            detectedLanguage=detected_lang_for_pdf
         )
     
     pdf_cache_fn, user_friendly_fn = f"{document_slug}.pdf", f"{create_slug(mp_name_for_pdf)}.pdf"
     try:
-        # Ensure context_data_for_pdf includes the detected language
         context_data_for_pdf = details_pdf.model_dump(exclude_none=True) if details_pdf else {}
-        if 'details' not in context_data_for_pdf: # Ensure 'details' key exists for template
+        
+        # Ensure 'details' key structure for the template and add language settings
+        if 'details' not in context_data_for_pdf:
              context_data_for_pdf = {'details': context_data_for_pdf}
-        if 'detectedLanguage' not in context_data_for_pdf['details'] and details_pdf:
-            context_data_for_pdf['details']['detectedLanguage'] = details_pdf.detectedLanguage or 'ru'
-        print('CUSTOM LOG', context_data_for_pdf)
+
+        current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru'])
+        context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf
+        context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg['TIME_UNIT_SINGULAR']
+        context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg['TIME_UNIT_DECIMAL_PLURAL']
+        context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg['TIME_UNIT_GENERAL_PLURAL']
+        
+        # print('CUSTOM LOG PDF Context:', context_data_for_pdf) # Keep for debugging
         pdf_path = await generate_pdf_from_html_template("training_plan_pdf_template.html", context_data_for_pdf, pdf_cache_fn)
         if not os.path.exists(pdf_path): raise HTTPException(status_code=500, detail="PDF file not found post-gen.")
         return FileResponse(path=pdf_path, filename=user_friendly_fn, media_type='application/pdf')

@@ -79,14 +79,17 @@ interface TrainingPlanTableProps {
   initialData?: TrainingPlanData | null;
 }
 
-// Translations for column headers
-const columnHeaders = {
+// Translations for column headers AND time units
+const localizationConfig = {
   ru: {
     moduleAndLessons: "Модуль и уроки",
     knowledgeCheck: "Проверка знаний",
     contentAvailability: "Наличие контента",
     source: "Источник информации",
     time: "Время",
+    timeUnitSingular: "ч",
+    timeUnitDecimalPlural: "ч", // For values like 1.5, 2.5, 21, 22-24, 31, 32-34 etc.
+    timeUnitGeneralPlural: "ч", // For 0, 5-20 and others ending in 0 or 5-9
   },
   en: {
     moduleAndLessons: "Module and Lessons",
@@ -94,24 +97,59 @@ const columnHeaders = {
     contentAvailability: "Content Availability",
     source: "Information Source",
     time: "Time",
+    timeUnitSingular: "h",
+    timeUnitDecimalPlural: "h",
+    timeUnitGeneralPlural: "h",
   },
+};
+
+// Helper function for Russian pluralization of hours (optional, but good for accuracy)
+// This is a simplified version. A more robust one would handle all cases.
+const getRussianHourUnit = (hours: number, units: typeof localizationConfig['ru']) => {
+  const h_int = Math.floor(hours);
+  const h_mod10 = h_int % 10;
+  const h_mod100 = h_int % 100;
+
+  if (hours !== h_int) { // Decimal
+    return units.timeUnitDecimalPlural;
+  }
+  if (h_mod100 >= 11 && h_mod100 <= 14) {
+    return units.timeUnitGeneralPlural;
+  }
+  if (h_mod10 === 1) {
+    return units.timeUnitSingular;
+  }
+  if (h_mod10 >= 2 && h_mod10 <= 4) {
+    return units.timeUnitDecimalPlural;
+  }
+  return units.timeUnitGeneralPlural;
 };
 
 
 const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) => {
   const iconBaseColor = '#FF1414'; 
-  const dataToDisplay = initialData; // Already expecting TrainingPlanData
+  const dataToDisplay = initialData;
   const sections = dataToDisplay?.sections;
   const mainTitle = dataToDisplay?.mainTitle;
 
-  // Determine language for headers, default to 'ru'
   const lang = dataToDisplay?.detectedLanguage === 'en' ? 'en' : 'ru';
-  const headers = columnHeaders[lang];
+  const localized = localizationConfig[lang];
 
 
   if (!dataToDisplay || !sections || sections.length === 0) {
      return <div className="p-8 text-center">No training plan data available.</div>;
   }
+  
+  const formatHoursDisplay = (hours: number, language: 'ru' | 'en') => {
+    if (hours <= 0) return '-';
+    const currentUnits = localizationConfig[language];
+    if (language === 'en') {
+      return `${hours}${hours === 1 ? currentUnits.timeUnitSingular : currentUnits.timeUnitGeneralPlural}`;
+    }
+    // Russian specific pluralization
+    return `${hours}${getRussianHourUnit(hours, currentUnits as typeof localizationConfig['ru'])}`;
+  };
+
 
   return (
     <div className="font-['Inter',_sans-serif] bg-gray-50">
@@ -122,13 +160,12 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) =>
             </div>
          )}
 
-        {/* MODIFIED Headers to use dynamic translations */}
         <div className="grid grid-cols-10 gap-0 text-gray-500 p-4 text-xs font-semibold items-center border-b border-gray-200 uppercase tracking-wider">
-            <div className="col-span-10 sm:col-span-4 pr-2 border-r border-gray-300">{headers.moduleAndLessons}</div>
-            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">{headers.knowledgeCheck}</div>
-            <div className="col-span-5 sm:col-span-1 text-left px-2 border-r border-gray-300">{headers.contentAvailability}</div>
-            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">{headers.source}</div>
-            <div className="col-span-5 sm:col-span-1 text-center px-2">{headers.time}</div>
+            <div className="col-span-10 sm:col-span-4 pr-2 border-r border-gray-300">{localized.moduleAndLessons}</div>
+            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">{localized.knowledgeCheck}</div>
+            <div className="col-span-5 sm:col-span-1 text-left px-2 border-r border-gray-300">{localized.contentAvailability}</div>
+            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">{localized.source}</div>
+            <div className="col-span-5 sm:col-span-1 text-center px-2">{localized.time}</div>
         </div>
 
         <div className="text-sm">
@@ -143,7 +180,10 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) =>
                       <div className="w-4 flex justify-center"> 
                         <NewClockIcon color={iconBaseColor} className="w-4 h-4"/>
                       </div>
-                      <span style={{ color: iconBaseColor }} className="flex-grow text-left">{section.totalHours}ч</span> 
+                      {/* Updated Section Hours */}
+                      <span style={{ color: iconBaseColor }} className="flex-grow text-left">
+                        {formatHoursDisplay(section.totalHours, lang)}
+                      </span> 
                   </div>
                </div>
               {section.lessons.map((lesson: Lesson, lessonIndex: number) => (
@@ -162,7 +202,10 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) =>
                          <div className="w-4 flex justify-center">
                             <NewClockIcon color={iconBaseColor} className="w-4 h-4" />
                          </div>
-                         <span className="flex-grow text-left">{lesson.hours > 0 ? `${lesson.hours}ч` : '-'}</span>
+                         {/* Updated Lesson Hours */}
+                         <span className="flex-grow text-left">
+                           {formatHoursDisplay(lesson.hours, lang)}
+                         </span>
                       </div>
                     </div>
                 ))}
@@ -174,3 +217,4 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) =>
   );
 };
 export default TrainingPlanTable;
+
