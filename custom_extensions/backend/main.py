@@ -146,12 +146,16 @@ LANG_CONFIG = {
         'MAP_SOURCE_EXISTING_INSTRUCTIONS': "Существующие инструкции",
         'MAP_SOURCE_EXISTING_INSTRUCTIONS_TO': "Существующая инструкция",
         'MAP_SOURCE_EXISTING_MATERIALS': "Существующие материалы",
-        'MAP_SOURCE_EXISTING_MATERIALS_TO': "Существующие материалы",
+        'MAP_SOURCE_EXISTING_MATERIALS_TO': "Существующие материалы", # Or "Существующая инструкция"
         'TIME_UNIT_SINGULAR': "час",
-        'TIME_UNIT_DECIMAL_PLURAL': "часа", # Used for 2-4, X.Y hours in lesson display
-        'TIME_UNIT_GENERAL_PLURAL': "часов", # Used for 0, 5+ hours, and module totals
+        'TIME_UNIT_DECIMAL_PLURAL': "часа",
+        'TIME_UNIT_GENERAL_PLURAL': "часов",
         'LESSON_ITEM_PREFIX_RE': r"^-",
-        'SPECIAL_SUFFIX_MODULE_1': ". Vogue Lash Spa"
+        'SPECIAL_SUFFIX_MODULE_1': ". Vogue Lash Spa", # Restored for original text_old compliance
+        'SUMMARY_PROGRAM_TITLE': "Итог по всей программе:",
+        'SUMMARY_TOTAL_MODULES': "Всего модулей",
+        'SUMMARY_TOTAL_LESSONS': "Всего уроков",
+        'SUMMARY_TOTAL_PROGRAM_TIME': "Общее время на реализацию программы"
     },
     'en': {
         'MODULE_KEYWORD': "Module",
@@ -176,101 +180,107 @@ LANG_CONFIG = {
         'MAP_SOURCE_EXISTING_MATERIALS': "Existing materials",
         'MAP_SOURCE_EXISTING_MATERIALS_TO': "Existing materials",
         'TIME_UNIT_SINGULAR': "hour",
-        'TIME_UNIT_DECIMAL_PLURAL': "hours", # Used for X.Y hours in lesson display
-        'TIME_UNIT_GENERAL_PLURAL': "hours", # Used for totals and integer hours > 1
+        'TIME_UNIT_DECIMAL_PLURAL': "hours",
+        'TIME_UNIT_GENERAL_PLURAL': "hours",
         'LESSON_ITEM_PREFIX_RE': r"^\d+\.",
-        'SPECIAL_SUFFIX_MODULE_1': ""
+        'SPECIAL_SUFFIX_MODULE_1': "",
+        'SUMMARY_PROGRAM_TITLE': "Program Summary:",
+        'SUMMARY_TOTAL_MODULES': "Total modules",
+        'SUMMARY_TOTAL_LESSONS': "Total lessons",
+        'SUMMARY_TOTAL_PROGRAM_TIME': "Total program time"
     }
 }
 
-
-def detect_language(text: str, configs: Dict[str, Dict[str, str]]) -> str: # Added type hint for clarity
+# --- Helper Functions (should replace existing ones in your script if different) ---
+def detect_language(text: str, configs: Dict[str, Dict[str, str]]) -> str:
     en_score = 0
     ru_score = 0
-    # Check for prominent keywords from each language
-    # More specific checks first
     if configs['en']['MODULE_KEYWORD'] in text and \
-            configs['en']['LESSONS_HEADER_KEYWORD'] in text and \
-            configs['en']['TOTAL_TIME_KEYWORD'] in text:
+       configs['en']['LESSONS_HEADER_KEYWORD'] in text and \
+       configs['en']['TOTAL_TIME_KEYWORD'] in text:
         en_score += 3
-
     if configs['ru']['MODULE_KEYWORD'] in text and \
-            configs['ru']['LESSONS_HEADER_KEYWORD'] in text and \
-            configs['ru']['TOTAL_TIME_KEYWORD'] in text:
+       configs['ru']['LESSONS_HEADER_KEYWORD'] in text and \
+       configs['ru']['TOTAL_TIME_KEYWORD'] in text:
         ru_score += 3
+    if en_score == 0 and ru_score == 0: # Fallback checks
+        if configs['en']['MODULE_KEYWORD'] in text: en_score +=1
+        if configs['ru']['MODULE_KEYWORD'] in text: ru_score +=1
+        if configs['en']['TIME_KEYWORD'] in text: en_score +=1
+        if configs['ru']['TIME_KEYWORD'] in text: ru_score +=1
+    
+    if en_score > ru_score and en_score > 0: return 'en'
+    elif ru_score > en_score and ru_score > 0: return 'ru'
+    elif en_score > 0 : return 'en'
+    elif ru_score > 0 : return 'ru'
+    return 'ru' # Default
 
-    # Fallback checks if the above more specific checks yield no primary result
-    if en_score == 0 and ru_score == 0:
-        if configs['en']['MODULE_KEYWORD'] in text: en_score += 1
-        if configs['ru']['MODULE_KEYWORD'] in text: ru_score += 1
-        if configs['en']['TIME_KEYWORD'] in text: en_score += 1  # Check a common sub-item
-        if configs['ru']['TIME_KEYWORD'] in text: ru_score += 1
+def extract_float_time(time_str_from_new: Optional[str]) -> float:
+    if not time_str_from_new: return 0.0
+    match = re.search(r'([\d,\.]+)', time_str_from_new)
+    if match:
+        num_str = match.group(1).replace(',', '.')
+        try: return float(num_str)
+        except ValueError: return 0.0
+    return 0.0
 
-    if en_score > ru_score and en_score > 0:
-        return 'en'
-    elif ru_score > en_score and ru_score > 0:
-        return 'ru'
-    elif en_score > 0:  # If scores are tied but English had some hits
-        return 'en'
-    elif ru_score > 0:  # If scores are tied but Russian had some hits
-        return 'ru'
+def format_lesson_time_display(time_float: float, lang_cfg: Dict[str, str]) -> str:
+    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
+    if time_float == 1.0: return f"1 {lang_cfg['TIME_UNIT_SINGULAR']}"
+    else: return f"{num_str} {lang_cfg['TIME_UNIT_DECIMAL_PLURAL']}"
 
-    return 'ru'  # Default language if still ambiguous
+def format_total_time_display(time_float: float, lang_cfg: Dict[str, str]) -> str:
+    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
+    return f"{num_str} {lang_cfg['TIME_UNIT_GENERAL_PLURAL']}"
 
-# MODIFIED transform_text_new_to_old to return detected_lang as well
+# --- Main Transformation Function (Updated) ---
 def transform_text_new_to_old(new_text: str, lang_configs: Dict = LANG_CONFIG) -> tuple[str, str]:
     detected_lang = detect_language(new_text, lang_configs)
     lang_cfg = lang_configs[detected_lang]
-
     output_lines = []
 
+    # CRITICAL FIX: Use \s* for the space between Module Title and Total Time
     module_header_parts = [
-        rf"## ({lang_cfg['MODULE_KEYWORD']} (\d+): ([^\n]+))\n",
-        r"\n",
-        rf"\*\*{lang_cfg['TOTAL_TIME_KEYWORD']}:\*\* [^\n]+\n",
-        rf"\*\*{lang_cfg['LESSONS_COUNT_KEYWORD']}:\*\* (\d+)\n",
-        r"\n",
-        rf"### {lang_cfg['LESSONS_HEADER_KEYWORD']}\n"
+        rf"## ({lang_cfg['MODULE_KEYWORD']} (\d+): ([^\n]+))\n", 
+        r"\s*",  # Allows for zero or more whitespace chars (handles missing or present blank line)
+        rf"\*\*{lang_cfg['TOTAL_TIME_KEYWORD']}:\*\* [^\n]+\n",     
+        rf"\*\*{lang_cfg['LESSONS_COUNT_KEYWORD']}:\*\* (\d+)\n",   
+        r"\n",    # Requires a blank line between "Number of Lessons" and "### Lessons"
+        rf"### {lang_cfg['LESSONS_HEADER_KEYWORD']}\n"             
     ]
-    lessons_block_capture_part = r"([\s\S]*?)"  # Group 5 for lessons_block
+    lessons_block_capture_part = r"([\s\S]*?)" 
     lookahead_part = r"(?=\n## |\Z)"
     module_pattern_str = "".join(module_header_parts) + lessons_block_capture_part + lookahead_part
-
-    try:
-        module_pattern = re.compile(module_pattern_str, re.MULTILINE)
-    except Exception as e:
-        # print(f"ERROR: Failed to compile module_pattern: {e}")
-        return "", detected_lang  # Or raise an exception
+    
+    try: module_pattern = re.compile(module_pattern_str, re.MULTILINE)
+    except Exception: return "", detected_lang
 
     lesson_item_prefix_re = lang_cfg['LESSON_ITEM_PREFIX_RE']
     lesson_title_regex = rf"{lesson_item_prefix_re}\s*\*\*(.*?)\*\*\n"
     time_detail_regex = rf"(?:\s+- \*\*{lang_cfg['TIME_KEYWORD']}:\*\* ([^\n\r]*)(?:\r?\n|$))?"
     assessment_detail_regex = rf"(?:\s+- \*\*{lang_cfg['ASSESSMENT_KEYWORD']}:\*\* ([^\n\r]*)(?:\r?\n|$))?"
     source_detail_regex = rf"(?:\s+- \*\*{lang_cfg['SOURCE_KEYWORD']}:\*\* ([^\n\r]*)(?:\r?\n|$))?"
-    lesson_pattern_str = (lesson_title_regex +
-                          time_detail_regex +
-                          assessment_detail_regex +
-                          source_detail_regex)
-    try:
-        lesson_pattern = re.compile(lesson_pattern_str, re.MULTILINE)
-    except Exception as e:
-        # print(f"ERROR: Failed to compile lesson_pattern: {e}")
-        return "", detected_lang
+    lesson_pattern_str = (lesson_title_regex + time_detail_regex + 
+                          assessment_detail_regex + source_detail_regex)
+    try: lesson_pattern = re.compile(lesson_pattern_str, re.MULTILINE)
+    except Exception: return "", detected_lang
 
+    overall_total_lessons = 0
+    overall_program_time_float = 0.0
     module_match_count = 0
+
     for module_match in module_pattern.finditer(new_text):
         module_match_count += 1
-        # ... (rest of the loop remains the same as original)
         full_module_title = module_match.group(1).strip()
-        module_num_str = module_match.group(2)
-        lessons_block = module_match.group(5)
-
+        module_num_str = module_match.group(2)    
+        lessons_block = module_match.group(5) 
+        
         current_module_title_for_output = full_module_title
         if module_num_str == "1" and lang_cfg.get('SPECIAL_SUFFIX_MODULE_1'):
             current_module_title_for_output = f"{full_module_title}{lang_cfg['SPECIAL_SUFFIX_MODULE_1']}"
-
+        
         output_lines.append(current_module_title_for_output)
-        output_lines.append("")
+        output_lines.append("") 
 
         module_lessons_text = []
         lesson_counter_in_module = 0
@@ -283,88 +293,55 @@ def transform_text_new_to_old(new_text: str, lang_configs: Dict = LANG_CONFIG) -
             proverka_str = lesson_match.group(3).strip() if lesson_match.group(3) else None
             istochnik_str = lesson_match.group(4).strip() if lesson_match.group(4) else None
 
-            module_lessons_text.append(
-                f"{lang_cfg['OUTPUT_LESSON_PREFIX']} {module_num_str}.{lesson_counter_in_module}: “{lesson_title}”")
+            module_lessons_text.append(f"{lang_cfg['OUTPUT_LESSON_PREFIX']} {module_num_str}.{lesson_counter_in_module}: “{lesson_title}”")
             module_lessons_text.append("")
-
             if proverka_str:
                 proverka_formatted = proverka_str.replace(", ", " + ")
                 module_lessons_text.append(f"- {lang_cfg['OUTPUT_ASSESSMENT']}: {proverka_formatted}")
             else:
                 module_lessons_text.append(f"- {lang_cfg['OUTPUT_ASSESSMENT']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
-
-            module_lessons_text.append(
-                f"- {lang_cfg['OUTPUT_CONTENT_AVAIL']}: {lang_cfg['PLACEHOLDER_CONTENT_MISSING']}")
-
+            module_lessons_text.append(f"- {lang_cfg['OUTPUT_CONTENT_AVAIL']}: {lang_cfg['PLACEHOLDER_CONTENT_MISSING']}")
             if istochnik_str:
-                if istochnik_str == lang_cfg.get('MAP_SOURCE_CREATED'):
-                    istochnik_formatted = lang_cfg.get('MAP_SOURCE_CREATED_TO')
-                elif istochnik_str == lang_cfg.get('MAP_SOURCE_EXISTING_INSTRUCTIONS'):
-                    istochnik_formatted = lang_cfg.get('MAP_SOURCE_EXISTING_INSTRUCTIONS_TO')
-                elif istochnik_str == lang_cfg.get('MAP_SOURCE_EXISTING_MATERIALS'):
-                    istochnik_formatted = lang_cfg.get('MAP_SOURCE_EXISTING_MATERIALS_TO')
-                else:
-                    istochnik_formatted = istochnik_str
+                if istochnik_str == lang_cfg.get('MAP_SOURCE_CREATED'): istochnik_formatted = lang_cfg.get('MAP_SOURCE_CREATED_TO')
+                elif istochnik_str == lang_cfg.get('MAP_SOURCE_EXISTING_INSTRUCTIONS'): istochnik_formatted = lang_cfg.get('MAP_SOURCE_EXISTING_INSTRUCTIONS_TO')
+                elif istochnik_str == lang_cfg.get('MAP_SOURCE_EXISTING_MATERIALS'): istochnik_formatted = lang_cfg.get('MAP_SOURCE_EXISTING_MATERIALS_TO')
+                else: istochnik_formatted = istochnik_str
                 module_lessons_text.append(f"- {lang_cfg['OUTPUT_SOURCE_INFO']}: {istochnik_formatted}")
-            else:
-                module_lessons_text.append(
-                    f"- {lang_cfg['OUTPUT_SOURCE_INFO']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
-
+            else: module_lessons_text.append(f"- {lang_cfg['OUTPUT_SOURCE_INFO']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
             lesson_time_float = extract_float_time(time_str)
             current_module_total_time_float += lesson_time_float
-            if time_str:
-                module_lessons_text.append(
-                    f"- {lang_cfg['OUTPUT_TIME']}: {format_lesson_time_display(lesson_time_float, lang_cfg)}")
-            else:
-                module_lessons_text.append(f"- {lang_cfg['OUTPUT_TIME']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
-
+            if time_str: module_lessons_text.append(f"- {lang_cfg['OUTPUT_TIME']}: {format_lesson_time_display(lesson_time_float, lang_cfg)}")
+            else: module_lessons_text.append(f"- {lang_cfg['OUTPUT_TIME']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
             module_lessons_text.append("")
         
-        output_lines.append(
-            f"{lang_cfg['OUTPUT_MODULE_TOTAL_TIME']}: {format_total_time_display(current_module_total_time_float, lang_cfg)}")
-        output_lines.append("")
+        overall_total_lessons += lesson_counter_in_module
+        overall_program_time_float += current_module_total_time_float
 
+        output_lines.append(f"{lang_cfg['OUTPUT_MODULE_TOTAL_TIME']}: {format_total_time_display(current_module_total_time_float, lang_cfg)}")
+        output_lines.append("")
+        
         if module_lessons_text and module_lessons_text[-1] == "":
-            output_lines.extend(module_lessons_text[:-1])
+             output_lines.extend(module_lessons_text[:-1]) 
         else:
             output_lines.extend(module_lessons_text)
-
+    
+    # if module_match_count > 0: # Add summary if modules were processed
+        # if output_lines and output_lines[-1] != "": # Ensure a blank line before summary title if needed
+            # output_lines.append("")
+        # output_lines.append(lang_cfg['SUMMARY_PROGRAM_TITLE'])
+        # output_lines.append("")
+        # output_lines.append(f"- {lang_cfg['SUMMARY_TOTAL_MODULES']}: {module_match_count}")
+        # output_lines.append(f"- {lang_cfg['SUMMARY_TOTAL_LESSONS']}: {overall_total_lessons}")
+        # output_lines.append(f"- {lang_cfg['SUMMARY_TOTAL_PROGRAM_TIME']}: {format_total_time_display(overall_program_time_float, lang_cfg)}")
 
     final_text_output = ""
     if output_lines:
         temp_output = "\n".join(output_lines)
-        final_text_output = re.sub(r'\n\n+', '\n\n', temp_output).strip()
+        final_text_output = re.sub(r'\n\s*\n', '\n\n', temp_output).strip() 
         if final_text_output:
             final_text_output += "\n"
-    
+            
     return final_text_output, detected_lang
-
-
-def extract_float_time(time_str_from_new):
-    if not time_str_from_new:
-        return 0.0
-    match = re.search(r'([\d,\.]+)', time_str_from_new)
-    if match:
-        num_str = match.group(1).replace(',', '.')
-        try:
-            return float(num_str)
-        except ValueError:
-            return 0.0
-    return 0.0
-
-
-def format_lesson_time_display(time_float, lang_cfg):
-    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
-    if time_float == 1.0:
-        return f"1 {lang_cfg['TIME_UNIT_SINGULAR']}"
-    else:
-        return f"{num_str} {lang_cfg['TIME_UNIT_DECIMAL_PLURAL']}"
-
-
-def format_total_time_display(time_float, lang_cfg):
-    num_str = str(int(time_float)) if time_float == int(time_float) else str(time_float)
-    return f"{num_str} {lang_cfg['TIME_UNIT_GENERAL_PLURAL']}"
-
 
 def get_canonical_field(raw_key: str) -> Optional[str]:
     raw_key_lower = raw_key.lower().strip()
