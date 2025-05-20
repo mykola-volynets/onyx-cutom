@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 import httpx
 import traceback
 import json
+import uuid
 
 # --- PDF Generation and Settings (Keep your existing logic or dummy) ---
 # ... (Keep this section as is) ...
@@ -749,14 +750,17 @@ async def get_microproduct_detail_from_db(
         print(f"Error fetching microproduct detail: {e}"); traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Server error: {str(e)}")
 
-# ... (Existing PDF endpoint - already updated in previous step to handle JSONB) ...
 @app.get("/api/custom/pdf/{document_slug}", response_class=FileResponse,
          responses={404: {"model": ErrorDetail}, 500: {"model": ErrorDetail}})
-async def download_micro_product_pdf_from_db( document_slug: str, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
+async def download_micro_product_pdf_from_db(
+    document_slug: str, 
+    onyx_user_id: str = Depends(get_current_onyx_user_id), 
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
     print(f"PDF req for doc_slug: {document_slug}, user {onyx_user_id}")
     async with pool.acquire() as conn: 
         user_projects_raw = await conn.fetch(
-             "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at "
+            "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at "
             "FROM projects WHERE onyx_user_id = $1", 
             onyx_user_id
         )
@@ -764,7 +768,11 @@ async def download_micro_product_pdf_from_db( document_slug: str, onyx_user_id: 
     target_row_dict = None
     mp_name_for_pdf_context = "document"
     project_name_for_pdf_context = "Project"
-    user_friendly_pdf_filename = "document.pdf"
+    # Use a unique name for the generated PDF to avoid browser caching issues if filenames were reused
+    # Or, more simply for now, ensure the generated PDF always has a distinct name for this request.
+    # For true "no-caching" at the PDF generation step, we ensure it always regenerates.
+    user_friendly_pdf_filename = f"{create_slug(document_slug)}_{uuid.uuid4().hex[:8]}.pdf"
+
 
     for r_dict in [dict(r) for r in user_projects_raw]:
         pn_db = r_dict['project_name']
@@ -775,55 +783,84 @@ async def download_micro_product_pdf_from_db( document_slug: str, onyx_user_id: 
             target_row_dict = r_dict
             mp_name_for_pdf_context = r_dict.get('microproduct_name') or mpt_type_for_slug or pn_db
             project_name_for_pdf_context = pn_db
-            user_friendly_pdf_filename = f"{create_slug(mp_name_for_pdf_context)}.pdf"
+            # Update user_friendly_pdf_filename to be more specific if desired, but unique name helps avoid browser cache
+            user_friendly_pdf_filename = f"{create_slug(mp_name_for_pdf_context)}_{uuid.uuid4().hex[:8]}.pdf"
             break
             
-    if not target_row_dict: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"PDF definition not found: {document_slug}")
+    if not target_row_dict: 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"PDF definition not found for slug: {document_slug}")
 
     content_json = target_row_dict.get('microproduct_content')
     details_pdf: Optional[TrainingPlanDetails] = None
-    detected_lang_for_pdf = 'ru'
+    detected_lang_for_pdf = 'ru' # Default
 
-    if content_json: # Should be a dict if from JSONB and asyncpg decodes it
+    if content_json:
         try:
-            details_pdf = TrainingPlanDetails(**content_json)
+            details_pdf = TrainingPlanDetails(**content_json) # Assumes content_json is already a dict
             if details_pdf.detectedLanguage:
                  detected_lang_for_pdf = details_pdf.detectedLanguage
         except Exception as pydantic_e:
-            print(f"Error validating TrainingPlanDetails from DB JSON for PDF: {pydantic_e}")
-            # Attempt to re-parse if it's a string (should not happen with correct JSONB handling)
-            if isinstance(content_json, str): 
-                print(f"Warning: microproduct_content for PDF {document_slug} was a string, attempting re-parse.")
-                details_pdf = parse_training_plan_from_string(content_json, project_name_for_pdf_context)
-                if details_pdf and details_pdf.detectedLanguage:
-                    detected_lang_for_pdf = details_pdf.detectedLanguage
-
+            print(f"Error validating TrainingPlanDetails from DB JSON for PDF ({document_slug}): {pydantic_e}")
+            # Optionally, try to re-parse if it was a string for some reason (legacy data, etc.)
+            if isinstance(content_json, str):
+                try:
+                    parsed_from_str = parse_training_plan_from_string(content_json, project_name_for_pdf_context)
+                    if parsed_from_str:
+                        details_pdf = parsed_from_str
+                        if details_pdf.detectedLanguage:
+                            detected_lang_for_pdf = details_pdf.detectedLanguage
+                except Exception as parse_e:
+                     print(f"Could not re-parse content string for PDF ({document_slug}): {parse_e}")
+    
     if not details_pdf: 
         details_pdf = TrainingPlanDetails(
-            mainTitle=f"No/unparsable content for PDF of '{mp_name_for_pdf_context}'", 
+            mainTitle=f"Content for '{mp_name_for_pdf_context}' is unavailable or unparsable.", 
             sections=[],
             detectedLanguage=detected_lang_for_pdf
         )
-            
-    pdf_cache_fn = f"{document_slug}.pdf" 
+    
+    # Use a timestamp or UUID to ensure the generated PDF filename is unique for this request
+    # This helps if generate_pdf_from_html_template itself might have some internal caching based on output_filename
+    unique_output_filename = f"{document_slug}_{uuid.uuid4().hex[:12]}.pdf"
+    
     try:
-        if details_pdf is None:
+        if details_pdf is None: # Should be initialized by now
              details_pdf = TrainingPlanDetails(mainTitle="Error preparing PDF data", sections=[], detectedLanguage=detected_lang_for_pdf)
 
         context_data_for_pdf = {'details': details_pdf.model_dump(exclude_none=True)}
         
-        current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru'])
+        current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru']) # Default to 'ru' if lang not found
         context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf
         context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg['TIME_UNIT_SINGULAR']
         context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg['TIME_UNIT_DECIMAL_PLURAL']
         context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg['TIME_UNIT_GENERAL_PLURAL']
         
-        pdf_path = await generate_pdf_from_html_template("training_plan_pdf_template.html", context_data_for_pdf, pdf_cache_fn)
-        if not os.path.exists(pdf_path): raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="PDF file not found post-gen.")
-        return FileResponse(path=pdf_path, filename=user_friendly_pdf_filename, media_type='application/pdf')
+        # Always generate the PDF for each request
+        pdf_path = await generate_pdf_from_html_template(
+            "training_plan_pdf_template.html", 
+            context_data_for_pdf, 
+            unique_output_filename # Pass the unique filename to the generator
+        )
+
+        if not os.path.exists(pdf_path): 
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="PDF file not found after generation.")
+        
+        # The FileResponse itself doesn't cache aggressively, but client/proxies might.
+        # Forcing a unique user_friendly_pdf_filename for each download can also help.
+        return FileResponse(
+            path=pdf_path, 
+            filename=user_friendly_pdf_filename, # This is the name the user sees
+            media_type='application/pdf',
+            # Add headers to suggest no caching by browsers/proxies
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     except Exception as e:
-        print(f"Err PDF endpoint {document_slug}: {e}"); traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Err PDF gen: {str(e)[:200]}")
+        print(f"Error in PDF endpoint for {document_slug}: {e}"); traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error during PDF generation: {str(e)[:200]}")
 
 # ... (Existing delete-multiple and health_check endpoints - keep as is) ...
 @app.post("/api/custom/projects/delete-multiple", status_code=status.HTTP_200_OK)
