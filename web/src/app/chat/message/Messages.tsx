@@ -313,10 +313,11 @@ export const AIMessage = ({
 
     // 3. Construct the target URL with the key
     // const customProjectsUiDomain = process.env.NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN;
-    const customProjectsUiDomain = 'https://ml-dev.contentbuilder.ai';
+    // const customProjectsUiDomain = 'https://ml-dev.contentbuilder.ai';
+    // const targetUrl = `${customProjectsUiDomain}/custom-projects-ui/add-to-project?responseKey=${encodeURIComponent(storageKey)}`;
+    const customProjectsUiDomain = process.env.NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN || 'https://ml.contentbuilder.ai'; // Fallback is good practice
     const targetUrl = `${customProjectsUiDomain}/custom-projects-ui/add-to-project?responseKey=${encodeURIComponent(storageKey)}`;
-    console.log('NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN:', process.env.NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN);
-    // const targetUrl = `http://143.198.59.56:8088/custom-projects-ui/add-to-project?responseKey=${encodeURIComponent(storageKey)}`;
+    console.log('Using customProjectsUiDomain from env:', customProjectsUiDomain);
     console.log('Constructed targetUrl:', targetUrl);
   
     // 4. Open the new tab

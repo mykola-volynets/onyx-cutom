@@ -100,7 +100,7 @@ services:
         - NEXT_PUBLIC_DISABLE_LOGOUT=${NEXT_PUBLIC_DISABLE_LOGOUT:-}
         - NEXT_PUBLIC_THEME=${NEXT_PUBLIC_THEME:-}
         - NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED=${NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED:-}
-        - NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN=${NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN:-https://ml-dev.contentbuilder.ai}
+        - NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN=${NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN:-https://ml.contentbuilder.ai}
     depends_on:
       api_server: # Changed from service_healthy to service_started
         condition: service_started
@@ -110,7 +110,7 @@ services:
     environment:
       - INTERNAL_URL=http://api_server:8080
       - WEB_DOMAIN=${WEB_DOMAIN}
-      - NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN=${NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN:-https://ml-dev.contentbuilder.ai}
+      - NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN=${NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN:-https://ml.contentbuilder.ai}
     logging:
       driver: json-file
       options:
