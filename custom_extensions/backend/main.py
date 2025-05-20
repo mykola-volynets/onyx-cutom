@@ -10,9 +10,10 @@ from datetime import datetime
 from fastapi.responses import FileResponse, JSONResponse
 import httpx
 import traceback
-import json # Import json for serializing to JSONB
+import json
 
 # --- PDF Generation and Settings (Keep your existing logic or dummy) ---
+# ... (Keep this section as is) ...
 try:
     from app.services.pdf_generator import generate_pdf_from_html_template
     from app.core.config import settings
@@ -28,9 +29,10 @@ except ImportError:
         with open(dummy_path, "w") as f: f.write(f"Dummy PDF for {output_filename} using context: {str(context_data)[:200]}")
         return dummy_path
 
+
 # --- Constants & DB Setup ---
 CUSTOM_PROJECTS_DATABASE_URL = os.getenv("CUSTOM_PROJECTS_DATABASE_URL")
-ONYX_API_SERVER_URL = "http://api_server:8080" # Internal Docker service name for Onyx API
+ONYX_API_SERVER_URL = "http://api_server:8080" 
 ONYX_SESSION_COOKIE_NAME = os.getenv("ONYX_SESSION_COOKIE_NAME", "fastapiusersauth")
 
 DB_POOL = None
@@ -43,21 +45,42 @@ app = FastAPI(title="Custom Extension Backend")
 
 @app.on_event("startup")
 async def startup_event():
+    # ... (Keep your existing startup_event that ensures microproduct_content is JSONB) ...
     print(f"Custom Backend starting...")
     global DB_POOL
     if not CUSTOM_PROJECTS_DATABASE_URL:
         print("CRITICAL: CUSTOM_PROJECTS_DATABASE_URL env var not set.")
         return
     try:
-        DB_POOL = await asyncpg.create_pool(dsn=CUSTOM_PROJECTS_DATABASE_URL, min_size=1, max_size=10)
+        DB_POOL = await asyncpg.create_pool(dsn=CUSTOM_PROJECTS_DATABASE_URL, min_size=1, max_size=10,
+                                          init=lambda conn: conn.set_type_codec(
+                                              'jsonb',
+                                              encoder=lambda value: json.dumps(value) if value is not None else None,
+                                              decoder=lambda value: json.loads(value) if value is not None else None,
+                                              schema='pg_catalog',
+                                              format='text' 
+                                          )) # Add init for proper JSONB handling
         async with DB_POOL.acquire() as connection:
-            # Ensure microproduct_content is JSONB
-            # Attempt to alter existing column first, then create table if it fails (e.g. table doesn't exist)
             try:
-                await connection.execute("ALTER TABLE projects ALTER COLUMN microproduct_content TYPE JSONB USING microproduct_content::jsonb;")
-                print("Successfully altered 'microproduct_content' to JSONB if it existed as TEXT.")
+                # Check if column type needs alteration (for existing installations)
+                col_type_row = await connection.fetchrow(
+                    "SELECT data_type FROM information_schema.columns "
+                    "WHERE table_name = 'projects' AND column_name = 'microproduct_content';"
+                )
+                if col_type_row and col_type_row['data_type'] != 'jsonb':
+                    print("Attempting to alter 'microproduct_content' column type to JSONB...")
+                    # This is a risky operation if data is not valid JSON.
+                    # For existing non-JSON data, a manual migration script is safer.
+                    # The `USING microproduct_content::text::jsonb` attempts conversion.
+                    await connection.execute("ALTER TABLE projects ALTER COLUMN microproduct_content TYPE JSONB USING microproduct_content::text::jsonb;")
+                    print("Successfully altered 'microproduct_content' to JSONB.")
+                elif not col_type_row:
+                    # Column might not exist, will be created by CREATE TABLE
+                    pass
+
             except Exception as alter_e:
-                print(f"Notice: Could not alter 'microproduct_content' to JSONB: {alter_e}. This is expected if table doesn't exist or column is already JSONB.")
+                print(f"Notice: Could not alter 'microproduct_content' to JSONB: {alter_e}. This is expected if table/column doesn't exist or is already JSONB or if conversion fails.")
+
 
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS projects (
@@ -66,18 +89,17 @@ async def startup_event():
                     project_name TEXT NOT NULL,
                     product_type TEXT,
                     microproduct_type TEXT,
-                    microproduct_name TEXT, /* User-defined name, falls back to type if not provided */
-                    microproduct_content JSONB, /* CHANGED TO JSONB */
+                    microproduct_name TEXT,
+                    microproduct_content JSONB, /* Ensured JSONB */
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
             """)
-            # Ensure microproduct_name column exists (idempotent)
             try:
                 await connection.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS microproduct_name TEXT;")
                 print("Ensured 'microproduct_name' column exists in 'projects' table.")
             except Exception as alter_e_name:
-                print(f"Notice: Could not ensure 'microproduct_name' column via ALTER: {alter_e_name}. This is okay if the column already exists.")
-            
+                print(f"Notice: Could not ensure 'microproduct_name' column via ALTER: {alter_e_name}.")
+
             await connection.execute("CREATE INDEX IF NOT EXISTS idx_projects_onyx_user_id ON projects(onyx_user_id);")
         print("Custom projects DB pool initialized & 'projects' table ensured with JSONB content field.")
     except Exception as e:
@@ -85,12 +107,15 @@ async def startup_event():
         traceback.print_exc()
         DB_POOL = None
 
+
 @app.on_event("shutdown")
 async def shutdown_event():
+    # ... (Keep as is) ...
     if DB_POOL:
         await DB_POOL.close()
         print("Custom projects DB pool closed.")
 
+# ... (CORS Middleware setup - keep as is) ...
 effective_origins = list(set(filter(None, [
     "http://localhost:3001", 
     "http://143.198.59.56:3001", 
@@ -140,7 +165,7 @@ class MicroProductApiResponse(BaseModel):
     slug: str
     webLinkPath: Optional[str] = None
     pdfLinkPath: Optional[str] = None
-    details: Optional[TrainingPlanDetails] = None # This will now come directly from DB
+    details: Optional[TrainingPlanDetails] = None
     model_config = {"from_attributes": True}
 
 class ProjectApiResponse(BaseModel):
@@ -157,16 +182,16 @@ class ProjectCreateRequest(BaseModel):
     product: str
     microProductType: str
     microProductName: Optional[str] = None
-    aiResponse: str # This is the raw text to be parsed
+    aiResponse: str # Raw text from AI
 
-class ProjectDB(BaseModel):
+class ProjectDB(BaseModel): # Represents data from DB for internal use
     id: int
     onyx_user_id: str
     project_name: str
     product_type: Optional[str] = None
     microproduct_type: Optional[str] = None
     microproduct_name: Optional[str] = None
-    microproduct_content: Optional[TrainingPlanDetails] = None # Now stores parsed object
+    microproduct_content: Optional[TrainingPlanDetails] = None # Parsed data
     created_at: datetime
     model_config = {"from_attributes": True}
 
@@ -176,7 +201,27 @@ class ErrorDetail(BaseModel):
 class ProjectsDeleteRequest(BaseModel):
     project_ids: List[int]
 
+# For fetching full project details for editing
+class ProjectDetailForEditResponse(BaseModel):
+    id: int
+    projectName: str
+    product: Optional[str] = None
+    microProductType: Optional[str] = None
+    microProductName: Optional[str] = None
+    microProductContent: Optional[TrainingPlanDetails] = None # Now directly the parsed object
+    createdAt: Optional[datetime] = None
+    model_config = {"from_attributes": True}
+
+# For updating a project
+class ProjectUpdateRequest(BaseModel):
+    projectName: str
+    product: str
+    microProductType: str
+    microProductName: Optional[str] = None
+    microProductContent: Optional[TrainingPlanDetails] = None # Send the whole object
+
 # --- Onyx User ID Function (keep as is) ---
+# ... (get_current_onyx_user_id function) ...
 async def get_current_onyx_user_id(request: Request) -> str:
     session_cookie_value = request.cookies.get(ONYX_SESSION_COOKIE_NAME)
     if not session_cookie_value:
@@ -209,6 +254,7 @@ async def get_current_onyx_user_id(request: Request) -> str:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal user validation error: {str(e)[:100]}")
 
 # --- Slug Creation Function (keep as is) ---
+# ... (create_slug function) ...
 def create_slug(text: Optional[str]) -> str:
     if not text: return "default-slug"
     text_processed = str(text).lower()
@@ -216,13 +262,8 @@ def create_slug(text: Optional[str]) -> str:
     text_processed = re.sub(r'[^\wа-яёa-z0-9\-]+', '', text_processed, flags=re.UNICODE | re.IGNORECASE)
     return text_processed or "generated-slug"
 
-# --- MULTI-LANGUAGE PARSER SECTION (keep as is) ---
-# LANG_CONFIG, detect_language, extract_float_time, format_lesson_time_display, 
-# format_total_time_display, transform_text_new_to_old, get_canonical_field,
-# parse_check_type_versatile, parse_content_available_versatile,
-# parse_training_plan_from_string
-# ALL THESE FUNCTIONS REMAIN THE SAME AS YOU PROVIDED.
-
+# --- MULTI-LANGUAGE PARSER SECTION (keep as is, used at creation and PDF, and potentially if a raw string needs re-parsing) ---
+# ... (LANG_CONFIG, detect_language, extract_float_time, etc. ... parse_training_plan_from_string) ...
 CANONICAL_ATTRIBUTE_FIELDS = {
     "check": ["knowledge assessment", "проверка знаний", "перевірка знань", "verificación de conocimientos", "control de conocimientos"],
     "contentAvailable": ["content availability", "наличие контента", "наявність контенту", "contenido disponible"],
@@ -365,6 +406,8 @@ def parse_content_available_versatile(text_val: str) -> dict:
     return {"type": "yes", "text": "100%"}
 
 def parse_training_plan_from_string(original_content_str: str, main_table_title: str) -> Optional[TrainingPlanDetails]:
+    # This function remains crucial for initially parsing AI responses.
+    # It also serves as the reference for how the data is structured.
     transformed_content_str, detected_lang = transform_text_new_to_old(original_content_str)
     if not transformed_content_str or not transformed_content_str.strip():
         return TrainingPlanDetails(mainTitle=f"Content for {main_table_title} not parsable/empty", sections=[], detectedLanguage=detected_lang or 'ru')
@@ -464,19 +507,16 @@ async def add_project_to_custom_db(
 ):
     db_microproduct_name_to_store = project_data.microProductName if project_data.microProductName and project_data.microProductName.strip() else project_data.microProductType
     
-    # Parse the aiResponse here
     parsed_content: Optional[TrainingPlanDetails] = parse_training_plan_from_string(
-        project_data.aiResponse, 
-        project_data.projectName # Use projectName as a hint for mainTitle
+        project_data.aiResponse, project_data.projectName
     )
     
-    # Serialize parsed_content to JSON string for DB storage if it's not None
-    content_to_store_json = None
+    content_to_store_for_db = None
     if parsed_content:
-        try:
-            content_to_store_json = parsed_content.model_dump_json(exclude_none=True) # Pydantic v2
-        except AttributeError: # Pydantic v1 fallback
-             content_to_store_json = parsed_content.json(exclude_none=True)
+        try: # Pydantic v2
+            content_to_store_for_db = parsed_content.model_dump(mode='json', exclude_none=True)
+        except AttributeError: # Pydantic v1
+             content_to_store_for_db = json.loads(parsed_content.json(exclude_none=True))
 
 
     insert_query = """
@@ -492,27 +532,110 @@ async def add_project_to_custom_db(
                 insert_query,
                 onyx_user_id, project_data.projectName, project_data.product,
                 project_data.microProductType, db_microproduct_name_to_store, 
-                content_to_store_json # Store the JSON string
+                content_to_store_for_db # This should be a Python dict for asyncpg to handle JSONB
             )
         if not row: raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create project entry.")
         
-        # When returning ProjectDB, ensure microproduct_content is correctly parsed from JSON string if needed by Pydantic model
-        db_row_dict = dict(row)
-        if isinstance(db_row_dict.get("microproduct_content"), str): # If DB returns JSON string
-            try:
-                db_row_dict["microproduct_content"] = json.loads(db_row_dict["microproduct_content"])
-            except json.JSONDecodeError:
-                db_row_dict["microproduct_content"] = None # Or handle error
-        
-        return ProjectDB(**db_row_dict)
+        # Pydantic model will parse the 'microproduct_content' from dict to TrainingPlanDetails
+        return ProjectDB(**dict(row)) 
     except Exception as e:
         print(f"Error inserting project: {e}"); traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on insert: {str(e)}")
 
+# NEW Endpoint to get a single project's details for editing
+@app.get("/api/custom/projects/{project_id}", response_model=ProjectDetailForEditResponse)
+async def get_project_details_for_edit(
+    project_id: int,
+    onyx_user_id: str = Depends(get_current_onyx_user_id),
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    query = """
+        SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at
+        FROM projects
+        WHERE id = $1 AND onyx_user_id = $2;
+    """
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(query, project_id, onyx_user_id)
+        
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+        
+        row_dict = dict(row)
+        # microproduct_content is already a dict/None from JSONB
+        return ProjectDetailForEditResponse(
+            id=row_dict["id"],
+            projectName=row_dict["project_name"],
+            product=row_dict.get("product_type"),
+            microProductType=row_dict.get("microproduct_type"),
+            microProductName=row_dict.get("microproduct_name"),
+            microProductContent=row_dict.get("microproduct_content"), # Pydantic will validate this into TrainingPlanDetails
+            createdAt=row_dict.get("created_at")
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error fetching project {project_id} for edit: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching project details: {str(e)}")
 
+# NEW Endpoint to update a project
+@app.put("/api/custom/projects/update/{project_id}", response_model=ProjectDB)
+async def update_project_in_db(
+    project_id: int,
+    project_update_data: ProjectUpdateRequest, # This model now takes TrainingPlanDetails
+    onyx_user_id: str = Depends(get_current_onyx_user_id),
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    db_microproduct_name_to_store = project_update_data.microProductName
+    if db_microproduct_name_to_store is None or not db_microproduct_name_to_store.strip():
+        db_microproduct_name_to_store = project_update_data.microProductType
+
+    content_to_store_for_db = None
+    if project_update_data.microProductContent:
+        try: # Pydantic v2
+            content_to_store_for_db = project_update_data.microProductContent.model_dump(mode='json', exclude_none=True)
+        except AttributeError: # Pydantic v1
+            content_to_store_for_db = json.loads(project_update_data.microProductContent.json(exclude_none=True))
+
+    update_query = """
+        UPDATE projects
+        SET project_name = $1,
+            product_type = $2,
+            microproduct_type = $3,
+            microproduct_name = $4,
+            microproduct_content = $5 
+            /* created_at is not updated on edit */
+        WHERE id = $6 AND onyx_user_id = $7
+        RETURNING id, onyx_user_id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at;
+    """
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                update_query,
+                project_update_data.projectName,
+                project_update_data.product,
+                project_update_data.microProductType,
+                db_microproduct_name_to_store,
+                content_to_store_for_db, # Store the JSON dict/object
+                project_id,
+                onyx_user_id
+            )
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found or update failed (user may not own project).")
+        return ProjectDB(**dict(row)) # Pydantic will parse JSONB from DB to model
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error updating project {project_id}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on update: {str(e)}")
+
+
+# ... (Existing /api/custom/projects endpoint - no changes needed here for now) ...
 @app.get("/api/custom/projects", response_model=List[ProjectApiResponse])
 async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
-    # We don't need microproduct_content for the list view, so query is fine
+    # This endpoint does not return microProductContent details, so it's largely unaffected.
     select_query = "SELECT id, project_name, product_type, microproduct_type, microproduct_name, created_at FROM projects WHERE onyx_user_id = $1 ORDER BY created_at DESC;"
     try:
         async with pool.acquire() as conn: db_rows = await conn.fetch(select_query, onyx_user_id)
@@ -558,6 +681,7 @@ async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error while fetching projects: {str(e)}")
 
 
+# ... (Existing /api/custom/microproducts/... endpoint - already updated in previous step to handle JSONB) ...
 @app.get("/api/custom/microproducts/{project_slug}/{product_slug}/{micro_product_type_slug}",
          response_model=MicroProductApiResponse, responses={404: {"model": ErrorDetail}})
 async def get_microproduct_detail_from_db(
@@ -567,9 +691,8 @@ async def get_microproduct_detail_from_db(
 ):
     try:
         async with pool.acquire() as connection:
-            # Fetch including the JSONB content
             all_projects_raw = await connection.fetch(
-                "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at "
+                "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at " # Fetch content
                 "FROM projects WHERE onyx_user_id = $1", onyx_user_id
             )
         
@@ -592,27 +715,21 @@ async def get_microproduct_detail_from_db(
         microproduct_display_name = found_project_row_dict.get('microproduct_name') or found_project_row_dict.get('microproduct_type', 'N/A')
         microproduct_type_for_routing = found_project_row_dict.get('microproduct_type') or "default-type"
         
-        # microproduct_content is now JSONB from the DB
         microproduct_content_json = found_project_row_dict.get('microproduct_content')
         
         details_data: Optional[TrainingPlanDetails] = None
-        if microproduct_content_json:
-            if isinstance(microproduct_content_json, str): # Should not happen if DB is JSONB and asyncpg decodes it
-                 try:
-                    microproduct_content_json = json.loads(microproduct_content_json)
-                 except json.JSONDecodeError:
-                    print(f"Warning: Could not decode microproduct_content string to JSON for project {project_name_from_db}")
-                    microproduct_content_json = None
-
-            if isinstance(microproduct_content_json, dict): # It's already a dict (parsed JSON)
-                try:
-                    details_data = TrainingPlanDetails(**microproduct_content_json)
-                except Exception as pydantic_e:
-                    print(f"Error validating TrainingPlanDetails from DB JSON for project {project_name_from_db}: {pydantic_e}")
+        if microproduct_content_json: # Should be a dict if from JSONB
+            try:
+                details_data = TrainingPlanDetails(**microproduct_content_json)
+            except Exception as pydantic_e:
+                print(f"Error validating TrainingPlanDetails from DB JSON for project {project_name_from_db} (detail view): {pydantic_e}")
+                # Fallback if validation fails or if it's somehow still a string that's not JSON
+                if isinstance(microproduct_content_json, str):
+                     details_data = parse_training_plan_from_string(microproduct_content_json, project_name_from_db)
+                else:     
                     details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_display_name} (validation error)", sections=[], detectedLanguage='ru')
-            else: # Fallback if it's neither string nor dict, or None
-                 details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_display_name}", sections=[], detectedLanguage='ru')
-        else:
+
+        else: # No content
             details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_display_name}", sections=[], detectedLanguage='ru')
 
 
@@ -625,21 +742,21 @@ async def get_microproduct_detail_from_db(
             slug=micro_product_type_slug,       
             webLinkPath=web_link_path,
             pdfLinkPath=pdf_link_path,
-            details=details_data # Already a TrainingPlanDetails object
+            details=details_data 
         )
     except HTTPException as e: raise e
     except Exception as e:
         print(f"Error fetching microproduct detail: {e}"); traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Server error: {str(e)}")
 
+# ... (Existing PDF endpoint - already updated in previous step to handle JSONB) ...
 @app.get("/api/custom/pdf/{document_slug}", response_class=FileResponse,
          responses={404: {"model": ErrorDetail}, 500: {"model": ErrorDetail}})
 async def download_micro_product_pdf_from_db( document_slug: str, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
     print(f"PDF req for doc_slug: {document_slug}, user {onyx_user_id}")
-    # Fetch including the JSONB content
     async with pool.acquire() as conn: 
         user_projects_raw = await conn.fetch(
-            "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at "
+             "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at "
             "FROM projects WHERE onyx_user_id = $1", 
             onyx_user_id
         )
@@ -663,60 +780,40 @@ async def download_micro_product_pdf_from_db( document_slug: str, onyx_user_id: 
             
     if not target_row_dict: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"PDF definition not found: {document_slug}")
 
-    # microproduct_content is now JSONB from the DB
     content_json = target_row_dict.get('microproduct_content')
     details_pdf: Optional[TrainingPlanDetails] = None
     detected_lang_for_pdf = 'ru'
 
-    if content_json:
-        if isinstance(content_json, str): # Should be dict if from JSONB
-            try:
-                content_json = json.loads(content_json)
-            except json.JSONDecodeError:
-                content_json = None
-        
-        if isinstance(content_json, dict):
-            try:
-                details_pdf = TrainingPlanDetails(**content_json)
-                if details_pdf.detectedLanguage:
-                    detected_lang_for_pdf = details_pdf.detectedLanguage
-            except Exception as pydantic_e:
-                print(f"Error validating TrainingPlanDetails from DB JSON for PDF: {pydantic_e}")
-                # Fallback if validation fails
-        # If content_json was None or failed to parse/validate, details_pdf remains None or default
-    
-    if not details_pdf: 
-        # Try to parse from original string if it was stored due to an old error or if content_json was just a string
-        # This path should ideally not be taken if data is consistently stored as JSONB
-        raw_text_fallback = target_row_dict.get('microproduct_content') if isinstance(target_row_dict.get('microproduct_content'), str) else None
-        if raw_text_fallback:
-             print("Warning: PDF generation falling back to parsing raw text content for PDF, this should not happen with JSONB storage.")
-             details_pdf = parse_training_plan_from_string(raw_text_fallback, project_name_for_pdf_context)
-             if details_pdf and details_pdf.detectedLanguage:
+    if content_json: # Should be a dict if from JSONB and asyncpg decodes it
+        try:
+            details_pdf = TrainingPlanDetails(**content_json)
+            if details_pdf.detectedLanguage:
                  detected_lang_for_pdf = details_pdf.detectedLanguage
-        
-        if not details_pdf: # Still no details
-            details_pdf = TrainingPlanDetails(
-                mainTitle=f"No/unparsable content for PDF of '{mp_name_for_pdf_context}'", 
-                sections=[],
-                detectedLanguage=detected_lang_for_pdf
-            )
+        except Exception as pydantic_e:
+            print(f"Error validating TrainingPlanDetails from DB JSON for PDF: {pydantic_e}")
+            # Attempt to re-parse if it's a string (should not happen with correct JSONB handling)
+            if isinstance(content_json, str): 
+                print(f"Warning: microproduct_content for PDF {document_slug} was a string, attempting re-parse.")
+                details_pdf = parse_training_plan_from_string(content_json, project_name_for_pdf_context)
+                if details_pdf and details_pdf.detectedLanguage:
+                    detected_lang_for_pdf = details_pdf.detectedLanguage
+
+    if not details_pdf: 
+        details_pdf = TrainingPlanDetails(
+            mainTitle=f"No/unparsable content for PDF of '{mp_name_for_pdf_context}'", 
+            sections=[],
+            detectedLanguage=detected_lang_for_pdf
+        )
             
     pdf_cache_fn = f"{document_slug}.pdf" 
     try:
-        # Ensure details_pdf is not None
-        if details_pdf is None: # Should be initialized by now
+        if details_pdf is None:
              details_pdf = TrainingPlanDetails(mainTitle="Error preparing PDF data", sections=[], detectedLanguage=detected_lang_for_pdf)
 
-        context_data_for_pdf = details_pdf.model_dump(exclude_none=True)
-        # The structure for generate_pdf_from_html_template might expect 'details' key
-        if 'mainTitle' in context_data_for_pdf or 'sections' in context_data_for_pdf: # Check if it's the plan itself
-             context_data_for_pdf = {'details': context_data_for_pdf}
-        elif not context_data_for_pdf.get('details'): # Ensure 'details' key exists
-             context_data_for_pdf['details'] = {}
+        context_data_for_pdf = {'details': details_pdf.model_dump(exclude_none=True)}
         
         current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru'])
-        context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf # Ensure it's there
+        context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf
         context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg['TIME_UNIT_SINGULAR']
         context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg['TIME_UNIT_DECIMAL_PLURAL']
         context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg['TIME_UNIT_GENERAL_PLURAL']
@@ -728,7 +825,7 @@ async def download_micro_product_pdf_from_db( document_slug: str, onyx_user_id: 
         print(f"Err PDF endpoint {document_slug}: {e}"); traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Err PDF gen: {str(e)[:200]}")
 
-
+# ... (Existing delete-multiple and health_check endpoints - keep as is) ...
 @app.post("/api/custom/projects/delete-multiple", status_code=status.HTTP_200_OK)
 async def delete_multiple_projects(
     delete_request: ProjectsDeleteRequest,

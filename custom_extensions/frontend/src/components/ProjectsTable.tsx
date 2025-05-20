@@ -1,3 +1,4 @@
+// custom_extensions/frontend/src/components/ProjectsTable.tsx
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -5,9 +6,10 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Link as LinkIcon, FileText, RefreshCw, Trash2, Plus, Minus, ChevronDown, ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Link as LinkIcon, FileText, Trash2, Plus, Minus, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 
-// It's good practice to have a fallback for environment variables
+// Fallback for environment variables
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || "";
 
 interface MicroProduct {
@@ -15,7 +17,7 @@ interface MicroProduct {
   slug: string;
   webLinkPath?: string;
   pdfLinkPath?: string;
-  details?: any;
+  details?: any; 
 }
 
 interface ProjectEntry {
@@ -38,12 +40,12 @@ const ProjectsTable: React.FC = () => {
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
+  const router = useRouter();
 
   const fetchProjects = async () => {
     setLoading(true);
     setError(null);
     const projectsApiUrl = `/api/custom-projects-backend/projects`;
-    console.log("Fetching projects from:", projectsApiUrl);
     try {
       const headers: HeadersInit = {};
       const devUserId = "dummy-onyx-user-id-007";
@@ -56,10 +58,8 @@ const ProjectsTable: React.FC = () => {
         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
       const data: ProjectEntry[] = await response.json();
-      console.log("Fetched projects data:", data);
       setProjectsData(data);
     } catch (e: any) {
-      console.error("Failed to fetch projects:", e);
       setError(e.message || "Failed to load projects.");
     } finally {
       setLoading(false);
@@ -92,10 +92,6 @@ const ProjectsTable: React.FC = () => {
     } else {
       alert("PDF link not available for this item.");
     }
-  };
-
-  const handleRefreshClick = (projectSlug: string, productSlug: string, microProductSlug: string) => {
-    alert(`TODO: Implement Refresh API Call for: ${projectSlug}/${productSlug}/${microProductSlug}`);
   };
 
   const handleSelectAllChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,7 +145,6 @@ const ProjectsTable: React.FC = () => {
       setSelectedProjectIds([]);
       alert(result.detail || `${validSelectedIds.length} project(s) deleted successfully.`);
     } catch (e: any) {
-      console.error('Failed to delete projects:', e);
       alert(`Error deleting projects: ${e.message || "Unknown error."}`);
     } finally {
       setIsDeleting(false);
@@ -202,10 +197,9 @@ const ProjectsTable: React.FC = () => {
                 <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Microproduct</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">WebView</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">PDF</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Update</th>
+                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Edit</th>
               </tr>
             </thead>
-            {/* Group by project name here */}
             {Object.entries(groupedProjects).map(([projectName, entries], groupIndex) => {
               const isCurrentlyExpanded = !!expandedProjects[projectName];
               const projectIdsInGroup = entries.map(e => e.id).filter(id => typeof id === 'number');
@@ -220,7 +214,6 @@ const ProjectsTable: React.FC = () => {
                   });
               };
 
-              // Render a single row if only one item, or if it's a group header
               if (entries.length === 1) {
                 const item = entries[0];
                 const detailPageUrl = item.microProduct?.webLinkPath || '#';
@@ -233,7 +226,7 @@ const ProjectsTable: React.FC = () => {
                              <td className="py-3 px-4 text-center">
                                 <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                                     checked={isRowSelected} disabled={typeof item.id !== 'number'}
-                                    onChange={(e) => handleRowCheckboxChange(item.id, e.target.checked)} />
+                                    onChange={(e) => {if (typeof item.id === 'number') handleRowCheckboxChange(item.id, e.target.checked)}} />
                             </td>
                             <td className="text-left py-3 px-4">{item.projectName}</td>
                             <td className="text-left py-3 px-4">{item.product}</td>
@@ -252,10 +245,13 @@ const ProjectsTable: React.FC = () => {
                                 </button>
                             </td>
                             <td className="text-center py-3 px-4">
-                                <button onClick={() => item.projectSlug && item.productSlug && item.microProduct?.slug && handleRefreshClick(item.projectSlug, item.productSlug, item.microProduct.slug)}
-                                disabled={!(item.projectSlug && item.productSlug && item.microProduct?.slug)}
-                                className={`text-gray-600 hover:text-gray-800 ${!(item.projectSlug && item.productSlug && item.microProduct?.slug) ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                <RefreshCw size={18} />
+                                <button
+                                    onClick={() => router.push(`/projects/edit/${item.id}`)}
+                                    disabled={typeof item.id !== 'number'}
+                                    className={`text-blue-600 hover:text-blue-800 ${typeof item.id !== 'number' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    title="Edit Project"
+                                >
+                                    <Pencil size={18} />
                                 </button>
                             </td>
                         </tr>
@@ -263,18 +259,16 @@ const ProjectsTable: React.FC = () => {
                 );
               }
 
-              // This is a group with multiple items
               return (
                 <tbody className="text-gray-700" key={projectName}>
-                  {/* Group Header Row */}
                   <tr className={`${groupIndex % 2 === 0 ? 'bg-gray-100' : 'bg-gray-50'} border-b border-gray-300 hover:bg-gray-200 cursor-pointer`}
                       onClick={() => handleToggleExpand(projectName)}>
                     <td className="py-3 px-4 text-center">
                        <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                         checked={areAllInGroupSelected} onChange={handleSelectGroupChange} disabled={projectIdsInGroup.length === 0} 
-                        onClick={(e) => e.stopPropagation()} /* Prevent row click from toggling checkbox */ />
+                        onClick={(e) => e.stopPropagation()} />
                     </td>
-                    <td colSpan={6} className="text-left py-3 px-4 font-semibold">
+                    <td colSpan={6} className="text-left py-3 px-4 font-semibold"> {/* Adjusted colSpan */}
                       <div className="flex items-center">
                         {isCurrentlyExpanded ? <ChevronDown size={18} className="mr-2 expand-collapse-icon" /> : <ChevronRight size={18} className="mr-2 expand-collapse-icon" />}
                         {projectName} ({entries.length})
@@ -282,49 +276,55 @@ const ProjectsTable: React.FC = () => {
                     </td>
                   </tr>
                   
-                  {/* Project Entries - Rendered within the same tbody, visibility controlled by CSS */}
                   {entries.map((item, itemIndex) => {
                     const detailPageUrl = item.microProduct?.webLinkPath || '#';
                     const isRowSelected = typeof item.id === 'number' && selectedProjectIds.includes(item.id);
                     
-                    const itemRowSpecificBg = itemIndex % 2 === 0 ? 'expanded-group-item-even' : 'expanded-group-item-odd';
+                    const itemRowBackground = isCurrentlyExpanded 
+                                              ? (itemIndex % 2 === 0 ? 'expanded-group-item-even' : 'expanded-group-item-odd')
+                                              : (itemIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50');
+
                     const itemClasses = `
-                      project-item-row 
+                      project-item-row
                       ${isCurrentlyExpanded ? 'project-item-row-expanded' : 'project-item-row-collapsed'}
-                      ${isCurrentlyExpanded ? itemRowSpecificBg : (itemIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50')}
-                       hover:bg-gray-100 border-b border-gray-200
+                      ${itemRowBackground}
+                      ${isCurrentlyExpanded ? 'border-b border-gray-200' : 'border-transparent'}
+                       hover:bg-gray-100 
                     `;
+                    const cellPaddingClass = isCurrentlyExpanded ? "py-3 px-4" : "p-0";
+                    const firstCellPaddingClass = isCurrentlyExpanded ? "py-3 px-4 pl-10" : "p-0";
 
                     return (
                       <tr key={item.id || `project-row-${groupIndex}-${itemIndex}`} className={itemClasses}>
-                        <td className="py-3 px-4 text-center">
+                        <td className={`text-center ${cellPaddingClass}`}>
                           <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                             checked={isRowSelected} disabled={typeof item.id !== 'number'}
-                            onChange={(e) => handleRowCheckboxChange(item.id, e.target.checked)} />
+                            onChange={(e) => {if (typeof item.id === 'number') handleRowCheckboxChange(item.id, e.target.checked)}} />
                         </td>
-                        <td className="text-left py-3 px-4 pl-10"> {/* Indent grouped items */}
-                          {/* Name is in the group header, so an empty cell here or specific detail */}
-                        </td>
-                        <td className="text-left py-3 px-4">{item.product}</td>
-                        <td className="text-left py-3 px-4">{item.microProduct?.name || 'N/A'}</td>
-                        <td className="text-center py-3 px-4">
+                        <td className={`text-left ${firstCellPaddingClass}`}></td>
+                        <td className={`text-left ${cellPaddingClass}`}>{item.product}</td>
+                        <td className={`text-left ${cellPaddingClass}`}>{item.microProduct?.name || 'N/A'}</td>
+                        <td className={`text-center ${cellPaddingClass}`}>
                           {item.microProduct?.webLinkPath ? (
                             <Link href={detailPageUrl} legacyBehavior>
                               <a target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 inline-block"><LinkIcon size={18} /></a>
                             </Link>
                           ) : <span className="text-gray-400"><LinkIcon size={18} /></span>}
                         </td>
-                        <td className="text-center py-3 px-4">
+                        <td className={`text-center ${cellPaddingClass}`}>
                           <button onClick={() => handlePdfClick(item.microProduct?.pdfLinkPath)} disabled={!item.microProduct?.pdfLinkPath}
                            className={`text-red-500 hover:text-red-700 inline-block ${!item.microProduct?.pdfLinkPath ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <FileText size={18} />
                           </button>
                         </td>
-                        <td className="text-center py-3 px-4">
-                          <button onClick={() => item.projectSlug && item.productSlug && item.microProduct?.slug && handleRefreshClick(item.projectSlug, item.productSlug, item.microProduct.slug)}
-                           disabled={!(item.projectSlug && item.productSlug && item.microProduct?.slug)}
-                           className={`text-gray-600 hover:text-gray-800 ${!(item.projectSlug && item.productSlug && item.microProduct?.slug) ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                            <RefreshCw size={18} />
+                        <td className={`text-center ${cellPaddingClass}`}>
+                          <button
+                            onClick={() => router.push(`/projects/edit/${item.id}`)}
+                             disabled={typeof item.id !== 'number'}
+                            className={`text-blue-600 hover:text-blue-800 ${typeof item.id !== 'number' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title="Edit Project"
+                          >
+                            <Pencil size={18} />
                           </button>
                         </td>
                       </tr>
