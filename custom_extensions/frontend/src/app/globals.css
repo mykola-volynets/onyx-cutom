@@ -24,3 +24,69 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* Styles for Project Table Expand/Collapse */
+
+.project-item-row {
+  transition: opacity 0.3s ease-in-out,
+              max-height 0.35s ease-in-out,
+              padding-top 0.35s ease-in-out,
+              padding-bottom 0.35s ease-in-out,
+              border-top-width 0.35s ease-in-out, /* Animate border for smoothness */
+              border-bottom-width 0.35s ease-in-out, /* Animate border for smoothness */
+              font-size 0.35s ease-in-out, /* Animate font-size */
+              line-height 0.35s ease-in-out; /* Animate line-height */
+  overflow: hidden !important; /* Crucial for max-height transition */
+  box-sizing: border-box;
+}
+
+.project-item-row-collapsed {
+  opacity: 0;
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+  font-size: 0 !important; /* Force font size to 0 */
+  line-height: 0 !important; /* Force line height to 0 */
+  visibility: hidden; /* Hide it completely */
+}
+
+/* Style table cells within collapsed rows */
+.project-item-row-collapsed > td {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  border: none !important; /* Remove all borders from TDs */
+  visibility: hidden; /* Also hide cell content explicitly */
+}
+
+.project-item-row-expanded {
+  opacity: 1;
+  max-height: 150px; /* Adjust if your rows can be taller */
+  visibility: visible;
+  /* Borders for expanded rows should be applied by specific classes or tr styles */
+}
+
+/* Distinct background for items within an expanded group */
+.expanded-group-item-even {
+  background-color: #f0f5fa !important;
+}
+
+.expanded-group-item-odd {
+  background-color: #e9eff5 !important;
+}
+
+.expanded-group-item-even:hover,
+.expanded-group-item-odd:hover {
+  background-color: #dde6ed !important;
+}
+
+.expand-collapse-icon {
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Ensure table has border-collapse for cleaner behavior */
+table {
+  border-collapse: collapse;
+}
