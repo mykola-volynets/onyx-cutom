@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 import re
 import os
 import asyncpg
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi.responses import FileResponse, JSONResponse
 import httpx
 import traceback
@@ -102,6 +102,21 @@ async def startup_event():
                 print(f"Notice: Could not ensure 'microproduct_name' column via ALTER: {alter_e_name}.")
 
             await connection.execute("CREATE INDEX IF NOT EXISTS idx_projects_onyx_user_id ON projects(onyx_user_id);")
+            await connection.execute("""
+                CREATE TABLE IF NOT EXISTS microproduct_pipelines (
+                    id SERIAL PRIMARY KEY,
+                    pipeline_name TEXT NOT NULL,
+                    pipeline_description TEXT,
+                    is_prompts_data_collection BOOLEAN DEFAULT FALSE,
+                    is_prompts_data_formating BOOLEAN DEFAULT FALSE,
+                    prompts_data_collection JSONB,
+                    prompts_data_formating JSONB,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP 
+                );
+            """)
+            # You might want to add an index for pipeline_name if it's queried often
+            await connection.execute("CREATE INDEX IF NOT EXISTS idx_pipelines_name ON microproduct_pipelines(pipeline_name);")
+            print("'microproduct_pipelines' table ensured.")
         print("Custom projects DB pool initialized & 'projects' table ensured with JSONB content field.")
     except Exception as e:
         print(f"CRITICAL: Failed to initialize custom projects DB pool or ensure 'projects' table: {e}")
@@ -221,6 +236,32 @@ class ProjectUpdateRequest(BaseModel):
     microProductName: Optional[str] = None
     microProductContent: Optional[TrainingPlanDetails] = None # Send the whole object
 
+# Pydantic Models for Pipelines
+class PipelinePromptItem(BaseModel):
+    id: str # e.g., "1", "2"
+    prompt: str
+
+class PipelinePrompts(BaseModel):
+    prompts: Dict[str, str] # Will store as {"1": "prompt text", "2": "another prompt"}
+
+class MicroproductPipelineBase(BaseModel):
+    pipeline_name: str
+    pipeline_description: Optional[str] = None
+    is_prompts_data_collection: bool = False
+    is_prompts_data_formating: bool = False
+    # For request, frontend will send lists of strings
+    prompts_data_collection_list: Optional[List[str]] = Field(default_factory=list)
+    prompts_data_formating_list: Optional[List[str]] = Field(default_factory=list)
+
+class MicroproductPipelineCreateRequest(MicroproductPipelineBase):
+    pass
+
+class MicroproductPipelineDBResponse(MicroproductPipelineBase):
+    id: int
+    prompts_data_collection: Optional[Dict[str, str]] = None 
+    prompts_data_formating: Optional[Dict[str, str]] = None
+    created_at: datetime # Pydantic expects this field name
+    model_config = {"from_attributes": True}
 # --- Onyx User ID Function (keep as is) ---
 # ... (get_current_onyx_user_id function) ...
 async def get_current_onyx_user_id(request: Request) -> str:
@@ -500,6 +541,82 @@ def parse_training_plan_from_string(original_content_str: str, main_table_title:
 
 
 # --- API Endpoints ---
+@app.post("/api/custom/pipelines/add", response_model=MicroproductPipelineDBResponse, status_code=status.HTTP_201_CREATED)
+async def add_pipeline(
+    pipeline_data: MicroproductPipelineCreateRequest,
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    prompts_collection_json = {str(i+1): prompt for i, prompt in enumerate(pipeline_data.prompts_data_collection_list) if prompt.strip()} if pipeline_data.prompts_data_collection_list else None
+    prompts_formating_json = {str(i+1): prompt for i, prompt in enumerate(pipeline_data.prompts_data_formating_list) if prompt.strip()} if pipeline_data.prompts_data_formating_list else None
+
+    query = """
+        INSERT INTO microproduct_pipelines (
+            pipeline_name, pipeline_description, 
+            is_prompts_data_collection, is_prompts_data_formating,
+            prompts_data_collection, prompts_data_formating, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id, pipeline_name, pipeline_description, 
+                  is_prompts_data_collection, is_prompts_data_formating,
+                  prompts_data_collection, prompts_data_formating, created_at; 
+    """ # Removed "AS date" alias from created_at
+    try:
+        async with pool.acquire() as conn:
+            # Ensure created_at is timezone-aware if not already
+            current_time = datetime.now(timezone.utc)
+            row = await conn.fetchrow(
+                query,
+                pipeline_data.pipeline_name,
+                pipeline_data.pipeline_description,
+                pipeline_data.is_prompts_data_collection,
+                pipeline_data.is_prompts_data_formating,
+                prompts_collection_json, 
+                prompts_formating_json,
+                current_time 
+            )
+        if not row:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create pipeline.")
+        
+        # Prepare data for Pydantic model, ensuring 'created_at' key exists
+        response_data = dict(row)
+        # The RETURNING clause now returns 'created_at', so it should be in row_dict directly
+        # If for some reason it was aliased as 'date' (which we removed), this would be needed:
+        # if 'date' in response_data and 'created_at' not in response_data:
+        #    response_data['created_at'] = response_data.pop('date')
+
+        return MicroproductPipelineDBResponse(**response_data)
+    except Exception as e:
+        print(f"Error inserting pipeline: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on pipeline insert: {str(e)}")
+
+@app.get("/api/custom/pipelines", response_model=List[MicroproductPipelineDBResponse])
+async def get_pipelines(
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    query = """
+        SELECT id, pipeline_name, pipeline_description, 
+               is_prompts_data_collection, is_prompts_data_formating,
+               prompts_data_collection, prompts_data_formating, created_at 
+        FROM microproduct_pipelines 
+        ORDER BY created_at DESC;
+    """ # Ensured created_at is selected directly
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(query)
+        
+        pipelines_list = []
+        for row in rows:
+            row_dict = dict(row)
+            # Ensure 'created_at' key is what Pydantic model expects
+            # if 'date' in row_dict and 'created_at' not in row_dict: # This check might be redundant if SQL is correct
+            #    row_dict['created_at'] = row_dict.pop('date')
+            pipelines_list.append(MicroproductPipelineDBResponse(**row_dict))
+        return pipelines_list
+
+    except Exception as e:
+        print(f"Error fetching pipelines: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching pipelines: {str(e)}")
 @app.post("/api/custom/projects/add", response_model=ProjectDB, status_code=status.HTTP_201_CREATED)
 async def add_project_to_custom_db(
     project_data: ProjectCreateRequest, 

@@ -1,4 +1,4 @@
-// onyx-cutom/web/src/app/chat/HistorySidebar.tsx (or its correct path)
+// onyx-cutom/web/src/app/chat/sessionSidebar/HistorySidebar.tsx
 "use client";
 
 import React, {
@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/tooltip";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChatSession } from "../interfaces"; // Assuming correct path
-import { Folder } from "../folders/interfaces"; // Assuming correct path
+import { ChatSession } from "../interfaces"; 
+import { Folder } from "../folders/interfaces"; 
 import { SettingsContext } from "@/components/settings/SettingsProvider";
 
 import {
@@ -25,14 +25,14 @@ import {
   KnowledgeGroupIcon,
   NewChatIcon,
 } from "@/components/icons/icons";
-import { PagesTab } from "./PagesTab"; // Assuming correct path
-import { pageType } from "./types"; // Assuming correct path
+import { PagesTab } from "./PagesTab"; 
+import { pageType } from "./types"; 
 import LogoWithText from "@/components/header/LogoWithText";
-import { Persona } from "@/app/admin/assistants/interfaces"; // Assuming correct path
+import { Persona } from "@/app/admin/assistants/interfaces"; 
 import { DragEndEvent } from "@dnd-kit/core";
 import { useAssistants } from "@/components/context/AssistantsContext";
 import { AssistantIcon } from "@/components/assistants/AssistantIcon";
-import { buildChatUrl } from "../lib"; // Assuming correct path
+import { buildChatUrl } from "../lib"; 
 import { reorderPinnedAssistants } from "@/lib/assistants/updateAssistantPreferences";
 import { useUser } from "@/components/user/UserProvider";
 import { DragHandle } from "@/components/table/DragHandle";
@@ -52,12 +52,11 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CircleX, PinIcon } from "lucide-react"; // lucide-react is used for some icons
+import { CircleX, PinIcon } from "lucide-react"; 
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { TruncatedText } from "@/components/ui/truncatedText";
 
-// NEW: Import for the "Projects" icon
-import { FiPackage } from "react-icons/fi";
+import { FiPackage, FiSliders } from "react-icons/fi"; // Added FiSliders
 
 interface HistorySidebarProps {
   liveAssistant?: Persona | null;
@@ -68,7 +67,7 @@ interface HistorySidebarProps {
   toggleSidebar?: () => void;
   toggled?: boolean;
   removeToggle?: () => void;
-  reset?: () => void; // Make sure this prop is passed if handleNewChat uses it
+  reset?: () => void; 
   showShareModal?: (chatSession: ChatSession) => void;
   showDeleteModal?: (chatSession: ChatSession) => void;
   explicitlyUntoggle: () => void;
@@ -177,8 +176,8 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
   (
     {
       liveAssistant,
-      reset = () => null, // Providing a default if not passed
-      setShowAssistantsModal = () => null, // Providing a default
+      reset = () => null, 
+      setShowAssistantsModal = () => null, 
       toggled,
       page,
       existingChats,
@@ -195,7 +194,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
   ) => {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const { user, toggleAssistantPinnedStatus } = useUser(); // Assuming useUser() provides the user object
+    const { user, toggleAssistantPinnedStatus } = useUser(); 
     const { refreshAssistants, pinnedAssistants, setPinnedAssistants } =
       useAssistants();
 
@@ -232,24 +231,19 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
           });
         }
       },
-      [setPinnedAssistants] // Removed reorderPinnedAssistants from deps if it's stable
+      [setPinnedAssistants] 
     );
 
     const combinedSettings = useContext(SettingsContext);
     if (!combinedSettings) {
-      // This check might be too strict if SettingsContext is optional or provided higher up
-      // Consider if this component should render a fallback or if context is guaranteed
-      // return null; 
       console.warn("SettingsContext not found in HistorySidebar");
     }
 
     const handleNewChat = useCallback(() => {
-      if (reset) reset(); // Call reset if it's provided and is a function
-      // console.log("currentChatSession for new chat URL:", currentChatSession); // For debugging
-
+      if (reset) reset(); 
       const newChatUrl =
         `/${page}` +
-        (currentChatSession?.persona_id !== undefined // Check if persona_id exists
+        (currentChatSession?.persona_id !== undefined 
           ? `?assistantId=${currentChatSession.persona_id}`
           : "");
       router.push(newChatUrl);
@@ -288,7 +282,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             />
           </div>
           {page == "chat" && (
-            <div className="px-4 px-1 -mx-2 gap-y-1 flex-col text-text-history-sidebar-button flex gap-x-1.5 items-center items-center"> {/* Matched from user HTML */}
+            <div className="px-4 px-1 -mx-2 gap-y-1 flex-col text-text-history-sidebar-button flex gap-x-1.5 items-center">
               <Link
                 className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
                 href={
@@ -299,9 +293,9 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 }
                 onClick={(e) => {
                   if (e.metaKey || e.ctrlKey) {
-                    return; // Allow default browser behavior (open in new tab/window)
+                    return; 
                   }
-                  e.preventDefault(); // Prevent default link navigation for programmatic navigation
+                  e.preventDefault(); 
                   handleNewChat();
                 }}
               >
@@ -337,19 +331,31 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 </Link>
               )}
 
-              {/* === NEW "PROJECTS" BUTTON/LINK === */}
               <Link
                 className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
-                href="/custom-projects-ui/projects"
-	        target="_blank"  // ADDED: Opens in a new tab/window
-                rel="noopener noreferrer" // ADDED: Security measure for target="_blank" 
+                href="/custom-projects-ui/projects" // Existing Projects Link
+                target="_blank" 
+                rel="noopener noreferrer" 
               >
                 <FiPackage size={20} className="flex-none text-text-history-sidebar-button" /> 
                 <p className="my-auto flex font-normal items-center text-base">
                   Projects
                 </p>
               </Link>
-              {/* === END OF NEW "PROJECTS" LINK === */}
+              
+              {/* === NEW "PIPELINES" BUTTON/LINK === */}
+              <Link
+                className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
+                href="/custom-projects-ui/pipelines"
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <FiSliders size={20} className="flex-none text-text-history-sidebar-button" /> 
+                <p className="my-auto flex font-normal items-center text-base">
+                  Pipelines
+                </p>
+              </Link>
+              {/* === END OF NEW "PIPELINES" LINK === */}
 
             </div>
           )}
@@ -369,7 +375,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 )}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="flex px-0 mr-4 flex-col gap-y-1 mt-1"> {/* Adjusted mr-4 for consistency if needed */}
+                <div className="flex px-0 mr-4 flex-col gap-y-1 mt-1"> 
                   {pinnedAssistants.map((assistant: Persona) => (
                     <SortableAssistant
                       key={assistant.id === 0 ? "assistant-0" : assistant.id}
@@ -385,7 +391,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                         await toggleAssistantPinnedStatus(
                           pinnedAssistants.map((a) => a.id),
                           assistant.id,
-                          false
+                          false 
                         );
                         await refreshAssistants();
                       }}
@@ -396,11 +402,11 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             </DndContext>
             {!pinnedAssistants.some((a) => a.id === liveAssistant?.id) &&
               liveAssistant && (
-                <div className="w-full mt-1 pr-4"> {/* Adjusted pr-4 for consistency */}
+                <div className="w-full mt-1 pr-4"> 
                   <SortableAssistant
                     pinned={false}
                     assistant={liveAssistant}
-                    active={liveAssistant.id === liveAssistant?.id} // This will always be true here
+                    active={liveAssistant.id === liveAssistant?.id} 
                     onClick={() => {
                       router.push(
                         buildChatUrl(searchParams, null, liveAssistant.id)
@@ -411,7 +417,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                       await toggleAssistantPinnedStatus(
                         [...pinnedAssistants.map((a) => a.id)],
                         liveAssistant.id,
-                        true
+                        true 
                       );
                       await refreshAssistants();
                     }}
@@ -422,7 +428,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             <div className="w-full px-4">
               <button
                 aria-label="Explore Assistants"
-                onClick={() => setShowAssistantsModal(true)} // Ensure setShowAssistantsModal is correctly passed as prop
+                onClick={() => setShowAssistantsModal(true)} 
                 className="w-full cursor-pointer text-base text-black dark:text-[#D4D4D4] hover:bg-background-chat-hover flex items-center gap-x-2 py-1 px-2 rounded-md"
               >
                 Explore Assistants

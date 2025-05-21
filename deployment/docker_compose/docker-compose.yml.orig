@@ -1,0 +1,308 @@
+services:
+  api_server:
+    image: onyxdotapp/onyx-backend:${IMAGE_TAG:-latest}
+    build:
+      context: ../../backend # Relative to deployment/docker_compose/
+      dockerfile: Dockerfile
+    command: >
+      /bin/sh -c "
+      alembic upgrade head &&
+      echo \"Starting Onyx Api Server\" &&
+      uvicorn onyx.main:app --host 0.0.0.0 --port 8080"
+    depends_on:
+      - relational_db
+      - index
+      - cache
+      - inference_model_server
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - AUTH_TYPE=${AUTH_TYPE:-oidc}
+      - POSTGRES_HOST=relational_db
+      - VESPA_HOST=index
+      - REDIS_HOST=cache
+      - MODEL_SERVER_HOST=${MODEL_SERVER_HOST:-inference_model_server}
+      - USE_IAM_AUTH=${USE_IAM_AUTH}
+      - AWS_REGION_NAME=${AWS_REGION_NAME-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY-}
+    # Uncomment the line below to use if IAM_AUTH is true and you are using iam auth for postgres
+    # volumes:
+    #   - ./bundle.pem:/app/bundle.pem:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+    volumes:
+      - api_server_logs:/var/log
+
+  background:
+    image: onyxdotapp/onyx-backend:${IMAGE_TAG:-latest}
+    build:
+      context: ../../backend # Relative to deployment/docker_compose/
+      dockerfile: Dockerfile
+    command: >
+      /bin/sh -c "
+      if [ -f /etc/ssl/certs/custom-ca.crt ]; then
+        update-ca-certificates;
+      fi &&
+      /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"
+    depends_on:
+      - relational_db
+      - index
+      - cache
+      - inference_model_server
+      - indexing_model_server
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - AUTH_TYPE=${AUTH_TYPE:-oidc}
+      - POSTGRES_HOST=relational_db
+      - VESPA_HOST=index
+      - REDIS_HOST=cache
+      - MODEL_SERVER_HOST=${MODEL_SERVER_HOST:-inference_model_server}
+      - INDEXING_MODEL_SERVER_HOST=${INDEXING_MODEL_SERVER_HOST:-indexing_model_server}
+      - USE_IAM_AUTH=${USE_IAM_AUTH}
+      - AWS_REGION_NAME=${AWS_REGION_NAME-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY-}
+    # Uncomment the line below to use if IAM_AUTH is true and you are using iam auth for postgres
+    # volumes:
+    #   - ./bundle.pem:/app/bundle.pem:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes: # Original had background_logs volume here, and also log configuration below
+      - background_logs:/var/log
+    # Uncomment the following lines if you need to include a custom CA certificate
+    # This section enables the use of a custom CA certificate
+    # If present, the custom CA certificate is mounted as a volume
+    # The container checks for its existence and updates the system's CA certificates
+    # This allows for secure communication with services using custom SSL certificates
+    # volumes:
+    #   # Maps to the CA_CERT_PATH environment variable in the Dockerfile
+    #   - ${CA_CERT_PATH:-./custom-ca.crt}:/etc/ssl/certs/custom-ca.crt:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  web_server:
+    image: onyxdotapp/onyx-web-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../../web # Relative to deployment/docker_compose/
+      dockerfile: Dockerfile
+      args:
+        - NODE_OPTIONS=${NODE_OPTIONS:-}
+        - NEXT_PUBLIC_DISABLE_STREAMING=${NEXT_PUBLIC_DISABLE_STREAMING:-false}
+        - NEXT_PUBLIC_NEW_CHAT_DIRECTS_TO_SAME_PERSONA=${NEXT_PUBLIC_NEW_CHAT_DIRECTS_TO_SAME_PERSONA:-false}
+        - NEXT_PUBLIC_POSITIVE_PREDEFINED_FEEDBACK_OPTIONS=${NEXT_PUBLIC_POSITIVE_PREDEFINED_FEEDBACK_OPTIONS:-}
+        - NEXT_PUBLIC_NEGATIVE_PREDEFINED_FEEDBACK_OPTIONS=${NEXT_PUBLIC_NEGATIVE_PREDEFINED_FEEDBACK_OPTIONS:-}
+        - NEXT_PUBLIC_DISABLE_LOGOUT=${NEXT_PUBLIC_DISABLE_LOGOUT:-}
+        - NEXT_PUBLIC_THEME=${NEXT_PUBLIC_THEME:-}
+        - NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED=${NEXT_PUBLIC_FORGOT_PASSWORD_ENABLED:-}
+        # - NEXT_PUBLIC_API_BASE_URL=http://143.198.59.56:8080
+    ports:
+      - "3000:3000" # allow for localhost:3000 usage, since that is the norm
+    depends_on:
+      - api_server
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - INTERNAL_URL=http://api_server:8080
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  relational_db:
+    image: postgres:15.2-alpine
+    command: -c 'max_connections=250'
+    restart: always
+    # POSTGRES_USER and POSTGRES_PASSWORD should be set in .env file
+    env_file:
+      - .env
+    volumes:
+      - db_volume:/var/lib/postgresql/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  inference_model_server:
+    image: onyxdotapp/onyx-model-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../../backend # Relative to deployment/docker_compose/
+      dockerfile: Dockerfile.model_server
+    command: >
+      /bin/sh -c "if [ \"${DISABLE_MODEL_SERVER:-false}\" = \"True\" ]; then
+        echo 'Skipping service...';
+        exit 0;
+      else
+        exec uvicorn model_server.main:app --host 0.0.0.0 --port 9000;
+      fi"
+    restart: on-failure
+    environment: # Original did not have env_file here, only specific env vars
+      - MIN_THREADS_ML_MODELS=${MIN_THREADS_ML_MODELS:-}
+      # Set to debug to get more fine-grained logs
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      # Not necessary, this is just to reduce download time during startup
+      - model_cache_huggingface:/root/.cache/huggingface/
+      # optional, only for debugging purposes
+      - inference_model_server_logs:/var/log
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  indexing_model_server:
+    image: onyxdotapp/onyx-model-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../../backend # Relative to deployment/docker_compose/
+      dockerfile: Dockerfile.model_server
+    command: >
+      /bin/sh -c "if [ \"${DISABLE_MODEL_SERVER:-false}\" = \"True\" ]; then
+        echo 'Skipping service...';
+        exit 0;
+      else
+        exec uvicorn model_server.main:app --host 0.0.0.0 --port 9000;
+      fi"
+    restart: on-failure
+    environment: # Original did not have env_file here
+      - MIN_THREADS_ML_MODELS=${MIN_THREADS_ML_MODELS:-}
+      - INDEXING_ONLY=True
+      # Set to debug to get more fine-grained logs
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - VESPA_SEARCHER_THREADS=${VESPA_SEARCHER_THREADS:-1}
+    volumes:
+      # Not necessary, this is just to reduce download time during startup
+      - indexing_huggingface_model_cache:/root/.cache/huggingface/
+      # optional, only for debugging purposes
+      - indexing_model_server_logs:/var/log
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  # This container name cannot have an underscore in it due to Vespa expectations of the URL
+  index:
+    image: vespaengine/vespa:8.277.17
+    restart: always
+    ports:
+      - "19071:19071"
+      - "8081:8081"
+#     - "19071:19071" # These were commented out in original
+#     - "8081:8081"   # These were commented out in original
+    volumes:
+      - vespa_volume:/opt/vespa/var
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "6"
+
+  cache:
+    image: redis:7.4-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    # docker silently mounts /data even without an explicit volume mount, which enables
+    # persistence. explicitly setting save and appendonly forces ephemeral behavior.
+    command: redis-server --save "" --appendonly no
+    # No specific logging configuration in original, but can be added if needed
+
+  # --- Custom Extension Services ---
+  custom_frontend:
+    build:
+      context: ../../custom_extensions/frontend # Path relative to this docker-compose.yml
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL_ARG=http://143.198.59.56:8001/api/custom
+    ports:
+      - "3001:3001" # Expose custom frontend on host port 3001
+    restart: always
+    env_file: # Optional: if it needs to share variables from the main .env
+      - .env
+    environment:
+      - NEXT_PUBLIC_CUSTOM_BACKEND_URL=http://custom_backend:8001/api/custom # For comms within Docker network
+      - PORT=3001 # Ensure Next.js listens on this port inside the container
+      # - NODE_ENV=development # Or production, depending on the build
+    depends_on:
+      - custom_backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+   #  volumes: # For development: mount local code for hot-reloading
+     #  - ../../custom_extensions/frontend:/app
+     #  - /app/node_modules # Anonymous volume to prevent host node_modules from overwriting container's
+     #  - /app/.next # Anonymous volume for Next.js build artifacts
+
+  custom_backend:
+    build:
+      context: ../../custom_extensions/backend # Path relative to this docker-compose.yml
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001" # Expose custom backend on host port 8001
+    restart: always
+    env_file: # Optional: if it needs to share variables from the main .env
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1 # For seeing logs immediately from Python
+      # Add necessary backend ENVs
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@relational_db:5432/${POSTGRES_DB:-onyx_db} # Example DB URL
+      # --- ADD URL for Frontend (needed by PDF generator) ---
+      - CUSTOM_FRONTEND_URL=http://custom_frontend:3001
+    shm_size: '2gb'
+    depends_on: # Depends on services it needs to connect to
+      - relational_db # If it directly accesses the Onyx database
+      - api_server    # If it calls the main Onyx API
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    volumes: # For development: mount local code for hot-reloading
+      - ../../custom_extensions/backend:/app
+      # If you have a venv inside custom_extensions/backend that you don't want to be overwritten:
+      # - /app/venv
+
+volumes:
+  db_volume:
+  vespa_volume:
+  # Created by the container itself
+  model_cache_huggingface:
+  indexing_huggingface_model_cache:
+  # for logs that we don't want to lose on container restarts
+  api_server_logs:
+  background_logs:
+  inference_model_server_logs:
+  indexing_model_server_logs:
+  # Logs for custom services
+  custom_frontend_logs: # This was not explicitly mapped to /var/log in service, but can be if needed
+  custom_backend_logs:  # Same as above
+
+# If your Onyx setup relies on a specific network, ensure all services, including custom ones, are part of it.
+# If no top-level 'networks:' block is defined, all services will join a default network for this compose file.
+# Example of defining a network if needed:
+# networks:
+#   onyx_network:
+#     driver: bridge
+
+# Then, each service would need:
+# networks:
+#   - onyx_network
