@@ -1,16 +1,19 @@
-// custom_extensions/frontend/src/app/pipelines/new/page.tsx
+// custom_extensions/frontend/src/app/pipelines/edit/[id]/page.tsx
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import React, { useState, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
-import { PipelineCreateFormData, PROMPT_TEMPLATES } from '@/types/pipelines'; // Adjust path
-import { PlusCircle, Trash2, ArrowUpCircle, ArrowDownCircle, BookOpen } from 'lucide-react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { PipelineCreateFormData, PipelineEditData, PROMPT_TEMPLATES } from '@/types/pipelines'; 
+import { PlusCircle, Trash2, Save, ArrowUpCircle, ArrowDownCircle, BookOpen } from 'lucide-react';
 
-const AddPipelinePageComponent = () => {
+const EditPipelinePageComponent = () => {
   const router = useRouter();
+  const params = useParams();
+  const pipelineId = params.id ? parseInt(params.id as string) : null;
+
   const [formData, setFormData] = useState<PipelineCreateFormData>({
     pipeline_name: '',
     pipeline_description: '',
@@ -19,8 +22,47 @@ const AddPipelinePageComponent = () => {
     prompts_data_collection_list: [''],
     prompts_data_formating_list: [''],
   });
+  const [initialPipelineName, setInitialPipelineName] = useState<string>(""); 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (pipelineId) {
+      const fetchPipelineData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const response = await fetch(`/api/custom-projects-backend/pipelines/${pipelineId}`);
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: "Failed to fetch pipeline data" }));
+            throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+          }
+          const data: PipelineEditData = await response.json();
+          setFormData({
+            id: data.id,
+            pipeline_name: data.pipeline_name,
+            pipeline_description: data.pipeline_description || '',
+            is_prompts_data_collection: data.is_prompts_data_collection,
+            is_prompts_data_formating: data.is_prompts_data_formating,
+            prompts_data_collection_list: data.prompts_data_collection_list.length > 0 ? data.prompts_data_collection_list : [''],
+            prompts_data_formating_list: data.prompts_data_formating_list.length > 0 ? data.prompts_data_formating_list : [''],
+          });
+          setInitialPipelineName(data.pipeline_name);
+        } catch (err: any) {
+          console.error("Failed to fetch pipeline data:", err);
+          setError(err.message || "Could not load pipeline data.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchPipelineData();
+    } else {
+      setError("Pipeline ID not found.");
+      setIsLoading(false);
+    }
+  }, [pipelineId]);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -88,36 +130,38 @@ const AddPipelinePageComponent = () => {
     }
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!pipelineId) {
+        setError("Cannot update pipeline without an ID.");
+        return;
+    }
     setIsSubmitting(true);
     setError(null);
 
     const payload: PipelineCreateFormData = {
-        ...formData,
+        ...formData, 
         prompts_data_collection_list: formData.prompts_data_collection_list.filter(p => p.trim() !== ''),
         prompts_data_formating_list: formData.prompts_data_formating_list.filter(p => p.trim() !== ''),
     };
 
-
     try {
-      const response = await fetch('/api/custom-projects-backend/pipelines/add', {
-        method: 'POST',
+      const response = await fetch(`/api/custom-projects-backend/pipelines/update/${pipelineId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Failed to create pipeline" }));
+        const errorData = await response.json().catch(() => ({ detail: "Failed to update pipeline" }));
         throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
-      alert('Pipeline created successfully!');
-      router.push('/pipelines');
+      alert('Pipeline updated successfully!');
+      router.push('/pipelines'); 
     } catch (err: any) {
-      console.error("Failed to submit pipeline:", err);
+      console.error("Failed to submit pipeline update:", err);
       setError(err.message || "An unknown error occurred.");
-      alert(`Error: ${err.message || "Could not create pipeline."}`);
+      alert(`Error: ${err.message || "Could not update pipeline."}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -158,7 +202,7 @@ const AddPipelinePageComponent = () => {
             <select
               onChange={(e) => handleTemplateSelect(listType, index, e.target.value)}
               className="text-xs p-1 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-black bg-white"
-              value="" // Reset selection after applying
+              value="" 
             >
               <option value="" disabled>Select a template...</option>
               {PROMPT_TEMPLATES.map(template => (
@@ -174,10 +218,19 @@ const AddPipelinePageComponent = () => {
     </div>
   );
 
+
+  if (isLoading) {
+    return <div className="p-8 text-center font-['Inter',_sans-serif] text-black">Loading pipeline data...</div>;
+  }
+
+  if (error && !formData.pipeline_name && !initialPipelineName) { 
+    return <div className="p-8 text-center text-red-500 font-['Inter',_sans-serif]">Error: {error}</div>;
+  }
+
   return (
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen font-['Inter',_sans-serif]">
       <div className="max-w-3xl mx-auto bg-white p-6 md:p-8 shadow-lg rounded-lg border border-gray-200">
-        <h1 className="text-2xl font-bold mb-6 text-black">Create New Pipeline</h1>
+        <h1 className="text-2xl font-bold mb-6 text-black">Edit Pipeline: {initialPipelineName || "..."}</h1>
         {error && <div className="mb-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded-md">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -240,10 +293,11 @@ const AddPipelinePageComponent = () => {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !formData.pipeline_name}
+              disabled={isSubmitting || !formData.pipeline_name || isLoading}
               className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              {isSubmitting ? 'Saving...' : 'Save Pipeline'}
+              <Save size={16} className="mr-2 inline-block" />
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
@@ -252,10 +306,10 @@ const AddPipelinePageComponent = () => {
   );
 };
 
-export default function AddPipelinePage() {
+export default function EditPipelinePage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading New Pipeline page...</div>}>
-      <AddPipelinePageComponent />
+    <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading Edit Pipeline page...</div>}>
+      <EditPipelinePageComponent />
     </Suspense>
   );
 }

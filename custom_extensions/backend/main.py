@@ -33,7 +33,7 @@ except ImportError:
 
 # --- Constants & DB Setup ---
 CUSTOM_PROJECTS_DATABASE_URL = os.getenv("CUSTOM_PROJECTS_DATABASE_URL")
-ONYX_API_SERVER_URL = "http://api_server:8080" 
+ONYX_API_SERVER_URL = "http://api_server:8080"
 ONYX_SESSION_COOKIE_NAME = os.getenv("ONYX_SESSION_COOKIE_NAME", "fastapiusersauth")
 
 DB_POOL = None
@@ -54,13 +54,13 @@ async def startup_event():
         return
     try:
         DB_POOL = await asyncpg.create_pool(dsn=CUSTOM_PROJECTS_DATABASE_URL, min_size=1, max_size=10,
-                                          init=lambda conn: conn.set_type_codec(
-                                              'jsonb',
-                                              encoder=lambda value: json.dumps(value) if value is not None else None,
-                                              decoder=lambda value: json.loads(value) if value is not None else None,
-                                              schema='pg_catalog',
-                                              format='text' 
-                                          )) # Add init for proper JSONB handling
+                                        init=lambda conn: conn.set_type_codec(
+                                            'jsonb',
+                                            encoder=lambda value: json.dumps(value) if value is not None else None,
+                                            decoder=lambda value: json.loads(value) if value is not None else None,
+                                            schema='pg_catalog',
+                                            format='text'
+                                        )) # Add init for proper JSONB handling
         async with DB_POOL.acquire() as connection:
             try:
                 # Check if column type needs alteration (for existing installations)
@@ -111,7 +111,7 @@ async def startup_event():
                     is_prompts_data_formating BOOLEAN DEFAULT FALSE,
                     prompts_data_collection JSONB,
                     prompts_data_formating JSONB,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP 
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
             """)
             # You might want to add an index for pipeline_name if it's queried often
@@ -133,10 +133,10 @@ async def shutdown_event():
 
 # ... (CORS Middleware setup - keep as is) ...
 effective_origins = list(set(filter(None, [
-    "http://localhost:3001", 
-    "http://143.198.59.56:3001", 
-    "http://143.198.59.56:8088", 
-    os.environ.get("WEB_DOMAIN", "http://localhost:3000"), 
+    "http://localhost:3001",
+    "http://143.198.59.56:3001",
+    "http://143.198.59.56:8088",
+    os.environ.get("WEB_DOMAIN", "http://localhost:3000"),
     settings.CUSTOM_FRONTEND_URL
 ])))
 if not effective_origins: effective_origins = ["http://localhost:3001"]
@@ -185,7 +185,7 @@ class MicroProductApiResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 class ProjectApiResponse(BaseModel):
-    id: int 
+    id: int
     projectName: str
     projectSlug: str
     product: str
@@ -256,12 +256,48 @@ class MicroproductPipelineBase(BaseModel):
 class MicroproductPipelineCreateRequest(MicroproductPipelineBase):
     pass
 
+class MicroproductPipelineUpdateRequest(MicroproductPipelineBase): # New model for updates
+    pass
+
 class MicroproductPipelineDBResponse(MicroproductPipelineBase):
     id: int
-    prompts_data_collection: Optional[Dict[str, str]] = None 
+    prompts_data_collection: Optional[Dict[str, str]] = None
     prompts_data_formating: Optional[Dict[str, str]] = None
-    created_at: datetime # Pydantic expects this field name
+    created_at: datetime
     model_config = {"from_attributes": True}
+
+# New model for fetching a single pipeline for editing (includes lists for frontend)
+class MicroproductPipelineGetResponse(MicroproductPipelineDBResponse):
+    # Ensure these are distinct from the parent and will be populated by the classmethod
+    prompts_data_collection_list: List[str] = Field(default_factory=list)
+    prompts_data_formating_list: List[str] = Field(default_factory=list)
+
+    @classmethod
+    def from_db_response(cls, db_response: MicroproductPipelineDBResponse) -> "MicroproductPipelineGetResponse":
+        data_collection_list = []
+        if db_response.prompts_data_collection:
+            data_collection_list = [
+                db_response.prompts_data_collection[key]
+                for key in sorted(db_response.prompts_data_collection.keys(), key=int)
+            ]
+
+        data_formating_list = []
+        if db_response.prompts_data_formating:
+            data_formating_list = [
+                db_response.prompts_data_formating[key]
+                for key in sorted(db_response.prompts_data_formating.keys(), key=int)
+            ]
+        
+        # Exclude the original Dict fields from the parent when constructing
+        # to avoid the "multiple values for keyword argument" error.
+        parent_data = db_response.model_dump(exclude={"prompts_data_collection", "prompts_data_formating", "prompts_data_collection_list", "prompts_data_formating_list"})
+
+        return cls(
+            **parent_data,
+            prompts_data_collection_list=data_collection_list,
+            prompts_data_formating_list=data_formating_list
+        )
+
 # --- Onyx User ID Function (keep as is) ---
 # ... (get_current_onyx_user_id function) ...
 async def get_current_onyx_user_id(request: Request) -> str:
@@ -271,14 +307,14 @@ async def get_current_onyx_user_id(request: Request) -> str:
         if dev_user_id:
             return dev_user_id
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Onyx session cookie '{ONYX_SESSION_COOKIE_NAME}' missing.")
-    
+
     onyx_user_info_url = f"{ONYX_API_SERVER_URL}/me"
     cookies_to_forward = {ONYX_SESSION_COOKIE_NAME: session_cookie_value}
-    
+
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(onyx_user_info_url, cookies=cookies_to_forward)
-            response.raise_for_status() 
+            response.raise_for_status()
             user_data = response.json()
             onyx_user_id = user_data.get("userId") or user_data.get("id")
             if not onyx_user_id:
@@ -344,7 +380,7 @@ def extract_float_time(time_str_from_new: Optional[str]) -> float:
 
 
 def format_lesson_time_display(time_float: float, lang_cfg: Dict[str, str]) -> str:
-    num_str = str(int(time_float)) if time_float == int(time_float) else f"{time_float:.1f}" 
+    num_str = str(int(time_float)) if time_float == int(time_float) else f"{time_float:.1f}"
     if time_float == 1.0: return f"1 {lang_cfg['TIME_UNIT_SINGULAR']}"
     return f"{num_str} {lang_cfg['TIME_UNIT_DECIMAL_PLURAL']}"
 
@@ -356,20 +392,20 @@ def format_total_time_display(time_float: float, lang_cfg: Dict[str, str]) -> st
 
 def transform_text_new_to_old(new_text: str, lang_configs: Dict = LANG_CONFIG) -> tuple[str, str]:
     detected_lang = detect_language(new_text, lang_configs)
-    lang_cfg = lang_configs.get(detected_lang, lang_configs['ru']) 
+    lang_cfg = lang_configs.get(detected_lang, lang_configs['ru'])
     output_lines = []
     module_header_parts = [
         rf"## ({lang_cfg['MODULE_KEYWORD']}\s*(\d+)\s*:\s*([^\n]+))\n",
-        r"\s*", 
+        r"\s*",
         rf"\*\*{lang_cfg['TOTAL_TIME_KEYWORD']}:\*\* [^\n]+\n",
-        rf"\*\*{lang_cfg['LESSONS_COUNT_KEYWORD']}:\*\* \d+\n", 
-        r"\n?", 
+        rf"\*\*{lang_cfg['LESSONS_COUNT_KEYWORD']}:\*\* \d+\n",
+        r"\n?",
         rf"### {lang_cfg['LESSONS_HEADER_KEYWORD']}\n"
     ]
     lessons_block_capture_part = r"([\s\S]*?)"
     lookahead_part = r"(?=\n## |\Z)"
     module_pattern_str = "".join(module_header_parts) + lessons_block_capture_part + lookahead_part
-    
+
     try: module_pattern = re.compile(module_pattern_str, re.MULTILINE | re.IGNORECASE)
     except Exception as e:
         print(f"Error compiling module_pattern: {e}"); return "", detected_lang
@@ -386,7 +422,7 @@ def transform_text_new_to_old(new_text: str, lang_configs: Dict = LANG_CONFIG) -
 
     for module_match in module_pattern.finditer(new_text):
         full_module_title = module_match.group(1).strip(); module_num_str = module_match.group(2)
-        lessons_block = module_match.group(4) 
+        lessons_block = module_match.group(4)
         output_lines.append(full_module_title); output_lines.append("")
         module_lessons_text = []; lesson_counter_in_module = 0; current_module_total_time_float = 0.0
         for lesson_match in lesson_pattern.finditer(lessons_block):
@@ -413,7 +449,7 @@ def transform_text_new_to_old(new_text: str, lang_configs: Dict = LANG_CONFIG) -
             else: module_lessons_text.append(f"- {lang_cfg['OUTPUT_TIME']}: {lang_cfg['PLACEHOLDER_DATA_MISSING']}")
             module_lessons_text.append("")
         output_lines.append(f"{lang_cfg['OUTPUT_MODULE_TOTAL_TIME']}: {format_total_time_display(current_module_total_time_float, lang_cfg)}"); output_lines.append("")
-        if module_lessons_text and module_lessons_text[-1] == "": output_lines.extend(module_lessons_text[:-1]) 
+        if module_lessons_text and module_lessons_text[-1] == "": output_lines.extend(module_lessons_text[:-1])
         else: output_lines.extend(module_lessons_text)
     final_text_output = "";
     if output_lines:
@@ -428,7 +464,7 @@ def get_canonical_field(raw_key: str) -> Optional[str]:
         for variation in variations:
             if variation.lower() == raw_key_lower: return canonical_name
     for canonical_name, variations in CANONICAL_ATTRIBUTE_FIELDS.items():
-        for variation in variations: 
+        for variation in variations:
             if variation.lower() in raw_key_lower: return canonical_name
     return None
 
@@ -459,7 +495,7 @@ def parse_training_plan_from_string(original_content_str: str, main_table_title:
     current_lesson_dict: Optional[Dict[str, Any]] = None
     section_id_counter = 0
     total_hours_explicitly_set_for_section = False
-    
+
     lines = transformed_content_str.splitlines()
     program_summary_keywords = ["итог по всей программе", "program summary:", "підсумок програми", "resumen del programa"]
 
@@ -476,21 +512,21 @@ def parse_training_plan_from_string(original_content_str: str, main_table_title:
         else:
             module_fallback_match = module_line_no_id_regex.match(line)
             if module_fallback_match: module_title_candidate = module_fallback_match.group(1).strip()
-        
+
         if module_title_candidate:
             if current_section_dict: plan_data["sections"].append(SectionDetail(**current_section_dict))
             section_id_counter += 1; display_section_id = parsed_section_id_text if parsed_section_id_text else str(section_id_counter)
             full_section_title = module_title_candidate.strip('.:-* ')
-            
+
             if not plan_data["mainTitle"] and "." in full_section_title: plan_data["mainTitle"] = full_section_title.split('.')[0].strip()
             elif not plan_data["mainTitle"]: plan_data["mainTitle"] = main_table_title
 
             current_section_dict = {"id": f"№{display_section_id}", "title": full_section_title, "totalHours": 0.0, "lessons": []}
             current_lesson_dict = None; total_hours_explicitly_set_for_section = False
-            
+
             combined_line_for_hours = line_raw
             if line_num < len(lines) and lines[line_num].strip(): combined_line_for_hours += " " + lines[line_num].strip()
-            
+
             total_hours_regex_str = r"(?:Общее время на модуль|Total Module Duration|Загальна тривалість модуля|Duración total del módulo)\s*[:\-]*\s*([\d.,]+)\s*(?:час|год|годин|hours?|hora|horas)"
             total_hours_match = re.search(total_hours_regex_str, combined_line_for_hours, re.IGNORECASE | re.UNICODE)
             if total_hours_match:
@@ -502,7 +538,7 @@ def parse_training_plan_from_string(original_content_str: str, main_table_title:
 
         lesson_regex_str = r"^\s*(?:\*\*)?(?:Урок|Lesson|Lección)\s*[\d.]*\s*[:\-]*\s*(?:[\"\'«“„”]?)(.+?)(?:[\"\'«“„”]?)(?:\*\*)?$"
         lesson_match = re.match(lesson_regex_str, line, re.IGNORECASE | re.UNICODE)
-        
+
         if lesson_match and current_section_dict is not None:
             lesson_title_raw = lesson_match.group(1).strip(); lesson_title = re.sub(r'^[\s.:\-*"«“„”\'\[\(]+|[\s.:\-*"«“„”\'\]\)]+$', '', lesson_title_raw).strip()
             current_lesson_dict = {"title": lesson_title, "check": {}, "contentAvailable": {}, "source": "", "hours": 0.0}
@@ -526,7 +562,7 @@ def parse_training_plan_from_string(original_content_str: str, main_table_title:
                                 current_section_dict["totalHours"] = float(current_section_dict.get("totalHours", 0.0)) + lesson_hours
                 except ValueError: print(f"Warn: Could not parse lesson hours: {value_raw}")
             continue
-            
+
     if current_section_dict: plan_data["sections"].append(SectionDetail(**current_section_dict))
 
     if not plan_data.get("mainTitle") and plan_data["sections"]:
@@ -551,17 +587,16 @@ async def add_pipeline(
 
     query = """
         INSERT INTO microproduct_pipelines (
-            pipeline_name, pipeline_description, 
+            pipeline_name, pipeline_description,
             is_prompts_data_collection, is_prompts_data_formating,
             prompts_data_collection, prompts_data_formating, created_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING id, pipeline_name, pipeline_description, 
-                  is_prompts_data_collection, is_prompts_data_formating,
-                  prompts_data_collection, prompts_data_formating, created_at; 
-    """ # Removed "AS date" alias from created_at
+        RETURNING id, pipeline_name, pipeline_description,
+                    is_prompts_data_collection, is_prompts_data_formating,
+                    prompts_data_collection, prompts_data_formating, created_at;
+    """
     try:
         async with pool.acquire() as conn:
-            # Ensure created_at is timezone-aware if not already
             current_time = datetime.now(timezone.utc)
             row = await conn.fetchrow(
                 query,
@@ -569,20 +604,14 @@ async def add_pipeline(
                 pipeline_data.pipeline_description,
                 pipeline_data.is_prompts_data_collection,
                 pipeline_data.is_prompts_data_formating,
-                prompts_collection_json, 
+                prompts_collection_json,
                 prompts_formating_json,
-                current_time 
+                current_time
             )
         if not row:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create pipeline.")
-        
-        # Prepare data for Pydantic model, ensuring 'created_at' key exists
-        response_data = dict(row)
-        # The RETURNING clause now returns 'created_at', so it should be in row_dict directly
-        # If for some reason it was aliased as 'date' (which we removed), this would be needed:
-        # if 'date' in response_data and 'created_at' not in response_data:
-        #    response_data['created_at'] = response_data.pop('date')
 
+        response_data = dict(row)
         return MicroproductPipelineDBResponse(**response_data)
     except Exception as e:
         print(f"Error inserting pipeline: {e}")
@@ -594,22 +623,19 @@ async def get_pipelines(
     pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     query = """
-        SELECT id, pipeline_name, pipeline_description, 
+        SELECT id, pipeline_name, pipeline_description,
                is_prompts_data_collection, is_prompts_data_formating,
-               prompts_data_collection, prompts_data_formating, created_at 
-        FROM microproduct_pipelines 
+               prompts_data_collection, prompts_data_formating, created_at
+        FROM microproduct_pipelines
         ORDER BY created_at DESC;
-    """ # Ensured created_at is selected directly
+    """
     try:
         async with pool.acquire() as conn:
             rows = await conn.fetch(query)
-        
+
         pipelines_list = []
         for row in rows:
             row_dict = dict(row)
-            # Ensure 'created_at' key is what Pydantic model expects
-            # if 'date' in row_dict and 'created_at' not in row_dict: # This check might be redundant if SQL is correct
-            #    row_dict['created_at'] = row_dict.pop('date')
             pipelines_list.append(MicroproductPipelineDBResponse(**row_dict))
         return pipelines_list
 
@@ -617,24 +643,121 @@ async def get_pipelines(
         print(f"Error fetching pipelines: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching pipelines: {str(e)}")
+
+
+@app.get("/api/custom/pipelines/{pipeline_id}", response_model=MicroproductPipelineGetResponse)
+async def get_pipeline(
+    pipeline_id: int,
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    query = """
+        SELECT id, pipeline_name, pipeline_description,
+               is_prompts_data_collection, is_prompts_data_formating,
+               prompts_data_collection, prompts_data_formating, created_at
+        FROM microproduct_pipelines
+        WHERE id = $1;
+    """
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(query, pipeline_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pipeline not found.")
+        
+        db_response = MicroproductPipelineDBResponse(**dict(row))
+        return MicroproductPipelineGetResponse.from_db_response(db_response)
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error fetching pipeline {pipeline_id}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching pipeline: {str(e)}")
+
+
+@app.put("/api/custom/pipelines/update/{pipeline_id}", response_model=MicroproductPipelineDBResponse)
+async def update_pipeline(
+    pipeline_id: int,
+    pipeline_data: MicroproductPipelineUpdateRequest,
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    prompts_collection_json = {str(i+1): prompt for i, prompt in enumerate(pipeline_data.prompts_data_collection_list) if prompt.strip()} if pipeline_data.prompts_data_collection_list else None
+    prompts_formating_json = {str(i+1): prompt for i, prompt in enumerate(pipeline_data.prompts_data_formating_list) if prompt.strip()} if pipeline_data.prompts_data_formating_list else None
+
+    query = """
+        UPDATE microproduct_pipelines
+        SET pipeline_name = $1,
+            pipeline_description = $2,
+            is_prompts_data_collection = $3,
+            is_prompts_data_formating = $4,
+            prompts_data_collection = $5,
+            prompts_data_formating = $6
+            /* created_at is not updated */
+        WHERE id = $7
+        RETURNING id, pipeline_name, pipeline_description,
+                    is_prompts_data_collection, is_prompts_data_formating,
+                    prompts_data_collection, prompts_data_formating, created_at;
+    """
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                query,
+                pipeline_data.pipeline_name,
+                pipeline_data.pipeline_description,
+                pipeline_data.is_prompts_data_collection,
+                pipeline_data.is_prompts_data_formating,
+                prompts_collection_json,
+                prompts_formating_json,
+                pipeline_id
+            )
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pipeline not found or update failed.")
+        return MicroproductPipelineDBResponse(**dict(row))
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error updating pipeline {pipeline_id}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on pipeline update: {str(e)}")
+
+
+@app.delete("/api/custom/pipelines/delete/{pipeline_id}", status_code=status.HTTP_200_OK)
+async def delete_pipeline(
+    pipeline_id: int,
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    query = "DELETE FROM microproduct_pipelines WHERE id = $1 RETURNING id;"
+    try:
+        async with pool.acquire() as conn:
+            deleted_id = await conn.fetchval(query, pipeline_id)
+        if deleted_id is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pipeline not found.")
+        return {"detail": f"Successfully deleted pipeline with ID {pipeline_id}."}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error deleting pipeline {pipeline_id}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on pipeline deletion: {str(e)}")
+
+
 @app.post("/api/custom/projects/add", response_model=ProjectDB, status_code=status.HTTP_201_CREATED)
 async def add_project_to_custom_db(
-    project_data: ProjectCreateRequest, 
-    onyx_user_id: str = Depends(get_current_onyx_user_id), 
+    project_data: ProjectCreateRequest,
+    onyx_user_id: str = Depends(get_current_onyx_user_id),
     pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     db_microproduct_name_to_store = project_data.microProductName if project_data.microProductName and project_data.microProductName.strip() else project_data.microProductType
-    
+
     parsed_content: Optional[TrainingPlanDetails] = parse_training_plan_from_string(
         project_data.aiResponse, project_data.projectName
     )
-    
+
     content_to_store_for_db = None
     if parsed_content:
         try: # Pydantic v2
             content_to_store_for_db = parsed_content.model_dump(mode='json', exclude_none=True)
         except AttributeError: # Pydantic v1
-             content_to_store_for_db = json.loads(parsed_content.json(exclude_none=True))
+            content_to_store_for_db = json.loads(parsed_content.json(exclude_none=True))
 
 
     insert_query = """
@@ -649,13 +772,13 @@ async def add_project_to_custom_db(
             row = await conn.fetchrow(
                 insert_query,
                 onyx_user_id, project_data.projectName, project_data.product,
-                project_data.microProductType, db_microproduct_name_to_store, 
+                project_data.microProductType, db_microproduct_name_to_store,
                 content_to_store_for_db # This should be a Python dict for asyncpg to handle JSONB
             )
         if not row: raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create project entry.")
-        
+
         # Pydantic model will parse the 'microproduct_content' from dict to TrainingPlanDetails
-        return ProjectDB(**dict(row)) 
+        return ProjectDB(**dict(row))
     except Exception as e:
         print(f"Error inserting project: {e}"); traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on insert: {str(e)}")
@@ -675,10 +798,10 @@ async def get_project_details_for_edit(
     try:
         async with pool.acquire() as conn:
             row = await conn.fetchrow(query, project_id, onyx_user_id)
-        
+
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
-        
+
         row_dict = dict(row)
         # microproduct_content is already a dict/None from JSONB
         return ProjectDetailForEditResponse(
@@ -722,7 +845,7 @@ async def update_project_in_db(
             product_type = $2,
             microproduct_type = $3,
             microproduct_name = $4,
-            microproduct_content = $5 
+            microproduct_content = $5
             /* created_at is not updated on edit */
         WHERE id = $6 AND onyx_user_id = $7
         RETURNING id, onyx_user_id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at;
@@ -762,11 +885,11 @@ async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_
             project_db_id = r_dict_full.get('id')
             if project_db_id is None:
                 print(f"WARNING: Project row encountered without an ID (user: {onyx_user_id}): {r_dict_full.get('project_name')}")
-                continue 
+                continue
 
             pn = r_dict_full.get('project_name', 'N/A')
             pt = r_dict_full.get('product_type', 'N/A')
-            
+
             name_for_display = r_dict_full.get('microproduct_name') or r_dict_full.get('microproduct_type', 'Unnamed MicroProduct')
             type_for_slug_generation = r_dict_full.get('microproduct_type')
             if not type_for_slug_generation: type_for_slug_generation = "default-mptype-slug"
@@ -780,16 +903,16 @@ async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_
             pdflp = f"pdf/{pdf_doc_identifier_slug}"
 
             mpa = MicroProductApiResponse(
-                name=name_for_display, 
-                slug=mpt_type_slug,    
+                name=name_for_display,
+                slug=mpt_type_slug,
                 webLinkPath=wlp,
                 pdfLinkPath=pdflp,
                 details=None # Details are not needed for the list view
             )
             pra = ProjectApiResponse(
-                id=project_db_id, 
-                projectName=pn, projectSlug=ps, 
-                product=pt, productSlug=pts_slug, 
+                id=project_db_id,
+                projectName=pn, projectSlug=ps,
+                product=pt, productSlug=pts_slug,
                 microProduct=mpa
             )
             transformed_projects.append(pra)
@@ -803,7 +926,7 @@ async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_
 @app.get("/api/custom/microproducts/{project_slug}/{product_slug}/{micro_product_type_slug}",
          response_model=MicroProductApiResponse, responses={404: {"model": ErrorDetail}})
 async def get_microproduct_detail_from_db(
-    project_slug: str, product_slug: str, micro_product_type_slug: str, 
+    project_slug: str, product_slug: str, micro_product_type_slug: str,
     onyx_user_id: str = Depends(get_current_onyx_user_id),
     pool: asyncpg.Pool = Depends(get_db_pool)
 ):
@@ -813,28 +936,28 @@ async def get_microproduct_detail_from_db(
                 "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at " # Fetch content
                 "FROM projects WHERE onyx_user_id = $1", onyx_user_id
             )
-        
+
         found_project_row_dict = None
         for r_dict in [dict(r) for r in all_projects_raw]:
             db_project_slug = create_slug(r_dict.get('project_name'))
             db_product_type_slug = create_slug(r_dict.get('product_type'))
-            db_microproduct_type_slug = create_slug(r_dict.get('microproduct_type')) 
+            db_microproduct_type_slug = create_slug(r_dict.get('microproduct_type'))
 
             if (db_project_slug == project_slug and
                 db_product_type_slug == product_slug and
                 db_microproduct_type_slug == micro_product_type_slug):
                 found_project_row_dict = r_dict
-                break 
-        
+                break
+
         if not found_project_row_dict: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Micro-product not found.")
 
         project_name_from_db = found_project_row_dict['project_name']
         product_type_from_db = found_project_row_dict.get('product_type', 'N/A')
         microproduct_display_name = found_project_row_dict.get('microproduct_name') or found_project_row_dict.get('microproduct_type', 'N/A')
         microproduct_type_for_routing = found_project_row_dict.get('microproduct_type') or "default-type"
-        
+
         microproduct_content_json = found_project_row_dict.get('microproduct_content')
-        
+
         details_data: Optional[TrainingPlanDetails] = None
         if microproduct_content_json: # Should be a dict if from JSONB
             try:
@@ -844,8 +967,8 @@ async def get_microproduct_detail_from_db(
                 # Fallback if validation fails or if it's somehow still a string that's not JSON
                 if isinstance(microproduct_content_json, str):
                      details_data = parse_training_plan_from_string(microproduct_content_json, project_name_from_db)
-                else:     
-                    details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_display_name} (validation error)", sections=[], detectedLanguage='ru')
+                else:
+                     details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_display_name} (validation error)", sections=[], detectedLanguage='ru')
 
         else: # No content
             details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_display_name}", sections=[], detectedLanguage='ru')
@@ -856,11 +979,11 @@ async def get_microproduct_detail_from_db(
         pdf_link_path = f"pdf/{pdf_doc_identifier_slug}"
 
         return MicroProductApiResponse(
-            name=microproduct_display_name, 
-            slug=micro_product_type_slug,       
+            name=microproduct_display_name,
+            slug=micro_product_type_slug,
             webLinkPath=web_link_path,
             pdfLinkPath=pdf_link_path,
-            details=details_data 
+            details=details_data
         )
     except HTTPException as e: raise e
     except Exception as e:
@@ -870,18 +993,18 @@ async def get_microproduct_detail_from_db(
 @app.get("/api/custom/pdf/{document_slug}", response_class=FileResponse,
          responses={404: {"model": ErrorDetail}, 500: {"model": ErrorDetail}})
 async def download_micro_product_pdf_from_db(
-    document_slug: str, 
-    onyx_user_id: str = Depends(get_current_onyx_user_id), 
+    document_slug: str,
+    onyx_user_id: str = Depends(get_current_onyx_user_id),
     pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     print(f"PDF req for doc_slug: {document_slug}, user {onyx_user_id}")
-    async with pool.acquire() as conn: 
+    async with pool.acquire() as conn:
         user_projects_raw = await conn.fetch(
             "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at "
-            "FROM projects WHERE onyx_user_id = $1", 
+            "FROM projects WHERE onyx_user_id = $1",
             onyx_user_id
         )
-    
+
     target_row_dict = None
     mp_name_for_pdf_context = "document"
     project_name_for_pdf_context = "Project"
@@ -894,7 +1017,7 @@ async def download_micro_product_pdf_from_db(
     for r_dict in [dict(r) for r in user_projects_raw]:
         pn_db = r_dict['project_name']
         pt_db = r_dict.get('product_type','')
-        mpt_type_for_slug = r_dict.get('microproduct_type', '') 
+        mpt_type_for_slug = r_dict.get('microproduct_type', '')
         current_pdf_slug = create_slug(f"{pn_db}_{pt_db}_{mpt_type_for_slug}")
         if current_pdf_slug == document_slug:
             target_row_dict = r_dict
@@ -903,8 +1026,8 @@ async def download_micro_product_pdf_from_db(
             # Update user_friendly_pdf_filename to be more specific if desired, but unique name helps avoid browser cache
             user_friendly_pdf_filename = f"{create_slug(mp_name_for_pdf_context)}_{uuid.uuid4().hex[:8]}.pdf"
             break
-            
-    if not target_row_dict: 
+
+    if not target_row_dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"PDF definition not found for slug: {document_slug}")
 
     content_json = target_row_dict.get('microproduct_content')
@@ -915,7 +1038,7 @@ async def download_micro_product_pdf_from_db(
         try:
             details_pdf = TrainingPlanDetails(**content_json) # Assumes content_json is already a dict
             if details_pdf.detectedLanguage:
-                 detected_lang_for_pdf = details_pdf.detectedLanguage
+                detected_lang_for_pdf = details_pdf.detectedLanguage
         except Exception as pydantic_e:
             print(f"Error validating TrainingPlanDetails from DB JSON for PDF ({document_slug}): {pydantic_e}")
             # Optionally, try to re-parse if it was a string for some reason (legacy data, etc.)
@@ -927,45 +1050,45 @@ async def download_micro_product_pdf_from_db(
                         if details_pdf.detectedLanguage:
                             detected_lang_for_pdf = details_pdf.detectedLanguage
                 except Exception as parse_e:
-                     print(f"Could not re-parse content string for PDF ({document_slug}): {parse_e}")
-    
-    if not details_pdf: 
+                    print(f"Could not re-parse content string for PDF ({document_slug}): {parse_e}")
+
+    if not details_pdf:
         details_pdf = TrainingPlanDetails(
-            mainTitle=f"Content for '{mp_name_for_pdf_context}' is unavailable or unparsable.", 
+            mainTitle=f"Content for '{mp_name_for_pdf_context}' is unavailable or unparsable.",
             sections=[],
             detectedLanguage=detected_lang_for_pdf
         )
-    
+
     # Use a timestamp or UUID to ensure the generated PDF filename is unique for this request
     # This helps if generate_pdf_from_html_template itself might have some internal caching based on output_filename
     unique_output_filename = f"{document_slug}_{uuid.uuid4().hex[:12]}.pdf"
-    
+
     try:
         if details_pdf is None: # Should be initialized by now
              details_pdf = TrainingPlanDetails(mainTitle="Error preparing PDF data", sections=[], detectedLanguage=detected_lang_for_pdf)
 
         context_data_for_pdf = {'details': details_pdf.model_dump(exclude_none=True)}
-        
+
         current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru']) # Default to 'ru' if lang not found
         context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf
         context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg['TIME_UNIT_SINGULAR']
         context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg['TIME_UNIT_DECIMAL_PLURAL']
         context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg['TIME_UNIT_GENERAL_PLURAL']
-        
+
         # Always generate the PDF for each request
         pdf_path = await generate_pdf_from_html_template(
-            "training_plan_pdf_template.html", 
-            context_data_for_pdf, 
+            "training_plan_pdf_template.html",
+            context_data_for_pdf,
             unique_output_filename # Pass the unique filename to the generator
         )
 
-        if not os.path.exists(pdf_path): 
+        if not os.path.exists(pdf_path):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="PDF file not found after generation.")
-        
+
         # The FileResponse itself doesn't cache aggressively, but client/proxies might.
         # Forcing a unique user_friendly_pdf_filename for each download can also help.
         return FileResponse(
-            path=pdf_path, 
+            path=pdf_path,
             filename=user_friendly_pdf_filename, # This is the name the user sees
             media_type='application/pdf',
             # Add headers to suggest no caching by browsers/proxies
