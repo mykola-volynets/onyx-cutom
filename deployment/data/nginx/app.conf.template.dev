@@ -50,6 +50,17 @@ server {
         proxy_pass_request_headers on;
     }
 
+    location ^~ /static_design_images/ { 
+        proxy_pass http://custom_backend_server/static_design_images/; # To custom_backend:8001/static_design_images/
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Add appropriate caching headers for images if desired in production
+        # expires 1M; 
+        # add_header Cache-Control "public";
+    }
+
     # Location for Custom Backend API
     # Use ^~ for higher precedence for this prefix match
     location ^~ /api/custom-projects-backend/ { # ADDED ^~ modifier
@@ -82,6 +93,7 @@ server {
         proxy_redirect off;
         proxy_pass http://api_server;
     }
+
 
     # Original Onyx Web Server location (main UI)
     location / {

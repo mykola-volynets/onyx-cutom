@@ -6,10 +6,10 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // For Next.js optimized images
-import { DesignTemplate } from '@/types/designTemplates';
-import { fetchDesignTemplates } from '@/lib/designTemplateApi';
-import { Plus, Edit3, Trash2, Eye } from 'lucide-react'; // Assuming you might add edit/delete later
+import Image from 'next/image'; // Using Next.js Image component
+import { DesignTemplate } from '@/types/designTemplates'; // Assuming types are in @/types/designTemplates.ts
+import { fetchDesignTemplates } from '@/lib/designTemplateApi'; // Assuming API functions are in @/lib/designTemplateApi.ts
+import { Plus } from 'lucide-react';
 
 const DesignTemplatesListPageComponent = () => {
   const [templates, setTemplates] = useState<DesignTemplate[]>([]);
@@ -19,12 +19,13 @@ const DesignTemplatesListPageComponent = () => {
   useEffect(() => {
     const loadTemplates = async () => {
       setLoading(true);
+      setError(null); // Reset error state on new fetch
       try {
         const data = await fetchDesignTemplates();
         setTemplates(data);
       } catch (err: any) {
         setError(err.message || "Could not load design templates.");
-        console.error(err);
+        console.error("Failed to load design templates:", err);
       } finally {
         setLoading(false);
       }
@@ -76,7 +77,7 @@ const DesignTemplatesListPageComponent = () => {
                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Date Created
                   </th>
-                  {/* Add Actions column if needed later for Edit/Delete */}
+                  {/* Add an "Actions" column here later if you want Edit/Delete buttons per template */}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -85,13 +86,13 @@ const DesignTemplatesListPageComponent = () => {
                     <td className="px-6 py-4">
                       {template.design_image_path ? (
                         <Image
-                          src={template.design_image_path}
-                          alt={template.template_name}
-                          width={80} // Adjust size as needed
-                          height={80}
-                          className="object-contain rounded"
-                          unoptimized={process.env.NODE_ENV === 'development'} // Useful if images are served locally by FastAPI dev server
-                        />
+			  src={template.design_image_path}
+			  alt={template.template_name || 'Design Template Image'}
+			  width={80}
+			  height={80}
+			  className="object-contain rounded"
+			  unoptimized={true} // <--- ADD THIS PROP FOR TESTING
+			/>
                       ) : (
                         <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
                           No Image
