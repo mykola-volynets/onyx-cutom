@@ -109,15 +109,15 @@ const AddPipelinePageComponent = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Failed to create pipeline" }));
+        const errorData = await response.json().catch(() => ({ detail: "Failed to create product" }));
         throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
-      alert('Pipeline created successfully!');
+      alert('Product created successfully!');
       router.push('/pipelines');
     } catch (err: any) {
-      console.error("Failed to submit pipeline:", err);
+      console.error("Failed to submit product:", err);
       setError(err.message || "An unknown error occurred.");
-      alert(`Error: ${err.message || "Could not create pipeline."}`);
+      alert(`Error: ${err.message || "Could not create product."}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -177,11 +177,11 @@ const AddPipelinePageComponent = () => {
   return (
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen font-['Inter',_sans-serif]">
       <div className="max-w-3xl mx-auto bg-white p-6 md:p-8 shadow-lg rounded-lg border border-gray-200">
-        <h1 className="text-2xl font-bold mb-6 text-black">Create New Pipeline</h1>
+        <h1 className="text-2xl font-bold mb-6 text-black">Create New Product</h1>
         {error && <div className="mb-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded-md">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="pipeline_name" className={labelBaseClasses}>Pipeline Name <span className="text-red-500">*</span></label>
+            <label htmlFor="pipeline_name" className={labelBaseClasses}>Product Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               name="pipeline_name"
@@ -194,7 +194,7 @@ const AddPipelinePageComponent = () => {
           </div>
 
           <div>
-            <label htmlFor="pipeline_description" className={labelBaseClasses}>Pipeline Description</label>
+            <label htmlFor="pipeline_description" className={labelBaseClasses}>Product Description</label>
             <textarea
               name="pipeline_description"
               id="pipeline_description"
@@ -243,7 +243,7 @@ const AddPipelinePageComponent = () => {
               disabled={isSubmitting || !formData.pipeline_name}
               className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              {isSubmitting ? 'Saving...' : 'Save Pipeline'}
+              {isSubmitting ? 'Saving...' : 'Save Product'}
             </button>
           </div>
         </form>
@@ -254,7 +254,7 @@ const AddPipelinePageComponent = () => {
 
 export default function AddPipelinePage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading New Pipeline page...</div>}>
+    <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading New Product page...</div>}>
       <AddPipelinePageComponent />
     </Suspense>
   );

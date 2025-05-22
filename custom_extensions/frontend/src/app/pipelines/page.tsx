@@ -22,14 +22,14 @@ const PipelinesPageComponent = () => {
     try {
       const response = await fetch('/api/custom-projects-backend/pipelines');
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({ detail: "Failed to fetch pipelines"}));
+        const errData = await response.json().catch(() => ({ detail: "Failed to fetch products"}));
         throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
       }
       const data: Pipeline[] = await response.json();
       setPipelines(data);
     } catch (err: any) {
-      console.error("Failed to fetch pipelines:", err);
-      setError(err.message || "Could not load pipelines.");
+      console.error("Failed to fetch products:", err);
+      setError(err.message || "Could not load prpjects.");
     } finally {
       setLoading(false);
     }
@@ -44,29 +44,29 @@ const PipelinesPageComponent = () => {
   };
 
   const handleDelete = async (pipelineId: number, pipelineName: string) => {
-    if (window.confirm(`Are you sure you want to delete the pipeline "${pipelineName}"? This action cannot be undone.`)) {
+    if (window.confirm(`Are you sure you want to delete the product "${pipelineName}"? This action cannot be undone.`)) {
       try {
         const response = await fetch(`/api/custom-projects-backend/pipelines/delete/${pipelineId}`, {
           method: 'DELETE',
         });
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: "Failed to delete pipeline" }));
+          const errorData = await response.json().catch(() => ({ detail: "Failed to delete product" }));
           throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
         }
-        alert('Pipeline deleted successfully!');
-        // Refresh the list of pipelines
+        alert('Product deleted successfully!');
+        // Refresh the list of products
         fetchPipelines();
       } catch (err: any) {
-        console.error("Failed to delete pipeline:", err);
-        setError(err.message || "Could not delete pipeline.");
-        alert(`Error: ${err.message || "Could not delete pipeline."}`);
+        console.error("Failed to delete product:", err);
+        setError(err.message || "Could not delete product.");
+        alert(`Error: ${err.message || "Could not delete product."}`);
       }
     }
   };
 
 
   if (loading) {
-    return <div className="p-8 text-center font-['Inter',_sans-serif] text-black">Loading pipelines...</div>;
+    return <div className="p-8 text-center font-['Inter',_sans-serif] text-black">Loading project...</div>;
   }
 
   if (error) {
@@ -77,17 +77,17 @@ const PipelinesPageComponent = () => {
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen font-['Inter',_sans-serif]">
       <div className="max-w-7xl mx-auto bg-white p-6 md:p-8 shadow-lg rounded-lg border border-gray-200">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-black">Microproduct Pipelines</h1>
+          <h1 className="text-2xl font-bold text-black">Products</h1>
           <Link href="/pipelines/new" legacyBehavior>
             <a className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-              <Plus size={18} className="mr-2" /> Add New Pipeline
+              <Plus size={18} className="mr-2" /> Add New Product
             </a>
           </Link>
         </div>
 
         {pipelines.length === 0 && !loading ? (
           <div className="text-center text-gray-500 py-10">
-            No pipelines configured yet. Click &quot;Add New Pipeline&quot; to get started.
+            No products configured yet. Click &quot;Add New Product&quot; to get started.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -95,7 +95,7 @@ const PipelinesPageComponent = () => {
               <thead className="bg-gray-800">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                    Pipeline Name
+                    Product Name
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Description
@@ -137,16 +137,16 @@ const PipelinesPageComponent = () => {
                       <button
                         onClick={() => handleEdit(pipeline.id)}
                         className="text-indigo-600 hover:text-indigo-900 inline-flex items-center text-xs p-1"
-                        title="Edit Pipeline"
-                        aria-label={`Edit pipeline ${pipeline.pipeline_name}`}
+                        title="Edit Project"
+                        aria-label={`Edit project ${pipeline.pipeline_name}`}
                       >
                         <Edit3 size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(pipeline.id, pipeline.pipeline_name)}
                         className="text-red-600 hover:text-red-900 inline-flex items-center text-xs p-1"
-                        title="Delete Pipeline"
-                        aria-label={`Delete pipeline ${pipeline.pipeline_name}`}
+                        title="Delete Project"
+                        aria-label={`Delete project ${pipeline.pipeline_name}`}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -164,7 +164,7 @@ const PipelinesPageComponent = () => {
 
 export default function PipelinesPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading Pipelines page...</div>}>
+    <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading Products page...</div>}>
       <PipelinesPageComponent />
     </Suspense>
   );

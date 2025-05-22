@@ -352,7 +352,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
               >
                 <FiSliders size={20} className="flex-none text-text-history-sidebar-button" /> 
                 <p className="my-auto flex font-normal items-center text-base">
-                  Pipelines
+                  Products
                 </p>
               </Link>
               {/* === END OF NEW "PIPELINES" LINK === */}

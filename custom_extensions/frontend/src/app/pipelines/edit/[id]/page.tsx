@@ -35,7 +35,7 @@ const EditPipelinePageComponent = () => {
         try {
           const response = await fetch(`/api/custom-projects-backend/pipelines/${pipelineId}`);
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: "Failed to fetch pipeline data" }));
+            const errorData = await response.json().catch(() => ({ detail: "Failed to fetch project data" }));
             throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
           }
           const data: PipelineEditData = await response.json();
@@ -50,15 +50,15 @@ const EditPipelinePageComponent = () => {
           });
           setInitialPipelineName(data.pipeline_name);
         } catch (err: any) {
-          console.error("Failed to fetch pipeline data:", err);
-          setError(err.message || "Could not load pipeline data.");
+          console.error("Failed to fetch product data:", err);
+          setError(err.message || "Could not load product data.");
         } finally {
           setIsLoading(false);
         }
       };
       fetchPipelineData();
     } else {
-      setError("Pipeline ID not found.");
+      setError("Product ID not found.");
       setIsLoading(false);
     }
   }, [pipelineId]);
@@ -133,7 +133,7 @@ const EditPipelinePageComponent = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pipelineId) {
-        setError("Cannot update pipeline without an ID.");
+        setError("Cannot update product without an ID.");
         return;
     }
     setIsSubmitting(true);
@@ -153,15 +153,15 @@ const EditPipelinePageComponent = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: "Failed to update pipeline" }));
+        const errorData = await response.json().catch(() => ({ detail: "Failed to update product" }));
         throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
-      alert('Pipeline updated successfully!');
+      alert('Product updated successfully!');
       router.push('/pipelines'); 
     } catch (err: any) {
-      console.error("Failed to submit pipeline update:", err);
+      console.error("Failed to submit product update:", err);
       setError(err.message || "An unknown error occurred.");
-      alert(`Error: ${err.message || "Could not update pipeline."}`);
+      alert(`Error: ${err.message || "Could not update product."}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -220,7 +220,7 @@ const EditPipelinePageComponent = () => {
 
 
   if (isLoading) {
-    return <div className="p-8 text-center font-['Inter',_sans-serif] text-black">Loading pipeline data...</div>;
+    return <div className="p-8 text-center font-['Inter',_sans-serif] text-black">Loading product data...</div>;
   }
 
   if (error && !formData.pipeline_name && !initialPipelineName) { 
@@ -230,11 +230,11 @@ const EditPipelinePageComponent = () => {
   return (
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen font-['Inter',_sans-serif]">
       <div className="max-w-3xl mx-auto bg-white p-6 md:p-8 shadow-lg rounded-lg border border-gray-200">
-        <h1 className="text-2xl font-bold mb-6 text-black">Edit Pipeline: {initialPipelineName || "..."}</h1>
+        <h1 className="text-2xl font-bold mb-6 text-black">Edit Product: {initialPipelineName || "..."}</h1>
         {error && <div className="mb-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded-md">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="pipeline_name" className={labelBaseClasses}>Pipeline Name <span className="text-red-500">*</span></label>
+            <label htmlFor="pipeline_name" className={labelBaseClasses}>Product Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               name="pipeline_name"
@@ -247,7 +247,7 @@ const EditPipelinePageComponent = () => {
           </div>
 
           <div>
-            <label htmlFor="pipeline_description" className={labelBaseClasses}>Pipeline Description</label>
+            <label htmlFor="pipeline_description" className={labelBaseClasses}>Product Description</label>
             <textarea
               name="pipeline_description"
               id="pipeline_description"
@@ -308,7 +308,7 @@ const EditPipelinePageComponent = () => {
 
 export default function EditPipelinePage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading Edit Pipeline page...</div>}>
+    <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading Edit Product page...</div>}>
       <EditPipelinePageComponent />
     </Suspense>
   );
