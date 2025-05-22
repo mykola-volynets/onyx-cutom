@@ -4,25 +4,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { PipelineCreateFormData, PROMPT_TEMPLATES } from '@/types/pipelines'; // Adjust path
-import { PlusCircle, Trash2, ArrowUpCircle, ArrowDownCircle, BookOpen } from 'lucide-react';
+import { PipelineFormData, PROMPT_TEMPLATES, PromptTemplate } from '@/types/pipelines';
+import { PlusCircle, Trash2, ArrowUpCircle, ArrowDownCircle, BookOpen, Image as ImageIcon } from 'lucide-react';
+import Image from 'next/image';
 
 const AddPipelinePageComponent = () => {
   const router = useRouter();
-  const [formData, setFormData] = useState<PipelineCreateFormData>({
+  const [formData, setFormData] = useState<PipelineFormData>({
     pipeline_name: '',
     pipeline_description: '',
-    is_prompts_data_collection: false,
-    is_prompts_data_formating: false,
-    prompts_data_collection_list: [''],
-    prompts_data_formating_list: [''],
+    is_discovery_prompts: false,
+    is_structuring_prompts: false,
+    discovery_prompts_list: [''],
+    structuring_prompts_list: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStructuringTemplates, setSelectedStructuringTemplates] = useState<(PromptTemplate | null)[]>([]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
       const { checked } = e.target as HTMLInputElement;
@@ -32,74 +34,121 @@ const AddPipelinePageComponent = () => {
     }
   };
 
-  const handlePromptChange = (
-    listType: 'prompts_data_collection_list' | 'prompts_data_formating_list',
-    index: number,
-    value: string
-  ) => {
+  const handleDiscoveryPromptChange = (index: number, value: string) => {
     setFormData(prev => {
-      const newList = [...prev[listType]];
+      const newList = [...prev.discovery_prompts_list];
       newList[index] = value;
-      return { ...prev, [listType]: newList };
+      return { ...prev, discovery_prompts_list: newList };
     });
   };
 
-  const addPromptInput = (listType: 'prompts_data_collection_list' | 'prompts_data_formating_list') => {
+  const addDiscoveryPromptInput = () => {
     setFormData(prev => ({
       ...prev,
-      [listType]: [...prev[listType], ''],
+      discovery_prompts_list: [...prev.discovery_prompts_list, ''],
     }));
   };
 
-  const removePromptInput = (listType: 'prompts_data_collection_list' | 'prompts_data_formating_list', index: number) => {
+  const removeDiscoveryPromptInput = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      [listType]: prev[listType].filter((_, i) => i !== index),
+      discovery_prompts_list: prev.discovery_prompts_list.filter((_, i) => i !== index),
     }));
   };
-
-  const movePrompt = (
-    listType: 'prompts_data_collection_list' | 'prompts_data_formating_list',
-    index: number,
-    direction: 'up' | 'down'
-  ) => {
+  
+  const moveDiscoveryPrompt = (index: number, direction: 'up' | 'down') => {
     setFormData(prev => {
-      const newList = [...prev[listType]];
-      const item = newList[index];
-      if (direction === 'up' && index > 0) {
-        newList.splice(index, 1);
-        newList.splice(index - 1, 0, item);
-      } else if (direction === 'down' && index < newList.length - 1) {
-        newList.splice(index, 1);
-        newList.splice(index + 1, 0, item);
-      }
-      return { ...prev, [listType]: newList };
+        const newList = [...prev.discovery_prompts_list];
+        const item = newList[index];
+        if (direction === 'up' && index > 0) {
+            newList.splice(index, 1);
+            newList.splice(index - 1, 0, item);
+        } else if (direction === 'down' && index < newList.length - 1) {
+            newList.splice(index, 1);
+            newList.splice(index + 1, 0, item);
+        }
+        return { ...prev, discovery_prompts_list: newList };
     });
   };
 
-  const handleTemplateSelect = (
-    listType: 'prompts_data_collection_list' | 'prompts_data_formating_list',
-    index: number,
-    templateId: string
-  ) => {
+  const handleStructuringTemplateSelect = (index: number, templateId: string) => {
     const selectedTemplate = PROMPT_TEMPLATES.find(t => t.id === templateId);
     if (selectedTemplate) {
-      handlePromptChange(listType, index, selectedTemplate.templateText);
+      setFormData(prev => {
+        const newList = [...prev.structuring_prompts_list];
+        newList[index] = selectedTemplate.templateText; 
+        return { ...prev, structuring_prompts_list: newList };
+      });
+      setSelectedStructuringTemplates(prev => {
+        const newSelected = [...prev];
+        newSelected[index] = selectedTemplate;
+        return newSelected;
+      });
+    } else { 
+        setFormData(prev => {
+            const newList = [...prev.structuring_prompts_list];
+            newList[index] = ""; 
+            return { ...prev, structuring_prompts_list: newList };
+          });
+          setSelectedStructuringTemplates(prev => {
+            const newSelected = [...prev];
+            newSelected[index] = null;
+            return newSelected;
+          });
     }
   };
 
+  const addStructuringPromptSlot = () => {
+    setFormData(prev => ({
+      ...prev,
+      structuring_prompts_list: [...prev.structuring_prompts_list, ''], 
+    }));
+    setSelectedStructuringTemplates(prev => [...prev, null]); 
+  };
+
+  const removeStructuringPromptSlot = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      structuring_prompts_list: prev.structuring_prompts_list.filter((_, i) => i !== index),
+    }));
+    setSelectedStructuringTemplates(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const moveStructuringPrompt = (index: number, direction: 'up' | 'down') => {
+    setFormData(prevFormData => {
+        const newList = [...prevFormData.structuring_prompts_list];
+        const item = newList[index];
+        // Changed 'let' to 'const' here as per ESLint suggestion
+        const newSelectedTemplates = [...selectedStructuringTemplates]; 
+        const selectedItem = newSelectedTemplates[index];
+
+        if (direction === 'up' && index > 0) {
+            newList.splice(index, 1);
+            newList.splice(index - 1, 0, item);
+            newSelectedTemplates.splice(index, 1);
+            newSelectedTemplates.splice(index - 1, 0, selectedItem);
+        } else if (direction === 'down' && index < newList.length - 1) {
+            newList.splice(index, 1);
+            newList.splice(index + 1, 0, item);
+            newSelectedTemplates.splice(index, 1);
+            newSelectedTemplates.splice(index + 1, 0, selectedItem);
+        }
+        setSelectedStructuringTemplates(newSelectedTemplates);
+        return { ...prevFormData, structuring_prompts_list: newList };
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
 
-    const payload: PipelineCreateFormData = {
-        ...formData,
-        prompts_data_collection_list: formData.prompts_data_collection_list.filter(p => p.trim() !== ''),
-        prompts_data_formating_list: formData.prompts_data_formating_list.filter(p => p.trim() !== ''),
+    const payload: PipelineFormData = { 
+      ...formData,
+      discovery_prompts_list: formData.discovery_prompts_list.filter(p => p.trim() !== ''),
+      structuring_prompts_list: formData.structuring_prompts_list.filter(p => p.trim() !== ''),
     };
-
+    delete payload.id;
 
     try {
       const response = await fetch('/api/custom-projects-backend/pipelines/add', {
@@ -127,49 +176,98 @@ const AddPipelinePageComponent = () => {
   const labelBaseClasses = "block text-sm font-medium text-black mb-1";
   const buttonBaseClasses = "p-1 text-gray-600 hover:text-gray-800 disabled:opacity-50";
 
-  const renderPromptInputs = (listType: 'prompts_data_collection_list' | 'prompts_data_formating_list', sectionTitle: string) => (
+  const renderDiscoveryPromptInputs = () => (
     <div className="pl-6 space-y-3 border-l-2 border-indigo-200 py-2">
-      <label className={`${labelBaseClasses} text-sm font-semibold`}>{sectionTitle}:</label>
-      {formData[listType].map((prompt, index) => (
-        <div key={`${listType}-${index}`} className="space-y-1 p-2 border border-gray-200 rounded-md">
+      <label className={`${labelBaseClasses} text-sm font-semibold`}>Discovery Prompts:</label>
+      {formData.discovery_prompts_list.map((prompt, index) => (
+        <div key={`discovery-${index}`} className="space-y-1 p-2 border border-gray-200 rounded-md">
           <div className="flex items-start space-x-2">
             <span className="text-black text-sm font-medium pt-2">{index + 1}.</span>
             <textarea
               value={prompt}
-              onChange={(e) => handlePromptChange(listType, index, e.target.value)}
-              placeholder="Enter prompt text or select a template"
+              onChange={(e) => handleDiscoveryPromptChange(index, e.target.value)}
+              placeholder="Enter discovery prompt text"
               className={`${inputBaseClasses} flex-grow min-h-[80px]`}
-              rows={4}
+              rows={3}
             />
             <div className="flex flex-col space-y-1 items-center pt-1">
-              <button type="button" onClick={() => movePrompt(listType, index, 'up')} disabled={index === 0} className={buttonBaseClasses} title="Move Up">
+              <button type="button" onClick={() => moveDiscoveryPrompt(index, 'up')} disabled={index === 0} className={buttonBaseClasses} title="Move Up">
                 <ArrowUpCircle size={18} />
               </button>
-              <button type="button" onClick={() => movePrompt(listType, index, 'down')} disabled={index === formData[listType].length - 1} className={buttonBaseClasses} title="Move Down">
+              <button type="button" onClick={() => moveDiscoveryPrompt(index, 'down')} disabled={index === formData.discovery_prompts_list.length - 1} className={buttonBaseClasses} title="Move Down">
                 <ArrowDownCircle size={18} />
               </button>
-              <button type="button" onClick={() => removePromptInput(listType, index)} className={`${buttonBaseClasses} text-red-500 hover:text-red-700`} title="Remove Prompt">
+              <button type="button" onClick={() => removeDiscoveryPromptInput(index)} className={`${buttonBaseClasses} text-red-500 hover:text-red-700`} title="Remove Prompt">
                 <Trash2 size={18} />
               </button>
             </div>
           </div>
-          <div className="flex items-center space-x-2 pl-6">
-            <BookOpen size={16} className="text-gray-500" />
-            <select
-              onChange={(e) => handleTemplateSelect(listType, index, e.target.value)}
-              className="text-xs p-1 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-black bg-white"
-              value="" // Reset selection after applying
-            >
-              <option value="" disabled>Select a template...</option>
-              {PROMPT_TEMPLATES.map(template => (
-                <option key={template.id} value={template.id}>{template.name}</option>
-              ))}
-            </select>
-          </div>
         </div>
       ))}
-      <button type="button" onClick={() => addPromptInput(listType)} className="mt-1 flex items-center text-xs text-blue-600 hover:text-blue-800">
-        <PlusCircle size={14} className="mr-1"/> Add {sectionTitle.replace(" Prompts:", "")} Prompt
+      <button type="button" onClick={addDiscoveryPromptInput} className="mt-1 flex items-center text-xs text-blue-600 hover:text-blue-800">
+        <PlusCircle size={14} className="mr-1"/> Add Discovery Prompt
+      </button>
+    </div>
+  );
+
+  const renderStructuringPromptInputs = () => (
+    <div className="pl-6 space-y-3 border-l-2 border-teal-200 py-2">
+      <label className={`${labelBaseClasses} text-sm font-semibold`}>Structuring Prompts (select from templates):</label>
+      {formData.structuring_prompts_list.map((promptText, index) => {
+        const currentSelectedTemplate = selectedStructuringTemplates[index];
+        const selectedTemplateId = PROMPT_TEMPLATES.find(t => t.templateText === promptText)?.id || "";
+
+        return (
+          <div key={`structuring-${index}`} className="space-y-1 p-3 border border-gray-200 rounded-md bg-gray-50">
+            <div className="flex items-start space-x-3">
+                <span className="text-black text-sm font-medium pt-2">{index + 1}.</span>
+                <div className="flex-grow space-y-2">
+                <div className="flex items-center space-x-2">
+                    <BookOpen size={16} className="text-gray-500 flex-shrink-0" />
+                    <select
+                    value={selectedTemplateId} 
+                    onChange={(e) => handleStructuringTemplateSelect(index, e.target.value)}
+                    className="flex-grow text-sm p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-black bg-white"
+                    >
+                    <option value="" disabled>Select a template...</option>
+                    {PROMPT_TEMPLATES.map(template => (
+                        <option key={template.id} value={template.id}>{template.name}</option>
+                    ))}
+                    </select>
+                </div>
+                {currentSelectedTemplate && (
+                    <div className="p-2 border rounded-md bg-white flex items-start gap-3">
+                        {currentSelectedTemplate.picture ? (
+                             <Image src={currentSelectedTemplate.picture} alt={currentSelectedTemplate.name} width={64} height={64} className="rounded object-cover w-16 h-16 flex-shrink-0" />
+                        ) : (
+                            <div className="w-16 h-16 bg-gray-200 flex items-center justify-center rounded flex-shrink-0">
+                                <ImageIcon size={24} className="text-gray-400"/>
+                            </div>
+                        )}
+                        <div>
+                            <p className="text-xs text-gray-700 font-semibold">{currentSelectedTemplate.name}</p>
+                            <p className="text-xs text-gray-500 mt-1 break-all">Text: &quot;{currentSelectedTemplate.templateText.substring(0,100)}{currentSelectedTemplate.templateText.length > 100 ? "..." : ""}&quot;</p>
+                        </div>
+                    </div>
+                )}
+                </div>
+                <div className="flex flex-col space-y-1 items-center pt-1">
+                <button type="button" onClick={() => moveStructuringPrompt(index, 'up')} disabled={index === 0} className={buttonBaseClasses} title="Move Up">
+                    <ArrowUpCircle size={18} />
+                </button>
+                <button type="button" onClick={() => moveStructuringPrompt(index, 'down')} disabled={index === formData.structuring_prompts_list.length - 1} className={buttonBaseClasses} title="Move Down">
+                    <ArrowDownCircle size={18} />
+                </button>
+                <button type="button" onClick={() => removeStructuringPromptSlot(index)} className={`${buttonBaseClasses} text-red-500 hover:text-red-700`} title="Remove Prompt">
+                    <Trash2 size={18} />
+                </button>
+                </div>
+            </div>
+          </div>
+        );
+      })}
+      <button type="button" onClick={addStructuringPromptSlot} className="mt-1 flex items-center text-xs text-teal-600 hover:text-teal-800">
+        <PlusCircle size={14} className="mr-1"/> Add Structuring Prompt from Template
       </button>
     </div>
   );
@@ -208,31 +306,30 @@ const AddPipelinePageComponent = () => {
           <div className="flex items-center">
             <input
               type="checkbox"
-              name="is_prompts_data_collection"
-              id="is_prompts_data_collection"
-              checked={formData.is_prompts_data_collection}
+              name="is_discovery_prompts" 
+              id="is_discovery_prompts"   
+              checked={formData.is_discovery_prompts} 
               onChange={handleInputChange}
               className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2"
             />
-            <label htmlFor="is_prompts_data_collection" className="text-sm text-black">Enable Data Collection Prompts?</label>
+            <label htmlFor="is_discovery_prompts" className="text-sm text-black">Enable Discovery Prompts?</label> 
           </div>
 
-          {formData.is_prompts_data_collection && renderPromptInputs('prompts_data_collection_list', 'Data Collection Prompts')}
+          {formData.is_discovery_prompts && renderDiscoveryPromptInputs()}
 
           <div className="flex items-center">
             <input
               type="checkbox"
-              name="is_prompts_data_formating"
-              id="is_prompts_data_formating"
-              checked={formData.is_prompts_data_formating}
+              name="is_structuring_prompts" 
+              id="is_structuring_prompts"   
+              checked={formData.is_structuring_prompts} 
               onChange={handleInputChange}
               className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2"
             />
-            <label htmlFor="is_prompts_data_formating" className="text-sm text-black">Enable Data Formatting Prompts?</label>
+            <label htmlFor="is_structuring_prompts" className="text-sm text-black">Enable Structuring Prompts (from templates)?</label> 
           </div>
 
-          {formData.is_prompts_data_formating && renderPromptInputs('prompts_data_formating_list', 'Data Formatting Prompts')}
-
+          {formData.is_structuring_prompts && renderStructuringPromptInputs()}
 
           <div className="flex justify-end gap-3 pt-4">
             <button type="button" onClick={() => router.push('/pipelines')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">

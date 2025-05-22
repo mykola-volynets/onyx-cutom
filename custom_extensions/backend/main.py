@@ -150,6 +150,8 @@ app.add_middleware(
 )
 
 # --- Pydantic Models ---
+
+# Models related to Projects and Training Plans
 class StatusInfo(BaseModel):
     type: str = "unknown"
     text: str = ""
@@ -236,67 +238,75 @@ class ProjectUpdateRequest(BaseModel):
     microProductName: Optional[str] = None
     microProductContent: Optional[TrainingPlanDetails] = None # Send the whole object
 
-# Pydantic Models for Pipelines
-class PipelinePromptItem(BaseModel):
-    id: str # e.g., "1", "2"
+
+# --- Pydantic Models for Pipelines ---
+# (Corrected for standard spaces and recent refactoring)
+
+class PipelinePromptItem(BaseModel): # This model might be unused now, consider removing if not needed.
+    # Ensure indentation here is with standard spaces
+    id: str
     prompt: str
 
-class PipelinePrompts(BaseModel):
-    prompts: Dict[str, str] # Will store as {"1": "prompt text", "2": "another prompt"}
+class PipelinePrompts(BaseModel): # This model might also be unused directly.
+    # Ensure indentation here is with standard spaces
+    prompts: Dict[str, str]
 
-class MicroproductPipelineBase(BaseModel):
+class MicroproductPipelineBase(BaseModel): # For common fields, especially in requests
     pipeline_name: str
     pipeline_description: Optional[str] = None
-    is_prompts_data_collection: bool = False
-    is_prompts_data_formating: bool = False
-    # For request, frontend will send lists of strings
-    prompts_data_collection_list: Optional[List[str]] = Field(default_factory=list)
-    prompts_data_formating_list: Optional[List[str]] = Field(default_factory=list)
+    is_discovery_prompts: bool = False
+    is_structuring_prompts: bool = False
+    discovery_prompts_list: Optional[List[str]] = Field(default_factory=list)
+    structuring_prompts_list: Optional[List[str]] = Field(default_factory=list)
 
 class MicroproductPipelineCreateRequest(MicroproductPipelineBase):
     pass
 
-class MicroproductPipelineUpdateRequest(MicroproductPipelineBase): # New model for updates
+class MicroproductPipelineUpdateRequest(MicroproductPipelineBase):
     pass
 
-class MicroproductPipelineDBResponse(MicroproductPipelineBase):
+class MicroproductPipelineDBResponse(BaseModel):
     id: int
-    prompts_data_collection: Optional[Dict[str, str]] = None
-    prompts_data_formating: Optional[Dict[str, str]] = None
+    pipeline_name: str
+    pipeline_description: Optional[str] = None
+    is_discovery_prompts: bool
+    is_structuring_prompts: bool
+    discovery_prompts: Optional[Dict[str, str]] = None
+    structuring_prompts: Optional[Dict[str, str]] = None
     created_at: datetime
     model_config = {"from_attributes": True}
 
-# New model for fetching a single pipeline for editing (includes lists for frontend)
 class MicroproductPipelineGetResponse(MicroproductPipelineDBResponse):
-    # Ensure these are distinct from the parent and will be populated by the classmethod
-    prompts_data_collection_list: List[str] = Field(default_factory=list)
-    prompts_data_formating_list: List[str] = Field(default_factory=list)
+    discovery_prompts_list: List[str] = Field(default_factory=list)
+    structuring_prompts_list: List[str] = Field(default_factory=list)
 
     @classmethod
-    def from_db_response(cls, db_response: MicroproductPipelineDBResponse) -> "MicroproductPipelineGetResponse":
-        data_collection_list = []
-        if db_response.prompts_data_collection:
-            data_collection_list = [
-                db_response.prompts_data_collection[key]
-                for key in sorted(db_response.prompts_data_collection.keys(), key=int)
+    def from_db_model(cls, db_model: MicroproductPipelineDBResponse) -> "MicroproductPipelineGetResponse":
+        discovery_list = []
+        if db_model.discovery_prompts:
+            discovery_list = [
+                db_model.discovery_prompts[key]
+                for key in sorted(db_model.discovery_prompts.keys(), key=int)
             ]
 
-        data_formating_list = []
-        if db_response.prompts_data_formating:
-            data_formating_list = [
-                db_response.prompts_data_formating[key]
-                for key in sorted(db_response.prompts_data_formating.keys(), key=int)
+        structuring_list = []
+        if db_model.structuring_prompts:
+            structuring_list = [
+                db_model.structuring_prompts[key]
+                for key in sorted(db_model.structuring_prompts.keys(), key=int)
             ]
-        
-        # Exclude the original Dict fields from the parent when constructing
-        # to avoid the "multiple values for keyword argument" error.
-        parent_data = db_response.model_dump(exclude={"prompts_data_collection", "prompts_data_formating", "prompts_data_collection_list", "prompts_data_formating_list"})
+
+        # Use model_dump from Pydantic v2, or .dict() for Pydantic v1
+        # Assuming Pydantic v2+ based on model_config
+        parent_data = db_model.model_dump(exclude={"discovery_prompts", "structuring_prompts"})
 
         return cls(
             **parent_data,
-            prompts_data_collection_list=data_collection_list,
-            prompts_data_formating_list=data_formating_list
+            discovery_prompts_list=discovery_list,
+            structuring_prompts_list=structuring_list
         )
+
+# --- End of Pydantic Models ---
 
 # --- Onyx User ID Function (keep as is) ---
 # ... (get_current_onyx_user_id function) ...
@@ -577,23 +587,29 @@ def parse_training_plan_from_string(original_content_str: str, main_table_title:
 
 
 # --- API Endpoints ---
-@app.post("/api/custom/pipelines/add", response_model=MicroproductPipelineDBResponse, status_code=status.HTTP_201_CREATED)
+
+# --- Pipeline Endpoints ---
+@app.post("/api/custom/pipelines/add", response_model=MicroproductPipelineDBResponse,
+          status_code=status.HTTP_201_CREATED)
 async def add_pipeline(
-    pipeline_data: MicroproductPipelineCreateRequest,
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        pipeline_data: MicroproductPipelineCreateRequest,
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
-    prompts_collection_json = {str(i+1): prompt for i, prompt in enumerate(pipeline_data.prompts_data_collection_list) if prompt.strip()} if pipeline_data.prompts_data_collection_list else None
-    prompts_formating_json = {str(i+1): prompt for i, prompt in enumerate(pipeline_data.prompts_data_formating_list) if prompt.strip()} if pipeline_data.prompts_data_formating_list else None
+    discovery_prompts_json_for_db = {str(i + 1): prompt for i, prompt in enumerate(pipeline_data.discovery_prompts_list)
+                                     if prompt.strip()} if pipeline_data.discovery_prompts_list else None
+    structuring_prompts_json_for_db = {str(i + 1): prompt for i, prompt in
+                                       enumerate(pipeline_data.structuring_prompts_list) if
+                                       prompt.strip()} if pipeline_data.structuring_prompts_list else None
 
     query = """
         INSERT INTO microproduct_pipelines (
             pipeline_name, pipeline_description,
-            is_prompts_data_collection, is_prompts_data_formating,
+            is_prompts_data_collection, is_prompts_data_formating, 
             prompts_data_collection, prompts_data_formating, created_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, pipeline_name, pipeline_description,
-                    is_prompts_data_collection, is_prompts_data_formating,
-                    prompts_data_collection, prompts_data_formating, created_at;
+                  is_prompts_data_collection, is_prompts_data_formating,
+                  prompts_data_collection, prompts_data_formating, created_at;
     """
     try:
         async with pool.acquire() as conn:
@@ -602,25 +618,36 @@ async def add_pipeline(
                 query,
                 pipeline_data.pipeline_name,
                 pipeline_data.pipeline_description,
-                pipeline_data.is_prompts_data_collection,
-                pipeline_data.is_prompts_data_formating,
-                prompts_collection_json,
-                prompts_formating_json,
+                pipeline_data.is_discovery_prompts,
+                pipeline_data.is_structuring_prompts,
+                discovery_prompts_json_for_db,
+                structuring_prompts_json_for_db,
                 current_time
             )
         if not row:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create pipeline.")
 
-        response_data = dict(row)
+        response_data = {
+            "id": row["id"],
+            "pipeline_name": row["pipeline_name"],
+            "pipeline_description": row["pipeline_description"],
+            "is_discovery_prompts": row["is_prompts_data_collection"],
+            "is_structuring_prompts": row["is_prompts_data_formating"],
+            "discovery_prompts": row["prompts_data_collection"],
+            "structuring_prompts": row["prompts_data_formating"],
+            "created_at": row["created_at"]
+        }
         return MicroproductPipelineDBResponse(**response_data)
     except Exception as e:
         print(f"Error inserting pipeline: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on pipeline insert: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"DB error on pipeline insert: {str(e)}")
+
 
 @app.get("/api/custom/pipelines", response_model=List[MicroproductPipelineDBResponse])
 async def get_pipelines(
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     query = """
         SELECT id, pipeline_name, pipeline_description,
@@ -635,20 +662,29 @@ async def get_pipelines(
 
         pipelines_list = []
         for row in rows:
-            row_dict = dict(row)
-            pipelines_list.append(MicroproductPipelineDBResponse(**row_dict))
+            mapped_data = {
+                "id": row["id"],
+                "pipeline_name": row["pipeline_name"],
+                "pipeline_description": row["pipeline_description"],
+                "is_discovery_prompts": row["is_prompts_data_collection"],
+                "is_structuring_prompts": row["is_prompts_data_formating"],
+                "discovery_prompts": row["prompts_data_collection"],
+                "structuring_prompts": row["prompts_data_formating"],
+                "created_at": row["created_at"]
+            }
+            pipelines_list.append(MicroproductPipelineDBResponse(**mapped_data))
         return pipelines_list
-
     except Exception as e:
         print(f"Error fetching pipelines: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching pipelines: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"DB error fetching pipelines: {str(e)}")
 
 
 @app.get("/api/custom/pipelines/{pipeline_id}", response_model=MicroproductPipelineGetResponse)
 async def get_pipeline(
-    pipeline_id: int,
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        pipeline_id: int,
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     query = """
         SELECT id, pipeline_name, pipeline_description,
@@ -662,40 +698,52 @@ async def get_pipeline(
             row = await conn.fetchrow(query, pipeline_id)
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pipeline not found.")
-        
-        db_response = MicroproductPipelineDBResponse(**dict(row))
-        return MicroproductPipelineGetResponse.from_db_response(db_response)
 
+        mapped_data_for_db_model = {
+            "id": row["id"],
+            "pipeline_name": row["pipeline_name"],
+            "pipeline_description": row["pipeline_description"],
+            "is_discovery_prompts": row["is_prompts_data_collection"],
+            "is_structuring_prompts": row["is_prompts_data_formating"],
+            "discovery_prompts": row["prompts_data_collection"],
+            "structuring_prompts": row["prompts_data_formating"],
+            "created_at": row["created_at"]
+        }
+        db_model_instance = MicroproductPipelineDBResponse(**mapped_data_for_db_model)
+        return MicroproductPipelineGetResponse.from_db_model(db_model_instance)
     except HTTPException as e:
         raise e
     except Exception as e:
         print(f"Error fetching pipeline {pipeline_id}: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching pipeline: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"DB error fetching pipeline: {str(e)}")
 
 
 @app.put("/api/custom/pipelines/update/{pipeline_id}", response_model=MicroproductPipelineDBResponse)
 async def update_pipeline(
-    pipeline_id: int,
-    pipeline_data: MicroproductPipelineUpdateRequest,
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        pipeline_id: int,
+        pipeline_data: MicroproductPipelineUpdateRequest,
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
-    prompts_collection_json = {str(i+1): prompt for i, prompt in enumerate(pipeline_data.prompts_data_collection_list) if prompt.strip()} if pipeline_data.prompts_data_collection_list else None
-    prompts_formating_json = {str(i+1): prompt for i, prompt in enumerate(pipeline_data.prompts_data_formating_list) if prompt.strip()} if pipeline_data.prompts_data_formating_list else None
+    discovery_prompts_json_for_db = {str(i + 1): prompt for i, prompt in enumerate(pipeline_data.discovery_prompts_list)
+                                     if prompt.strip()} if pipeline_data.discovery_prompts_list else None
+    structuring_prompts_json_for_db = {str(i + 1): prompt for i, prompt in
+                                       enumerate(pipeline_data.structuring_prompts_list) if
+                                       prompt.strip()} if pipeline_data.structuring_prompts_list else None
 
     query = """
         UPDATE microproduct_pipelines
         SET pipeline_name = $1,
             pipeline_description = $2,
-            is_prompts_data_collection = $3,
-            is_prompts_data_formating = $4,
-            prompts_data_collection = $5,
-            prompts_data_formating = $6
-            /* created_at is not updated */
+            is_prompts_data_collection = $3, 
+            is_prompts_data_formating = $4,  
+            prompts_data_collection = $5,  
+            prompts_data_formating = $6   
         WHERE id = $7
         RETURNING id, pipeline_name, pipeline_description,
-                    is_prompts_data_collection, is_prompts_data_formating,
-                    prompts_data_collection, prompts_data_formating, created_at;
+                  is_prompts_data_collection, is_prompts_data_formating,
+                  prompts_data_collection, prompts_data_formating, created_at;
     """
     try:
         async with pool.acquire() as conn:
@@ -703,27 +751,39 @@ async def update_pipeline(
                 query,
                 pipeline_data.pipeline_name,
                 pipeline_data.pipeline_description,
-                pipeline_data.is_prompts_data_collection,
-                pipeline_data.is_prompts_data_formating,
-                prompts_collection_json,
-                prompts_formating_json,
+                pipeline_data.is_discovery_prompts,
+                pipeline_data.is_structuring_prompts,
+                discovery_prompts_json_for_db,
+                structuring_prompts_json_for_db,
                 pipeline_id
             )
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pipeline not found or update failed.")
-        return MicroproductPipelineDBResponse(**dict(row))
+
+        response_data = {
+            "id": row["id"],
+            "pipeline_name": row["pipeline_name"],
+            "pipeline_description": row["pipeline_description"],
+            "is_discovery_prompts": row["is_prompts_data_collection"],
+            "is_structuring_prompts": row["is_prompts_data_formating"],
+            "discovery_prompts": row["prompts_data_collection"],
+            "structuring_prompts": row["prompts_data_formating"],
+            "created_at": row["created_at"]
+        }
+        return MicroproductPipelineDBResponse(**response_data)
     except HTTPException as e:
         raise e
     except Exception as e:
         print(f"Error updating pipeline {pipeline_id}: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on pipeline update: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"DB error on pipeline update: {str(e)}")
 
 
 @app.delete("/api/custom/pipelines/delete/{pipeline_id}", status_code=status.HTTP_200_OK)
 async def delete_pipeline(
-    pipeline_id: int,
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        pipeline_id: int,
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     query = "DELETE FROM microproduct_pipelines WHERE id = $1 RETURNING id;"
     try:
@@ -737,14 +797,16 @@ async def delete_pipeline(
     except Exception as e:
         print(f"Error deleting pipeline {pipeline_id}: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on pipeline deletion: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"DB error on pipeline deletion: {str(e)}")
 
 
+# --- Project and MicroProduct Endpoints ---
 @app.post("/api/custom/projects/add", response_model=ProjectDB, status_code=status.HTTP_201_CREATED)
 async def add_project_to_custom_db(
-    project_data: ProjectCreateRequest,
-    onyx_user_id: str = Depends(get_current_onyx_user_id),
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        project_data: ProjectCreateRequest,
+        onyx_user_id: str = Depends(get_current_onyx_user_id),
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     db_microproduct_name_to_store = project_data.microProductName if project_data.microProductName and project_data.microProductName.strip() else project_data.microProductType
 
@@ -754,11 +816,10 @@ async def add_project_to_custom_db(
 
     content_to_store_for_db = None
     if parsed_content:
-        try: # Pydantic v2
+        try:
             content_to_store_for_db = parsed_content.model_dump(mode='json', exclude_none=True)
-        except AttributeError: # Pydantic v1
+        except AttributeError:
             content_to_store_for_db = json.loads(parsed_content.json(exclude_none=True))
-
 
     insert_query = """
         INSERT INTO projects (
@@ -773,22 +834,23 @@ async def add_project_to_custom_db(
                 insert_query,
                 onyx_user_id, project_data.projectName, project_data.product,
                 project_data.microProductType, db_microproduct_name_to_store,
-                content_to_store_for_db # This should be a Python dict for asyncpg to handle JSONB
+                content_to_store_for_db
             )
-        if not row: raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create project entry.")
-
-        # Pydantic model will parse the 'microproduct_content' from dict to TrainingPlanDetails
+        if not row:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Failed to create project entry.")
         return ProjectDB(**dict(row))
     except Exception as e:
-        print(f"Error inserting project: {e}"); traceback.print_exc()
+        print(f"Error inserting project: {e}");
+        traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on insert: {str(e)}")
 
-# NEW Endpoint to get a single project's details for editing
+
 @app.get("/api/custom/projects/{project_id}", response_model=ProjectDetailForEditResponse)
 async def get_project_details_for_edit(
-    project_id: int,
-    onyx_user_id: str = Depends(get_current_onyx_user_id),
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        project_id: int,
+        onyx_user_id: str = Depends(get_current_onyx_user_id),
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     query = """
         SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at
@@ -803,14 +865,13 @@ async def get_project_details_for_edit(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
 
         row_dict = dict(row)
-        # microproduct_content is already a dict/None from JSONB
         return ProjectDetailForEditResponse(
             id=row_dict["id"],
             projectName=row_dict["project_name"],
             product=row_dict.get("product_type"),
             microProductType=row_dict.get("microproduct_type"),
             microProductName=row_dict.get("microproduct_name"),
-            microProductContent=row_dict.get("microproduct_content"), # Pydantic will validate this into TrainingPlanDetails
+            microProductContent=row_dict.get("microproduct_content"),
             createdAt=row_dict.get("created_at")
         )
     except HTTPException as e:
@@ -818,15 +879,16 @@ async def get_project_details_for_edit(
     except Exception as e:
         print(f"Error fetching project {project_id} for edit: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching project details: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"DB error fetching project details: {str(e)}")
 
-# NEW Endpoint to update a project
+
 @app.put("/api/custom/projects/update/{project_id}", response_model=ProjectDB)
 async def update_project_in_db(
-    project_id: int,
-    project_update_data: ProjectUpdateRequest, # This model now takes TrainingPlanDetails
-    onyx_user_id: str = Depends(get_current_onyx_user_id),
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        project_id: int,
+        project_update_data: ProjectUpdateRequest,
+        onyx_user_id: str = Depends(get_current_onyx_user_id),
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     db_microproduct_name_to_store = project_update_data.microProductName
     if db_microproduct_name_to_store is None or not db_microproduct_name_to_store.strip():
@@ -834,9 +896,9 @@ async def update_project_in_db(
 
     content_to_store_for_db = None
     if project_update_data.microProductContent:
-        try: # Pydantic v2
+        try:
             content_to_store_for_db = project_update_data.microProductContent.model_dump(mode='json', exclude_none=True)
-        except AttributeError: # Pydantic v1
+        except AttributeError:
             content_to_store_for_db = json.loads(project_update_data.microProductContent.json(exclude_none=True))
 
     update_query = """
@@ -846,7 +908,6 @@ async def update_project_in_db(
             microproduct_type = $3,
             microproduct_name = $4,
             microproduct_content = $5
-            /* created_at is not updated on edit */
         WHERE id = $6 AND onyx_user_id = $7
         RETURNING id, onyx_user_id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at;
     """
@@ -858,13 +919,14 @@ async def update_project_in_db(
                 project_update_data.product,
                 project_update_data.microProductType,
                 db_microproduct_name_to_store,
-                content_to_store_for_db, # Store the JSON dict/object
+                content_to_store_for_db,
                 project_id,
                 onyx_user_id
             )
         if not row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found or update failed (user may not own project).")
-        return ProjectDB(**dict(row)) # Pydantic will parse JSONB from DB to model
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="Project not found or update failed (user may not own project).")
+        return ProjectDB(**dict(row))
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -873,26 +935,28 @@ async def update_project_in_db(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on update: {str(e)}")
 
 
-# ... (Existing /api/custom/projects endpoint - no changes needed here for now) ...
 @app.get("/api/custom/projects", response_model=List[ProjectApiResponse])
-async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
-    # This endpoint does not return microProductContent details, so it's largely unaffected.
+async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_current_onyx_user_id),
+                                                pool: asyncpg.Pool = Depends(get_db_pool)):
     select_query = "SELECT id, project_name, product_type, microproduct_type, microproduct_name, created_at FROM projects WHERE onyx_user_id = $1 ORDER BY created_at DESC;"
     try:
-        async with pool.acquire() as conn: db_rows = await conn.fetch(select_query, onyx_user_id)
+        async with pool.acquire() as conn:
+            db_rows = await conn.fetch(select_query, onyx_user_id)
         transformed_projects: List[ProjectApiResponse] = []
         for r_dict_full in [dict(row) for row in db_rows]:
             project_db_id = r_dict_full.get('id')
             if project_db_id is None:
-                print(f"WARNING: Project row encountered without an ID (user: {onyx_user_id}): {r_dict_full.get('project_name')}")
+                print(
+                    f"WARNING: Project row encountered without an ID (user: {onyx_user_id}): {r_dict_full.get('project_name')}")
                 continue
 
             pn = r_dict_full.get('project_name', 'N/A')
             pt = r_dict_full.get('product_type', 'N/A')
-
-            name_for_display = r_dict_full.get('microproduct_name') or r_dict_full.get('microproduct_type', 'Unnamed MicroProduct')
+            name_for_display = r_dict_full.get('microproduct_name') or r_dict_full.get('microproduct_type',
+                                                                                       'Unnamed MicroProduct')
             type_for_slug_generation = r_dict_full.get('microproduct_type')
-            if not type_for_slug_generation: type_for_slug_generation = "default-mptype-slug"
+            if not type_for_slug_generation:
+                type_for_slug_generation = "default-mptype-slug"
 
             ps = create_slug(pn)
             pts_slug = create_slug(pt)
@@ -907,7 +971,7 @@ async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_
                 slug=mpt_type_slug,
                 webLinkPath=wlp,
                 pdfLinkPath=pdflp,
-                details=None # Details are not needed for the list view
+                details=None
             )
             pra = ProjectApiResponse(
                 id=project_db_id,
@@ -918,22 +982,23 @@ async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_
             transformed_projects.append(pra)
         return transformed_projects
     except Exception as e:
-        print(f"Error fetching projects: {e}"); traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error while fetching projects: {str(e)}")
+        print(f"Error fetching projects: {e}");
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"DB error while fetching projects: {str(e)}")
 
 
-# ... (Existing /api/custom/microproducts/... endpoint - already updated in previous step to handle JSONB) ...
 @app.get("/api/custom/microproducts/{project_slug}/{product_slug}/{micro_product_type_slug}",
          response_model=MicroProductApiResponse, responses={404: {"model": ErrorDetail}})
 async def get_microproduct_detail_from_db(
-    project_slug: str, product_slug: str, micro_product_type_slug: str,
-    onyx_user_id: str = Depends(get_current_onyx_user_id),
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        project_slug: str, product_slug: str, micro_product_type_slug: str,
+        onyx_user_id: str = Depends(get_current_onyx_user_id),
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     try:
         async with pool.acquire() as connection:
             all_projects_raw = await connection.fetch(
-                "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at " # Fetch content
+                "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at "
                 "FROM projects WHERE onyx_user_id = $1", onyx_user_id
             )
 
@@ -944,38 +1009,41 @@ async def get_microproduct_detail_from_db(
             db_microproduct_type_slug = create_slug(r_dict.get('microproduct_type'))
 
             if (db_project_slug == project_slug and
-                db_product_type_slug == product_slug and
-                db_microproduct_type_slug == micro_product_type_slug):
+                    db_product_type_slug == product_slug and
+                    db_microproduct_type_slug == micro_product_type_slug):
                 found_project_row_dict = r_dict
                 break
 
-        if not found_project_row_dict: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Micro-product not found.")
+        if not found_project_row_dict:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Micro-product not found.")
 
         project_name_from_db = found_project_row_dict['project_name']
         product_type_from_db = found_project_row_dict.get('product_type', 'N/A')
-        microproduct_display_name = found_project_row_dict.get('microproduct_name') or found_project_row_dict.get('microproduct_type', 'N/A')
+        microproduct_display_name = found_project_row_dict.get('microproduct_name') or found_project_row_dict.get(
+            'microproduct_type', 'N/A')
         microproduct_type_for_routing = found_project_row_dict.get('microproduct_type') or "default-type"
-
         microproduct_content_json = found_project_row_dict.get('microproduct_content')
-
         details_data: Optional[TrainingPlanDetails] = None
-        if microproduct_content_json: # Should be a dict if from JSONB
+
+        if microproduct_content_json:
             try:
                 details_data = TrainingPlanDetails(**microproduct_content_json)
             except Exception as pydantic_e:
-                print(f"Error validating TrainingPlanDetails from DB JSON for project {project_name_from_db} (detail view): {pydantic_e}")
-                # Fallback if validation fails or if it's somehow still a string that's not JSON
+                print(
+                    f"Error validating TrainingPlanDetails from DB JSON for project {project_name_from_db} (detail view): {pydantic_e}")
                 if isinstance(microproduct_content_json, str):
-                     details_data = parse_training_plan_from_string(microproduct_content_json, project_name_from_db)
+                    details_data = parse_training_plan_from_string(microproduct_content_json, project_name_from_db)
                 else:
-                     details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_display_name} (validation error)", sections=[], detectedLanguage='ru')
-
-        else: # No content
-            details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_display_name}", sections=[], detectedLanguage='ru')
-
+                    details_data = TrainingPlanDetails(
+                        mainTitle=f"Content for {microproduct_display_name} (validation error)", sections=[],
+                        detectedLanguage='ru')
+        else:
+            details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_display_name}", sections=[],
+                                               detectedLanguage='ru')
 
         web_link_path = f"/projects/{project_slug}/{product_slug}/{micro_product_type_slug}"
-        pdf_doc_identifier_slug = create_slug(f"{project_name_from_db}_{product_type_from_db}_{microproduct_type_for_routing}")
+        pdf_doc_identifier_slug = create_slug(
+            f"{project_name_from_db}_{product_type_from_db}_{microproduct_type_for_routing}")
         pdf_link_path = f"pdf/{pdf_doc_identifier_slug}"
 
         return MicroProductApiResponse(
@@ -985,17 +1053,20 @@ async def get_microproduct_detail_from_db(
             pdfLinkPath=pdf_link_path,
             details=details_data
         )
-    except HTTPException as e: raise e
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        print(f"Error fetching microproduct detail: {e}"); traceback.print_exc()
+        print(f"Error fetching microproduct detail: {e}");
+        traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Server error: {str(e)}")
+
 
 @app.get("/api/custom/pdf/{document_slug}", response_class=FileResponse,
          responses={404: {"model": ErrorDetail}, 500: {"model": ErrorDetail}})
 async def download_micro_product_pdf_from_db(
-    document_slug: str,
-    onyx_user_id: str = Depends(get_current_onyx_user_id),
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        document_slug: str,
+        onyx_user_id: str = Depends(get_current_onyx_user_id),
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     print(f"PDF req for doc_slug: {document_slug}, user {onyx_user_id}")
     async with pool.acquire() as conn:
@@ -1008,40 +1079,35 @@ async def download_micro_product_pdf_from_db(
     target_row_dict = None
     mp_name_for_pdf_context = "document"
     project_name_for_pdf_context = "Project"
-    # Use a unique name for the generated PDF to avoid browser caching issues if filenames were reused
-    # Or, more simply for now, ensure the generated PDF always has a distinct name for this request.
-    # For true "no-caching" at the PDF generation step, we ensure it always regenerates.
     user_friendly_pdf_filename = f"{create_slug(document_slug)}_{uuid.uuid4().hex[:8]}.pdf"
-
 
     for r_dict in [dict(r) for r in user_projects_raw]:
         pn_db = r_dict['project_name']
-        pt_db = r_dict.get('product_type','')
+        pt_db = r_dict.get('product_type', '')
         mpt_type_for_slug = r_dict.get('microproduct_type', '')
         current_pdf_slug = create_slug(f"{pn_db}_{pt_db}_{mpt_type_for_slug}")
         if current_pdf_slug == document_slug:
             target_row_dict = r_dict
             mp_name_for_pdf_context = r_dict.get('microproduct_name') or mpt_type_for_slug or pn_db
             project_name_for_pdf_context = pn_db
-            # Update user_friendly_pdf_filename to be more specific if desired, but unique name helps avoid browser cache
             user_friendly_pdf_filename = f"{create_slug(mp_name_for_pdf_context)}_{uuid.uuid4().hex[:8]}.pdf"
             break
 
     if not target_row_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"PDF definition not found for slug: {document_slug}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"PDF definition not found for slug: {document_slug}")
 
     content_json = target_row_dict.get('microproduct_content')
     details_pdf: Optional[TrainingPlanDetails] = None
-    detected_lang_for_pdf = 'ru' # Default
+    detected_lang_for_pdf = 'ru'
 
     if content_json:
         try:
-            details_pdf = TrainingPlanDetails(**content_json) # Assumes content_json is already a dict
+            details_pdf = TrainingPlanDetails(**content_json)
             if details_pdf.detectedLanguage:
                 detected_lang_for_pdf = details_pdf.detectedLanguage
         except Exception as pydantic_e:
             print(f"Error validating TrainingPlanDetails from DB JSON for PDF ({document_slug}): {pydantic_e}")
-            # Optionally, try to re-parse if it was a string for some reason (legacy data, etc.)
             if isinstance(content_json, str):
                 try:
                     parsed_from_str = parse_training_plan_from_string(content_json, project_name_for_pdf_context)
@@ -1059,39 +1125,36 @@ async def download_micro_product_pdf_from_db(
             detectedLanguage=detected_lang_for_pdf
         )
 
-    # Use a timestamp or UUID to ensure the generated PDF filename is unique for this request
-    # This helps if generate_pdf_from_html_template itself might have some internal caching based on output_filename
     unique_output_filename = f"{document_slug}_{uuid.uuid4().hex[:12]}.pdf"
 
     try:
-        if details_pdf is None: # Should be initialized by now
-             details_pdf = TrainingPlanDetails(mainTitle="Error preparing PDF data", sections=[], detectedLanguage=detected_lang_for_pdf)
+        if details_pdf is None:
+            details_pdf = TrainingPlanDetails(mainTitle="Error preparing PDF data", sections=[],
+                                              detectedLanguage=detected_lang_for_pdf)
 
+        # Use model_dump for Pydantic v2
         context_data_for_pdf = {'details': details_pdf.model_dump(exclude_none=True)}
 
-        current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru']) # Default to 'ru' if lang not found
+        current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru'])
         context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf
         context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg['TIME_UNIT_SINGULAR']
         context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg['TIME_UNIT_DECIMAL_PLURAL']
         context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg['TIME_UNIT_GENERAL_PLURAL']
 
-        # Always generate the PDF for each request
         pdf_path = await generate_pdf_from_html_template(
             "training_plan_pdf_template.html",
             context_data_for_pdf,
-            unique_output_filename # Pass the unique filename to the generator
+            unique_output_filename
         )
 
         if not os.path.exists(pdf_path):
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="PDF file not found after generation.")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="PDF file not found after generation.")
 
-        # The FileResponse itself doesn't cache aggressively, but client/proxies might.
-        # Forcing a unique user_friendly_pdf_filename for each download can also help.
         return FileResponse(
             path=pdf_path,
-            filename=user_friendly_pdf_filename, # This is the name the user sees
+            filename=user_friendly_pdf_filename,
             media_type='application/pdf',
-            # Add headers to suggest no caching by browsers/proxies
             headers={
                 "Cache-Control": "no-cache, no-store, must-revalidate",
                 "Pragma": "no-cache",
@@ -1099,18 +1162,21 @@ async def download_micro_product_pdf_from_db(
             }
         )
     except Exception as e:
-        print(f"Error in PDF endpoint for {document_slug}: {e}"); traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error during PDF generation: {str(e)[:200]}")
+        print(f"Error in PDF endpoint for {document_slug}: {e}");
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Error during PDF generation: {str(e)[:200]}")
 
-# ... (Existing delete-multiple and health_check endpoints - keep as is) ...
+
 @app.post("/api/custom/projects/delete-multiple", status_code=status.HTTP_200_OK)
 async def delete_multiple_projects(
-    delete_request: ProjectsDeleteRequest,
-    onyx_user_id: str = Depends(get_current_onyx_user_id),
-    pool: asyncpg.Pool = Depends(get_db_pool)
+        delete_request: ProjectsDeleteRequest,
+        onyx_user_id: str = Depends(get_current_onyx_user_id),
+        pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     if not delete_request.project_ids:
-        return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"detail": "No project IDs provided for deletion."})
+        return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST,
+                            content={"detail": "No project IDs provided for deletion."})
 
     try:
         async with pool.acquire() as conn:
@@ -1122,12 +1188,15 @@ async def delete_multiple_projects(
                 )
                 deleted_count_match = re.search(r"DELETE\s+(\d+)", result_status)
                 deleted_count = int(deleted_count_match.group(1)) if deleted_count_match else 0
-                print(f"User {onyx_user_id} requested deletion for IDs: {delete_request.project_ids}. Successfully deleted: {deleted_count} project(s).")
+                print(
+                    f"User {onyx_user_id} requested deletion for IDs: {delete_request.project_ids}. Successfully deleted: {deleted_count} project(s).")
                 return {"detail": f"Successfully deleted {deleted_count} project(s)."}
     except Exception as e:
         print(f"Error deleting projects for user {onyx_user_id}, IDs {delete_request.project_ids}: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error during deletion: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Database error during deletion: {str(e)}")
+
 
 @app.get("/api/custom/health")
 async def health_check():

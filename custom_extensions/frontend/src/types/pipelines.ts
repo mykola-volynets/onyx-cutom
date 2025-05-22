@@ -1,80 +1,70 @@
 // custom_extensions/frontend/src/types/pipelines.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Matches MicroproductPipelineDBResponse from backend
-export interface Pipeline {
-  id: number;
-  pipeline_name: string;
-  pipeline_description?: string | null;
-  is_prompts_data_collection: boolean;
-  is_prompts_data_formating: boolean;
-  prompts_data_collection?: { [key: string]: string } | null;
-  prompts_data_formating?: { [key: string]: string } | null;
-  created_at: string;
-}
-
-export interface PipelineCreateFormData {
-  id?: number;
-  pipeline_name: string;
-  pipeline_description?: string | null;
-  is_prompts_data_collection: boolean;
-  is_prompts_data_formating: boolean;
-  prompts_data_collection_list: string[];
-  prompts_data_formating_list: string[];
-}
-
-export interface PipelineEditData extends PipelineCreateFormData {
-  id: number;
-  created_at: string;
-}
-
-// --- NEW: Prompt Templates ---
 export interface PromptTemplate {
   id: string;
   name: string;
   templateText: string;
+  picture: string; // New field for image URL or path
 }
 
+// Example updated templates - replace with your actual data and picture paths/URLs
 export const PROMPT_TEMPLATES: PromptTemplate[] = [
-  {
-    id: 'training-plan-structure-v1',
-    name: 'Structure for Training Plan microproduct',
-    templateText: `It is critical that you strictly adhere to the following markdown formatting and exact keywords for the specified language.
-Your answer should be in LANGUAGE
-
-Overall Structure:
-
-Optionally, begin with a main program title: # [Program Title]
-Modules can be visually separated by a --- line if desired.
-Module Format:
-
-Module Title Line: Start with ##, then Module (English) or Модуль (Russian), the module number, a colon, and the title. Example: ## Module 1: Introduction or ## Модуль 1: Введение. This line must end with a newline.
-Optional Blank Line(s): Zero or more blank lines can follow the module title line.
-Total Time Line: Must be formatted exactly as: **Total Time:** [Value] (English) or **Общее время:** [Значение] (Russian). This line must end with a newline.
-Number of Lessons Line: Must be formatted exactly as: **Number of Lessons:** [Value] (English) or **Количество уроков:** [Значение] (Russian). This line must end with a newline.
-Mandatory Blank Line: Exactly one blank line must follow the "Number of Lessons" / "Количество уроков" line.
-Lessons Header Line: Must be formatted exactly as: ### Lessons (English) or ### Уроки (Russian). This line must end with a newline.
-Lesson Format (within a module, after the ### Lessons/Уроки header):
-
-Lesson Titles:
-English: Numbered list, bolded title. Example: 1. **Lesson Title Text**
-Russian: Hyphenated list, bolded title. Example: - **Название урока**
-Lesson Details: Each detail must be on a new line, indented with two spaces, a hyphen, and a space (-). The keyword must be bolded, followed by a colon, a space, and then the value. Use these exact keywords:
-For English:
-- **Time:** [Value]
-- **Knowledge Assessment:** [Description]
-- **Information Source:** [Description]
-For Russian:
-- **Время:** [Значение]
-- **Проверка знаний:** [Описание]
-- **Источник:** [Описание] (Important: use the keyword "Источник" for Russian source details)
-Blank Lines: Ensure one blank line after all details of one lesson before starting the next lesson title.
-Use the exact keywords and markdown formatting as shown for the specified [TARGET LANGUAGE]. Replace bracketed placeholders like [Value] or [Description] with actual content. If content is unknown, you may use the placeholder itself but maintain the surrounding structure and keywords.`
-  },
-  // Add more templates here if needed
-  // {
-  //   id: 'another-template-id',
-  //   name: 'Another Template Name',
-  //   templateText: 'Actual text for another template...'
-  // }
+  { id: 'template1', name: 'General Summary', templateText: 'Summarize the following text: {{text_input}}', picture: '/images/template_summary.png' },
+  { id: 'template2', name: 'Key Points Extraction', templateText: 'Extract key points from: {{text_input}}', picture: '/images/template_keypoints.png' },
+  { id: 'template3', name: 'Sentiment Analysis', templateText: 'Analyze sentiment of: {{text_input}}', picture: '/images/template_sentiment.png' },
+  // Add more templates as needed
 ];
+
+// Base type for API responses (list view)
+export interface Pipeline {
+  id: number;
+  pipeline_name: string;
+  pipeline_description?: string | null; // Description is still fetched, just not shown on list page
+  is_discovery_prompts: boolean;      // Renamed
+  is_structuring_prompts: boolean;    // Renamed
+  // The following are the dictionary versions from MicroproductPipelineDBResponse
+  discovery_prompts?: { [key: string]: string } | null;    // Renamed
+  structuring_prompts?: { [key: string]: string } | null;  // Renamed
+  created_at: string; // Or Date
+}
+
+// For form data (Create)
+export interface PipelineCreateFormData {
+  id?: number; // Optional for create, present for edit state
+  pipeline_name: string;
+  pipeline_description?: string | null;
+  is_discovery_prompts: boolean;    // Renamed
+  is_structuring_prompts: boolean;  // Renamed
+  discovery_prompts_list: string[];   // Renamed
+  structuring_prompts_list: string[]; // Renamed - this will hold template *texts*
+}
+
+// Base type for API responses (list view - matches MicroproductPipelineDBResponse from backend)
+export interface Pipeline {
+  id: number;
+  pipeline_name: string;
+  pipeline_description?: string | null;
+  is_discovery_prompts: boolean;
+  is_structuring_prompts: boolean;
+  discovery_prompts?: { [key: string]: string } | null; 
+  structuring_prompts?: { [key: string]: string } | null;
+  created_at: string; // Or Date
+}
+
+// For form data (Create and also shape of data for Edit form state)
+export interface PipelineFormData { // Combined for simplicity, 'id' distinguishes create/edit
+  id?: number; 
+  pipeline_name: string;
+  pipeline_description?: string | null;
+  is_discovery_prompts: boolean;
+  is_structuring_prompts: boolean;
+  discovery_prompts_list: string[]; 
+  structuring_prompts_list: string[]; // Will store the TEXT of selected templates
+}
+
+// For data returned specifically by GET /pipelines/{id} (backend's MicroproductPipelineGetResponse)
+export interface PipelineGetResponse extends Pipeline { // Extends basic Pipeline info
+  discovery_prompts_list: string[];  // Already a list from backend
+  structuring_prompts_list: string[]; // Already a list from backend
+}

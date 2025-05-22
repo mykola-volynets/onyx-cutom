@@ -6,13 +6,13 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // For navigation
-import { Pipeline } from '@/types/pipelines';
+import { useRouter } from 'next/navigation';
+import { Pipeline } from '@/types/pipelines'; // Use the updated type
 import { Eye, XCircle, CheckCircle2, Plus, Edit3, Trash2 } from 'lucide-react';
 
 const PipelinesPageComponent = () => {
   const router = useRouter();
-  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]); // Uses updated Pipeline type
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,14 +22,14 @@ const PipelinesPageComponent = () => {
     try {
       const response = await fetch('/api/custom-projects-backend/pipelines');
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({ detail: "Failed to fetch products"}));
+        const errData = await response.json().catch(() => ({ detail: "Failed to fetch products" }));
         throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
       }
-      const data: Pipeline[] = await response.json();
+      const data: Pipeline[] = await response.json(); // Expects new field names
       setPipelines(data);
     } catch (err: any) {
       console.error("Failed to fetch products:", err);
-      setError(err.message || "Could not load prpjects.");
+      setError(err.message || "Could not load products."); // Changed "prpjects" to "products"
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,6 @@ const PipelinesPageComponent = () => {
           throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
         }
         alert('Product deleted successfully!');
-        // Refresh the list of products
         fetchPipelines();
       } catch (err: any) {
         console.error("Failed to delete product:", err);
@@ -64,9 +63,8 @@ const PipelinesPageComponent = () => {
     }
   };
 
-
   if (loading) {
-    return <div className="p-8 text-center font-['Inter',_sans-serif] text-black">Loading project...</div>;
+    return <div className="p-8 text-center font-['Inter',_sans-serif] text-black">Loading products...</div>; // Changed "project" to "products"
   }
 
   if (error) {
@@ -97,16 +95,13 @@ const PipelinesPageComponent = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Product Name
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                    Description
+                  {/* Description column removed */}
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
+                    Discovery Phase {/* Renamed */}
                   </th>
                   <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
-                    Collects Data
+                    Structuring Phase {/* Renamed */}
                   </th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
-                    Formats Data
-                  </th>
-                  {/* Removed Created At, Collection Prompts, Formatting Prompts direct view */}
                   <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
                     Actions
                   </th>
@@ -118,17 +113,15 @@ const PipelinesPageComponent = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
                       {pipeline.pipeline_name}
                     </td>
-                    <td className="px-6 py-4 text-sm text-black break-words max-w-xs whitespace-pre-wrap">
-                      {pipeline.pipeline_description || <span className="text-xs text-gray-400 italic">N/A</span>}
-                    </td>
+                    {/* pipeline.pipeline_description TD removed */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-black text-center">
-                      {pipeline.is_prompts_data_collection ?
+                      {pipeline.is_discovery_prompts ? // Renamed field
                         <CheckCircle2 className="h-5 w-5 text-green-500 inline-block" aria-label="Yes" /> :
                         <XCircle className="h-5 w-5 text-red-500 inline-block" aria-label="No" />
                       }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-black text-center">
-                      {pipeline.is_prompts_data_formating ?
+                      {pipeline.is_structuring_prompts ? // Renamed field
                         <CheckCircle2 className="h-5 w-5 text-green-500 inline-block" aria-label="Yes" /> :
                         <XCircle className="h-5 w-5 text-red-500 inline-block" aria-label="No" />
                       }
@@ -137,16 +130,16 @@ const PipelinesPageComponent = () => {
                       <button
                         onClick={() => handleEdit(pipeline.id)}
                         className="text-indigo-600 hover:text-indigo-900 inline-flex items-center text-xs p-1"
-                        title="Edit Project"
-                        aria-label={`Edit project ${pipeline.pipeline_name}`}
+                        title="Edit Product" // Changed "Project" to "Product"
+                        aria-label={`Edit product ${pipeline.pipeline_name}`} // Changed "project" to "product"
                       >
                         <Edit3 size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(pipeline.id, pipeline.pipeline_name)}
                         className="text-red-600 hover:text-red-900 inline-flex items-center text-xs p-1"
-                        title="Delete Project"
-                        aria-label={`Delete project ${pipeline.pipeline_name}`}
+                        title="Delete Product" // Changed "Project" to "Product"
+                        aria-label={`Delete product ${pipeline.pipeline_name}`} // Changed "project" to "product"
                       >
                         <Trash2 size={16} />
                       </button>
