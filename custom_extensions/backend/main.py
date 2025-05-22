@@ -308,8 +308,7 @@ class DesignTemplateBase(BaseModel):
 class DesignTemplateCreate(DesignTemplateBase):
     design_image_path: str
 
-class DesignTemplateUpdate(DesignTemplateBase):
-    design_image_path: Optional[str] = None
+class DesignTemplateUpdate(BaseModel):
     template_name: Optional[str] = None
     template_structuring_prompt: Optional[str] = None
     microproduct_type: Optional[str] = None
@@ -853,6 +852,129 @@ async def get_design_templates(pool: asyncpg.Pool = Depends(get_db_pool)):
     except Exception as e:
         print(f"Error fetching design templates: {e}"); traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching design templates: {str(e)}")
+
+@app.get("/api/custom/design_templates/{template_id}", response_model=DesignTemplateResponse)
+async def get_design_template(
+    template_id: int,
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    query = """
+        SELECT id, template_name, template_structuring_prompt, design_image_path,
+               microproduct_type, component_name, date_created
+        FROM design_templates WHERE id = $1;
+    """
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(query, template_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Design template not found")
+        return DesignTemplateResponse(**dict(row))
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        print(f"Error fetching design template {template_id}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching design template: {str(e)}")
+
+@app.put("/api/custom/design_templates/update/{template_id}", response_model=DesignTemplateResponse)
+async def update_design_template(
+    template_id: int,
+    template_data: DesignTemplateUpdate, # Use the new update model
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    # Fetch existing record to ensure it exists and to handle partial updates gracefully
+    async with pool.acquire() as conn:
+        existing_template_row = await conn.fetchrow("SELECT * FROM design_templates WHERE id = $1", template_id)
+        if not existing_template_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Design template not found")
+
+    # Create a dictionary of fields to update
+    # Pydantic's exclude_unset=True is great for this if the model comes directly
+    # Or manually build the update query
+    update_fields = template_data.model_dump(exclude_unset=True)
+    
+    # We are not allowing image path updates via this endpoint as per user request.
+    # If 'design_image_path' was in DesignTemplateUpdate and sent, you might ignore it here.
+    # Since it's not in DesignTemplateUpdate, we don't need to worry about it here.
+
+    if not update_fields:
+        # If no fields are provided for update, we can return the existing record or a 304 Not Modified.
+        # For simplicity, returning existing. Or raise a 400 Bad Request.
+        return DesignTemplateResponse(**dict(existing_template_row))
+
+    set_clauses = []
+    update_values = []
+    i = 1 # For query parameters $1, $2, ...
+
+    for key, value in update_fields.items():
+        set_clauses.append(f"{key} = ${i}")
+        update_values.append(value)
+        i += 1
+    
+    update_values.append(template_id) # For WHERE id = $i
+
+    query = f"""
+        UPDATE design_templates
+        SET {', '.join(set_clauses)}
+        WHERE id = ${i}
+        RETURNING id, template_name, template_structuring_prompt, design_image_path,
+                  microproduct_type, component_name, date_created;
+    """
+    
+    try:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(query, *update_values)
+        if not row: # Should not happen if existence check passed, but good for safety
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update design template.")
+        return DesignTemplateResponse(**dict(row))
+    except asyncpg.exceptions.UniqueViolationError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Update would violate a unique constraint (e.g., template name).")
+    except Exception as e:
+        print(f"Error updating design template {template_id}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on design template update: {str(e)}")
+
+@app.delete("/api/custom/design_templates/delete/{template_id}", status_code=status.HTTP_200_OK)
+async def delete_design_template(
+    template_id: int,
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    # Optional: Before deleting from DB, you might want to delete the associated image file 
+    # from STATIC_DESIGN_IMAGES_DIR if it's no longer used by any other resource.
+    # This requires fetching the design_image_path first.
+    async with pool.acquire() as conn:
+        template_to_delete = await conn.fetchrow("SELECT design_image_path FROM design_templates WHERE id = $1", template_id)
+        if not template_to_delete:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Design template not found.")
+
+        # Attempt to delete the image file
+        if template_to_delete["design_image_path"]:
+            image_file_on_disk = template_to_delete["design_image_path"].lstrip('/') # Remove leading slash for os.path.join
+            full_image_path = os.path.join(STATIC_DESIGN_IMAGES_DIR, image_file_on_disk.replace(f"{STATIC_DESIGN_IMAGES_DIR}/", "", 1))
+
+            # A more robust way to get the filename if path is /static_design_images/filename.ext
+            if template_to_delete["design_image_path"].startswith(f"/{STATIC_DESIGN_IMAGES_DIR}/"):
+                filename_only = template_to_delete["design_image_path"][len(f"/{STATIC_DESIGN_IMAGES_DIR}/"):]
+                full_image_path = os.path.join(STATIC_DESIGN_IMAGES_DIR, filename_only)
+                
+                if os.path.exists(full_image_path):
+                    try:
+                        os.remove(full_image_path)
+                        print(f"Successfully deleted image file: {full_image_path}")
+                    except OSError as e:
+                        print(f"Error deleting image file {full_image_path}: {e}. Continuing with DB record deletion.")
+                else:
+                    print(f"Image file not found for deletion: {full_image_path}")
+
+
+        # Delete the database record
+        deleted_count = await conn.execute("DELETE FROM design_templates WHERE id = $1", template_id)
+    
+    if deleted_count == "DELETE 0": # Or check if template_to_delete was None initially
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Design template not found or already deleted.")
+    
+    return {"detail": f"Successfully deleted design template with ID {template_id}."}
+
 
 
 @app.get("/api/custom/health")

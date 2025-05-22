@@ -6,32 +6,69 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // Using Next.js Image component
-import { DesignTemplate } from '@/types/designTemplates'; // Assuming types are in @/types/designTemplates.ts
-import { fetchDesignTemplates } from '@/lib/designTemplateApi'; // Assuming API functions are in @/lib/designTemplateApi.ts
-import { Plus } from 'lucide-react';
+import Image from 'next/image';
+import { DesignTemplate } from '@/types/designTemplates';
+import { fetchDesignTemplates } from '@/lib/designTemplateApi'; // Will add deleteDesignTemplate here later
+import { Plus, Edit3, Trash2 } from 'lucide-react'; // Added Edit3, Trash2
+import { useRouter } from 'next/navigation'; // For navigation
+
+// Assume deleteDesignTemplate will be added to lib/designTemplateApi.ts
+async function deleteDesignTemplateAPI(templateId: number): Promise<{ detail: string }> {
+    const API_BASE_URL = '/api/custom-projects-backend'; // Should be consistent
+    const response = await fetch(`${API_BASE_URL}/design_templates/delete/${templateId}`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to delete design template' }));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+    if (response.status === 204) return { detail: "Successfully deleted" }; // Handle 204 No Content
+    return response.json();
+}
+
 
 const DesignTemplatesListPageComponent = () => {
   const [templates, setTemplates] = useState<DesignTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const loadTemplates = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchDesignTemplates();
+      setTemplates(data);
+    } catch (err: any) {
+      setError(err.message || "Could not load design templates.");
+      console.error("Failed to load design templates:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadTemplates = async () => {
-      setLoading(true);
-      setError(null); // Reset error state on new fetch
-      try {
-        const data = await fetchDesignTemplates();
-        setTemplates(data);
-      } catch (err: any) {
-        setError(err.message || "Could not load design templates.");
-        console.error("Failed to load design templates:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadTemplates();
   }, []);
+
+  const handleEdit = (templateId: number) => {
+    router.push(`/admin/design-templates/edit/${templateId}`);
+  };
+
+  const handleDelete = async (templateId: number, templateName: string) => {
+    if (window.confirm(`Are you sure you want to delete the template "${templateName}"? This will also delete its associated image.`)) {
+      try {
+        await deleteDesignTemplateAPI(templateId); // Use the new API lib function
+        alert('Template deleted successfully!');
+        loadTemplates(); // Refresh the list
+      } catch (err: any) {
+        console.error("Failed to delete template:", err);
+        setError(err.message || "Could not delete template.");
+        alert(`Error: ${err.message || "Could not delete template."}`);
+      }
+    }
+  };
+
 
   if (loading) {
     return <div className="p-8 text-center font-['Inter',_sans-serif] text-black">Loading Design Templates...</div>;
@@ -52,6 +89,9 @@ const DesignTemplatesListPageComponent = () => {
             </a>
           </Link>
         </div>
+
+        {error && <div className="mb-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded-md">{error}</div>}
+
 
         {templates.length === 0 ? (
           <div className="text-center text-gray-500 py-10">
@@ -74,42 +114,60 @@ const DesignTemplatesListPageComponent = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                     Component Name
                   </th>
-                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                    Date Created
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider">
+                    Actions
                   </th>
-                  {/* Add an "Actions" column here later if you want Edit/Delete buttons per template */}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {templates.map((template) => (
-                  <tr key={template.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
+                  <tr key={template.id} className="hover:bg-gray-50 group">
+                    <td className="px-6 py-4 align-middle"> {/* Ensure consistent alignment */}
                       {template.design_image_path ? (
-                        <Image
-			  src={template.design_image_path}
-			  alt={template.template_name || 'Design Template Image'}
-			  width={80}
-			  height={80}
-			  className="object-contain rounded"
-			  unoptimized={true} // <--- ADD THIS PROP FOR TESTING
-			/>
+                        <div className="w-28 h-28 flex items-center justify-center relative"> {/* Added relative for potential absolute positioned scaled image */}
+                          <Image
+                            src={template.design_image_path}
+                            alt={template.template_name || 'Design Template Image'}
+                            width={112} 
+                            height={112}
+                            className="object-contain rounded-md 
+                                       transform transition-transform duration-300 ease-in-out 
+                                       group-hover:scale-[3.5] group-hover:z-20 cursor-pointer" // Increased scale to 3.5x, higher z-index, using group-hover
+                            unoptimized={true} // As requested
+                          />
+                        </div>
                       ) : (
-                        <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                        <div className="w-28 h-28 bg-gray-200 rounded-md flex items-center justify-center text-xs text-gray-500">
                           No Image
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black align-middle">
                       {template.template_name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black align-middle">
                       {template.microproduct_type}
                     </td>
-                     <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                     <td className="px-6 py-4 whitespace-nowrap text-sm text-black align-middle">
                       {template.component_name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(template.date_created).toLocaleDateString()}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center space-x-2 align-middle">
+                        <button
+                            onClick={() => handleEdit(template.id)}
+                            className="text-indigo-600 hover:text-indigo-900 inline-flex items-center text-xs p-1"
+                            title="Edit Template"
+                            aria-label={`Edit template ${template.template_name}`}
+                        >
+                            <Edit3 size={16} />
+                        </button>
+                        <button
+                            onClick={() => handleDelete(template.id, template.template_name)}
+                            className="text-red-600 hover:text-red-900 inline-flex items-center text-xs p-1"
+                            title="Delete Template"
+                            aria-label={`Delete template ${template.template_name}`}
+                        >
+                            <Trash2 size={16} />
+                        </button>
                     </td>
                   </tr>
                 ))}

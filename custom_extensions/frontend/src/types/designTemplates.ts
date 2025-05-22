@@ -13,12 +13,19 @@ export interface DesignTemplate {
 export interface DesignTemplateFormData {
   template_name: string;
   template_structuring_prompt: string;
-  design_image_path: string; // This will hold the path returned by the upload API
+  design_image_path: string; // Path from upload or manual input
   microproduct_type: string;
   component_name: string;
 }
 
-// You might also want to define the type for the image upload response
 export interface ImageUploadResponse {
   file_path: string;
+}
+
+// Data structure for updating a design template (image path is not updatable here)
+export interface DesignTemplateUpdateData {
+  template_name?: string;
+  template_structuring_prompt?: string;
+  microproduct_type?: string;
+  component_name?: string;
 }
