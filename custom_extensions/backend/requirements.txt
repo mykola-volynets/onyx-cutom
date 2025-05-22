@@ -8,4 +8,5 @@ pyppeteer
 Jinja2
 asyncpg # For PostgreSQL
 python-dotenv # To load .env variables
+python-multipart
 

@@ -356,6 +356,17 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 </p>
               </Link>
               {/* === END OF NEW "PIPELINES" LINK === */}
+              <Link
+                className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
+                href="/custom-projects-ui/admin/design-templates"
+                target="_blank" 
+                rel="noopener noreferrer" 
+              >
+                <FiPackage size={20} className="flex-none text-text-history-sidebar-button" /> 
+                <p className="my-auto flex font-normal items-center text-base">
+                  Templates(Designs)
+                </p>
+              </Link>
 
             </div>
           )}
