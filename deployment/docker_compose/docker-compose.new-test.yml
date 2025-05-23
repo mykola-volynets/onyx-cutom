@@ -305,6 +305,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - CUSTOM_PROJECTS_DATABASE_URL=postgresql://${CUSTOM_PROJECTS_DB_USER:-custom_user}:${CUSTOM_PROJECTS_DB_PASSWORD:-custom_password}@custom_projects_db:5432/${CUSTOM_PROJECTS_DB_NAME:-custom_projects_db}
+      - COHERE_API_KEY=${COHERE_API_KEY}
       - ONYX_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@relational_db:5432/${POSTGRES_DB:-onyx_db}
       - CUSTOM_FRONTEND_URL=http://custom_frontend:3001
     shm_size: '2gb'

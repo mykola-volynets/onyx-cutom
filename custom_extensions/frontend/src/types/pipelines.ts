@@ -8,14 +8,6 @@ export interface PromptTemplate {
   picture: string; // New field for image URL or path
 }
 
-// Example updated templates - replace with your actual data and picture paths/URLs
-export const PROMPT_TEMPLATES: PromptTemplate[] = [
-  { id: 'template1', name: 'General Summary', templateText: 'Summarize the following text: {{text_input}}', picture: '/images/template_summary.png' },
-  { id: 'template2', name: 'Key Points Extraction', templateText: 'Extract key points from: {{text_input}}', picture: '/images/template_keypoints.png' },
-  { id: 'template3', name: 'Sentiment Analysis', templateText: 'Analyze sentiment of: {{text_input}}', picture: '/images/template_sentiment.png' },
-  // Add more templates as needed
-];
-
 // Base type for API responses (list view)
 export interface Pipeline {
   id: number;
