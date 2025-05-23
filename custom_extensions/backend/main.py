@@ -639,50 +639,54 @@ async def parse_ai_response_with_llm(
     # Enhanced prompt for Cohere or similar LLM
     prompt_message = f"""
 You are a highly accurate text-to-JSON parsing assistant. Your task is to convert the *entirety* of the following unstructured text into a single, structured JSON object.
-Ensure *all* modules (each starting with '## Module X: ...' or similar) and their respective sections and lessons present in the "Raw text to parse" are included in your JSON output's 'sections' array. Do not truncate or omit any modules or their content from the input.
+Ensure *all* modules (each starting with '## Module X: ...', '## Модуль X: ...' or similar) and their respective sections and lessons present in the "Raw text to parse" are included in your JSON output's 'sections' array. Do not truncate or omit any modules or their content from the input.
 The desired JSON output format is exemplified below. Ensure all fields from the text are mapped correctly to the JSON structure and that your output strictly follows this JSON format.
 Pay close attention to data types: strings should be quoted (e.g., "text": ""), numerical values should be numbers (not strings), and lists should be arrays. Null values are not permitted for string fields; use an empty string "" instead if text is absent but the field itself is required according to the example structure.
+Maintain the original language of the input text for all textual content in the JSON, unless a specific transformation is requested (like for 'type' fields).
 
 Key Parsing Instructions:
-- Main Title: The 'mainTitle' should be extracted from the primary title of the program, often found at the beginning (e.g., '# Program Title: ...').
+- Main Title: The 'mainTitle' should be extracted from the primary title of the program, often found at the beginning (e.g., '# Program Title: ...', '# Программа обучения...'). It should be in the original language.
 - Sections: Each distinct module in the input text should become a separate object in the 'sections' array.
-- Section ID: The 'id' for each section object must be formatted strictly as '№' followed by the module number (e.g., '№1' for Module 1, '№2' for Module 2, and so on). Do not include the section title in the 'id' field.
-- Section Title: The 'title' for each section object should be the descriptive title of the module (e.g., "Basics of Service and Operations" from "## Module 1: Basics of Service and Operations").
-- Hours: 'totalHours' for sections and 'hours' for lessons should be float numbers. Ensure values like "2 hours" become `2.0` and "1.5 hours" becomes `1.5`.
+- Section ID: The 'id' for each section object must be formatted strictly as '№' followed by the module number (e.g., '№1' for Module 1 or Модуль 1, '№2' for Module 2 or Модуль 2, and so on). Do not include the section title in the 'id' field.
+- Section Title: The 'title' for each section object should be the descriptive title of the module (e.g., "Basics of Service and Operations" from "## Module 1: Basics of Service and Operations", or "Основы сервиса и операций" from "## Модуль 1: Основы сервиса и операций"). It must be in the original language.
+- Lesson Title: The 'title' for each lesson must be in the original language.
+- Source: The 'source' field for each lesson must be in the original language.
+- Hours: 'totalHours' for sections and 'hours' for lessons should be float numbers. Ensure values like "2 hours" or "2 часа" become `2.0` and "1.5 hours" or "1.5 часа" becomes `1.5`.
 - 'check' object:
     - This object must ONLY contain two string fields: 'type' and 'text'. Both fields are mandatory for each lesson.
-    - The 'text' field must contain the exact string found after 'Knowledge Assessment:' in the input text (e.g., if input is '- Knowledge Assessment: Test', then 'text' is "Test"; if input is '- Knowledge Assessment: Test, practice', then 'text' is "Test, practice"). If 'Knowledge Assessment:' is present but has no specific text immediately following it, use an empty string "" for this 'text' field.
-    - For the 'type' field:
-        - Infer the most appropriate type based on the 'Knowledge Assessment:' text.
-        - If the text is "Test", type is "test".
-        - If the text is "Practice", type is "practice".
-        - If the text is "Role-playing" or "Role play", type is "role_play".
-        - If the text is "Test, practice", the type is "test" (the 'text' field will still contain "Test, practice").
-        - If the text is "Practice with Supervisor", type is "practice_supervisor".
-        - If the text is "Case study", type is "other_check".
+    - The 'text' field must contain the exact string found after 'Knowledge Assessment:' (or its equivalent in other languages, like 'Проверка знаний:') in the input text. This 'text' field MUST be in the original language of the input. For example, if input is '- Проверка знаний: Тест', then 'text' is "Тест". If input is '- Knowledge Assessment: Test, practice', then 'text' is "Test, practice". If 'Knowledge Assessment:' is present but has no specific text immediately following it, use an empty string "" for this 'text' field.
+    - For the 'type' field (this 'type' field should be in English as per the allowed enum values):
+        - Infer the most appropriate type based on the 'Knowledge Assessment:' text, regardless of its language.
+        - If the text is "Test" or "Тест", type is "test".
+        - If the text is "Practice" or "Практика", type is "practice".
+        - If the text is "Role-playing", "Role play", or "Ролевые игры", type is "role_play".
+        - If the text is "Test, practice" or "Тест, практика", the type is "test" (the 'text' field will still contain the original "Test, practice" or "Тест, практика").
+        - If the text is "Practice with Supervisor" or "Практика с куратором", type is "practice_supervisor".
+        - If the text is "Case study" or "Кейс", type is "other_check".
         - For other assessment texts not listed, use 'other_check'.
-        - Common types include 'test', 'practice', 'practice_supervisor', 'role_play', 'none', 'other_check'.
-    - If 'Knowledge Assessment:' is not mentioned at all for a lesson, the entire 'check' object should be `{{"type": "none", "text": "N/A"}}`.
+        - Common 'type' values (in English) are 'test', 'practice', 'practice_supervisor', 'role_play', 'none', 'other_check'.
+    - If 'Knowledge Assessment:' (or its equivalent) is not mentioned at all for a lesson, the entire 'check' object should be `{{"type": "none", "text": "N/A"}}`.
 - 'contentAvailable' object:
-    - This should be an object with 'type' and 'text' string fields. Both fields are mandatory for each lesson.
-    - If 'Content Availability' is not mentioned for a lesson, the 'contentAvailable' field in the JSON should default to `{{"type": "yes", "text": "100%"}}`.
-    - If 'Content Availability' IS mentioned, parse it according to the text. Common types for 'contentAvailable' include 'yes' (meaning "100%"), 'no', 'percentage'. If 'Content Availability' is present but has no specific text, use an empty string "" for its 'text' field and "unknown_availability" for its 'type' field.
-- Missing Information: If specific information for other fields (like 'source' or 'hours') is not found in the text, use a sensible default (e.g., empty string for 'source', 0.0 for 'hours') or omit optional fields if appropriate, but always try to match the example structure and ensure field types are correct.
-- Language Detection: The 'detectedLanguage' field should be determined from the main language of the text (e.g., "en", "ru").
+    - This should be an object with 'type' and 'text' string fields. Both fields are mandatory for each lesson. The 'type' field should be in English.
+    - If 'Content Availability' (or its equivalent) is not mentioned for a lesson, the 'contentAvailable' field in the JSON should default to `{{"type": "yes", "text": "100%"}}`.
+    - If 'Content Availability' IS mentioned, parse it according to the text. Common types for 'contentAvailable' include 'yes' (meaning "100%"), 'no', 'percentage'. If 'Content Availability' is present but has no specific text, use an empty string "" for its 'text' field, and "unknown_availability" for its 'type' field.
+- Missing Information: If specific information for other fields (like 'source' or 'hours') is not found in the text, use a sensible default (e.g., empty string for 'source', 0.0 for 'hours') or omit optional fields if appropriate, but always try to match the example structure and ensure field types are correct. Maintain original language for text fields.
+- Language Detection: The 'detectedLanguage' field (e.g., "en", "ru") should be determined from the main language of the input text. All other textual fields like titles, sources, and particularly `check.text` should remain in that original detected language.
 
 Raw text to parse:
 ---
 {ai_response}
 ---
 
-Example of the desired JSON output structure (ensure your output strictly follows this JSON format, including all specified fields where applicable. Note: the 'id' in this example uses 'Module X', but your output should use '№X' as per the instructions. The 'mainTitle' is also an example; extract the actual title from the raw text. 'contentAvailable' in this example shows variety, but your default for unmentioned is `{{"type": "yes", "text": "100%"}}`):
+Example of the desired JSON output structure (ensure your output strictly follows this JSON format, including all specified fields where applicable. Note: the 'id' in this example uses 'Module X', but your output should use '№X' as per the instructions. The 'mainTitle' is also an example; extract the actual title from the raw text. 'contentAvailable' in this example shows variety, but your default for unmentioned is `{{"type": "yes", "text": "100%"}}`. Textual content like titles and `check.text` in the example are in English, but your output should reflect the language of the `Raw text to parse`):
 ---
 {actual_json_example}
 ---
 
 Return ONLY the JSON object corresponding to the parsed text. Do not include any other explanatory text or markdown formatting (like ```json ... ```) around the JSON.
-The entire output must be a single, valid JSON object and must include all modules and all their lessons found in the input.
+The entire output must be a single, valid JSON object and must include all modules and all their lessons found in the input, with textual content in the original language.
     """
+
     print("--- DEBUG: LLM Input (Raw aiResponse) ---")
     print(ai_response)
     print("--- DEBUG: LLM Input (Prompt Message) ---")
