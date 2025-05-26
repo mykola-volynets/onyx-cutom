@@ -1,40 +1,20 @@
 // custom_extensions/frontend/src/components/ProjectsTable.tsx
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Link as LinkIcon, FileText, Trash2, Plus, Minus, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
+import { Link as LinkIcon, FileText, Trash2, Pencil, ChevronDown, ChevronRight } from 'lucide-react';
+import { ProjectListItem } from '@/types/trainingPlan'; // Using the updated type
 
-// Fallback for environment variables
-const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || "";
-
-interface MicroProduct {
-  name: string;
-  slug: string;
-  webLinkPath?: string;
-  pdfLinkPath?: string;
-  details?: any; 
-}
-
-interface ProjectEntry {
-  id: number;
-  projectName: string;
-  projectSlug: string;
-  product: string;
-  productSlug: string;
-  microProduct: MicroProduct;
-}
+const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
 
 interface GroupedProjects {
-  [projectName: string]: ProjectEntry[];
+  [projectName: string]: ProjectListItem[];
 }
 
 const ProjectsTable: React.FC = () => {
-  const [projectsData, setProjectsData] = useState<ProjectEntry[]>([]);
+  const [projectsData, setProjectsData] = useState<ProjectListItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
@@ -45,19 +25,19 @@ const ProjectsTable: React.FC = () => {
   const fetchProjects = async () => {
     setLoading(true);
     setError(null);
-    const projectsApiUrl = `/api/custom-projects-backend/projects`;
+    const projectsApiUrl = `${CUSTOM_BACKEND_URL}/projects`;
     try {
       const headers: HeadersInit = {};
-      const devUserId = "dummy-onyx-user-id-007";
+      const devUserId = "dummy-onyx-user-id-for-testing"; 
       if (devUserId && process.env.NODE_ENV === 'development') {
         headers['X-Dev-Onyx-User-ID'] = devUserId;
       }
-      const response = await fetch(projectsApiUrl, { headers });
+      const response = await fetch(projectsApiUrl, { headers, cache: 'no-store' });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0, 200)}`);
       }
-      const data: ProjectEntry[] = await response.json();
+      const data: ProjectListItem[] = await response.json();
       setProjectsData(data);
     } catch (e: any) {
       setError(e.message || "Failed to load projects.");
@@ -72,7 +52,7 @@ const ProjectsTable: React.FC = () => {
 
   const groupedProjects = useMemo(() => {
     return projectsData.reduce((acc, project) => {
-      const { projectName } = project;
+      const { projectName } = project; // Group by main project name
       if (!acc[projectName]) {
         acc[projectName] = [];
       }
@@ -85,14 +65,23 @@ const ProjectsTable: React.FC = () => {
     setExpandedProjects(prev => ({ ...prev, [projectName]: !prev[projectName] }));
   };
 
-  const handlePdfClick = (pdfPath: string | undefined) => {
-    if (pdfPath) {
-      const fullProxiedPdfUrl = `/api/custom-projects-backend/${pdfPath}`;
-      window.open(fullProxiedPdfUrl, '_blank');
-    } else {
-      alert("PDF link not available for this item.");
-    }
+  const handlePdfClick = (projectId: number, microProductName: string | null | undefined) => {
+    const docNameSlug = microProductName ? slugify(microProductName) : 'document';
+    const fullProxiedPdfUrl = `${CUSTOM_BACKEND_URL}/pdf/${projectId}/${docNameSlug}`;
+    window.open(fullProxiedPdfUrl, '_blank');
   };
+  
+  const slugify = (text: string): string => {
+    if (!text) return "default-slug";
+    return text
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-') // Replace spaces with -
+      .replace(/[^\w-]+/g, '') // Remove all non-word chars
+      .replace(/--+/g, '-'); // Replace multiple - with single -
+  }
+
 
   const handleSelectAllChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = event.target.checked;
@@ -120,11 +109,11 @@ const ProjectsTable: React.FC = () => {
       alert("No valid projects selected for deletion.");
       return;
     }
-    if (!window.confirm(`Are you sure you want to delete ${validSelectedIds.length} selected project(s)?`)) {
+    if (!window.confirm(`Are you sure you want to delete ${validSelectedIds.length} selected project(s)? This will delete all instances under these projects.`)) {
       return;
     }
     setIsDeleting(true);
-    const deleteApiUrl = '/api/custom-projects-backend/projects/delete-multiple';
+    const deleteApiUrl = `${CUSTOM_BACKEND_URL}/projects/delete-multiple`;
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
       const devUserId = "dummy-onyx-user-id-for-testing";
@@ -144,6 +133,7 @@ const ProjectsTable: React.FC = () => {
       setProjectsData(prevProjects => prevProjects.filter(p => !validSelectedIds.includes(p.id)));
       setSelectedProjectIds([]);
       alert(result.detail || `${validSelectedIds.length} project(s) deleted successfully.`);
+      fetchProjects(); // Refresh the list
     } catch (e: any) {
       alert(`Error deleting projects: ${e.message || "Unknown error."}`);
     } finally {
@@ -177,7 +167,7 @@ const ProjectsTable: React.FC = () => {
       </div>
 
       {(!projectsData || projectsData.length === 0) ? (
-        <div className="p-8 text-center">No projects found.</div>
+        <div className="p-8 text-center">No projects found. <Link href="/add-to-project" className="text-blue-600 hover:underline">Add a new one?</Link></div>
       ) : (
         <div className="shadow-lg rounded-lg overflow-x-auto border border-gray-200 bg-white">
           <table className="min-w-full bg-white">
@@ -192,16 +182,16 @@ const ProjectsTable: React.FC = () => {
                     disabled={projectsData.length === 0}
                   />
                 </th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Name</th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Product</th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Microproduct</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">WebView</th>
+                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Project Name</th>
+                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Instance / Design Name</th>
+                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Design Category</th>
+                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">View</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">PDF</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Edit</th>
               </tr>
             </thead>
             {Object.entries(groupedProjects).map(([projectName, entries], groupIndex) => {
-              const isCurrentlyExpanded = !!expandedProjects[projectName];
+              const isCurrentlyExpanded = expandedProjects[projectName] === undefined ? true : !!expandedProjects[projectName]; // Default to expanded
               const projectIdsInGroup = entries.map(e => e.id).filter(id => typeof id === 'number');
               const areAllInGroupSelected = projectIdsInGroup.length > 0 && projectIdsInGroup.every(id => selectedProjectIds.includes(id));
               
@@ -214,118 +204,70 @@ const ProjectsTable: React.FC = () => {
                   });
               };
 
-              if (entries.length === 1) {
-                const item = entries[0];
-                const detailPageUrl = item.microProduct?.webLinkPath || '#';
-                const isRowSelected = typeof item.id === 'number' && selectedProjectIds.includes(item.id);
-                const rowBackground = groupIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white';
-
-                return (
-                    <tbody className="text-gray-700" key={item.id || `project-row-single-${groupIndex}`}>
-                        <tr className={`${rowBackground} hover:bg-gray-100 border-b border-gray-200 project-item-row project-item-row-expanded`}>
-                             <td className="py-3 px-4 text-center">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                                    checked={isRowSelected} disabled={typeof item.id !== 'number'}
-                                    onChange={(e) => {if (typeof item.id === 'number') handleRowCheckboxChange(item.id, e.target.checked)}} />
-                            </td>
-                            <td className="text-left py-3 px-4">{item.projectName}</td>
-                            <td className="text-left py-3 px-4">{item.product}</td>
-                            <td className="text-left py-3 px-4">{item.microProduct?.name || 'N/A'}</td>
-                            <td className="text-center py-3 px-4">
-                                {item.microProduct?.webLinkPath ? (
-                                <Link href={detailPageUrl} legacyBehavior>
-                                    <a target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 inline-block"><LinkIcon size={18} /></a>
-                                </Link>
-                                ) : <span className="text-gray-400"><LinkIcon size={18} /></span>}
-                            </td>
-                            <td className="text-center py-3 px-4">
-                                <button onClick={() => handlePdfClick(item.microProduct?.pdfLinkPath)} disabled={!item.microProduct?.pdfLinkPath}
-                                className={`text-red-500 hover:text-red-700 inline-block ${!item.microProduct?.pdfLinkPath ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                <FileText size={18} />
-                                </button>
-                            </td>
-                            <td className="text-center py-3 px-4">
-                                <button
-                                    onClick={() => router.push(`/projects/edit/${item.id}`)}
-                                    disabled={typeof item.id !== 'number'}
-                                    className={`text-blue-600 hover:text-blue-800 ${typeof item.id !== 'number' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    title="Edit Project"
-                                >
-                                    <Pencil size={18} />
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                );
-              }
-
               return (
-                <tbody className="text-gray-700" key={projectName}>
-                  <tr className={`${groupIndex % 2 === 0 ? 'bg-gray-100' : 'bg-gray-50'} border-b border-gray-300 hover:bg-gray-200 cursor-pointer`}
-                      onClick={() => handleToggleExpand(projectName)}>
-                    <td className="py-3 px-4 text-center">
-                       <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                        checked={areAllInGroupSelected} onChange={handleSelectGroupChange} disabled={projectIdsInGroup.length === 0} 
-                        onClick={(e) => e.stopPropagation()} />
-                    </td>
-                    <td colSpan={6} className="text-left py-3 px-4 font-semibold"> {/* Adjusted colSpan */}
-                      <div className="flex items-center">
-                        {isCurrentlyExpanded ? <ChevronDown size={18} className="mr-2 expand-collapse-icon" /> : <ChevronRight size={18} className="mr-2 expand-collapse-icon" />}
-                        {projectName} ({entries.length})
-                      </div>
-                    </td>
-                  </tr>
+                <tbody className="text-gray-700" key={projectName + groupIndex}>
+                  {entries.length > 1 && (
+                    <tr className={`${groupIndex % 2 === 0 ? 'bg-gray-100' : 'bg-gray-50'} border-b border-gray-300 hover:bg-gray-200 cursor-pointer`}
+                        onClick={() => handleToggleExpand(projectName)}>
+                      <td className="py-3 px-4 text-center">
+                         <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                          checked={areAllInGroupSelected} onChange={handleSelectGroupChange} disabled={projectIdsInGroup.length === 0} 
+                          onClick={(e) => e.stopPropagation()} />
+                      </td>
+                      <td colSpan={6} className="text-left py-3 px-4 font-semibold">
+                        <div className="flex items-center">
+                          {isCurrentlyExpanded ? <ChevronDown size={18} className="mr-2 expand-collapse-icon" /> : <ChevronRight size={18} className="mr-2 expand-collapse-icon" />}
+                          {projectName} ({entries.length} instances)
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   
                   {entries.map((item, itemIndex) => {
-                    const detailPageUrl = item.microProduct?.webLinkPath || '#';
+                    const detailPageUrl = `/projects/view/${item.id}`; // New view path
                     const isRowSelected = typeof item.id === 'number' && selectedProjectIds.includes(item.id);
                     
-                    const itemRowBackground = isCurrentlyExpanded 
-                                              ? (itemIndex % 2 === 0 ? 'expanded-group-item-even' : 'expanded-group-item-odd')
-                                              : (itemIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50');
-
+                    const rowVisibleClass = entries.length > 1 ? (isCurrentlyExpanded ? 'expanded-group-item-visible' : 'expanded-group-item-hidden') : '';
+                    const itemRowBackground = itemIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50';
                     const itemClasses = `
-                      project-item-row
-                      ${isCurrentlyExpanded ? 'project-item-row-expanded' : 'project-item-row-collapsed'}
-                      ${itemRowBackground}
-                      ${isCurrentlyExpanded ? 'border-b border-gray-200' : 'border-transparent'}
-                       hover:bg-gray-100 
+                      project-item-row ${rowVisibleClass}
+                      ${entries.length === 1 && (groupIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white')}
+                      ${entries.length > 1 && itemRowBackground}
+                      hover:bg-gray-100 border-b border-gray-200
                     `;
-                    const cellPaddingClass = isCurrentlyExpanded ? "py-3 px-4" : "p-0";
-                    const firstCellPaddingClass = isCurrentlyExpanded ? "py-3 px-4 pl-10" : "p-0";
-
+                    
                     return (
                       <tr key={item.id || `project-row-${groupIndex}-${itemIndex}`} className={itemClasses}>
-                        <td className={`text-center ${cellPaddingClass}`}>
+                        <td className="py-3 px-4 text-center">
                           <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                            checked={isRowSelected} disabled={typeof item.id !== 'number'}
-                            onChange={(e) => {if (typeof item.id === 'number') handleRowCheckboxChange(item.id, e.target.checked)}} />
+                              checked={isRowSelected} disabled={typeof item.id !== 'number'}
+                              onChange={(e) => {if (typeof item.id === 'number') handleRowCheckboxChange(item.id, e.target.checked)}} />
                         </td>
-                        <td className={`text-left ${firstCellPaddingClass}`}></td>
-                        <td className={`text-left ${cellPaddingClass}`}>{item.product}</td>
-                        <td className={`text-left ${cellPaddingClass}`}>{item.microProduct?.name || 'N/A'}</td>
-                        <td className={`text-center ${cellPaddingClass}`}>
-                          {item.microProduct?.webLinkPath ? (
-                            <Link href={detailPageUrl} legacyBehavior>
+                        <td className={`text-left py-3 px-4 ${entries.length > 1 ? 'pl-10' : ''}`}>
+                          {entries.length > 1 ? "" : item.projectName}
+                        </td>
+                        <td className="text-left py-3 px-4">{item.microproduct_name || item.design_template_name || 'N/A'}</td>
+                        <td className="text-left py-3 px-4">{item.design_microproduct_type || 'N/A'}</td>
+                        <td className="text-center py-3 px-4">
+                          <Link href={detailPageUrl} legacyBehavior>
                               <a target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 inline-block"><LinkIcon size={18} /></a>
-                            </Link>
-                          ) : <span className="text-gray-400"><LinkIcon size={18} /></span>}
+                          </Link>
                         </td>
-                        <td className={`text-center ${cellPaddingClass}`}>
-                          <button onClick={() => handlePdfClick(item.microProduct?.pdfLinkPath)} disabled={!item.microProduct?.pdfLinkPath}
-                           className={`text-red-500 hover:text-red-700 inline-block ${!item.microProduct?.pdfLinkPath ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <td className="text-center py-3 px-4">
+                           <button onClick={() => handlePdfClick(item.id, item.microproduct_name || item.design_template_name)}
+                             className="text-red-500 hover:text-red-700 inline-block">
                             <FileText size={18} />
                           </button>
                         </td>
-                        <td className={`text-center ${cellPaddingClass}`}>
-                          <button
-                            onClick={() => router.push(`/projects/edit/${item.id}`)}
-                             disabled={typeof item.id !== 'number'}
-                            className={`text-blue-600 hover:text-blue-800 ${typeof item.id !== 'number' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            title="Edit Project"
-                          >
-                            <Pencil size={18} />
-                          </button>
+                        <td className="text-center py-3 px-4">
+                            <button
+                                onClick={() => router.push(`/projects/edit/${item.id}`)}
+                                disabled={typeof item.id !== 'number'}
+                                className={`text-blue-600 hover:text-blue-800 ${typeof item.id !== 'number' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                title="Edit Project Instance"
+                            >
+                                <Pencil size={18} />
+                            </button>
                         </td>
                       </tr>
                     );
@@ -336,6 +278,20 @@ const ProjectsTable: React.FC = () => {
           </table>
         </div>
       )}
+       <style jsx>{`
+        .expanded-group-item-hidden {
+          display: none;
+        }
+        .expanded-group-item-visible {
+          display: table-row;
+        }
+        .expanded-group-item-even {
+            background-color: #f9fafb; /* Tailwind's gray-50 */
+        }
+        .expanded-group-item-odd {
+            background-color: #ffffff; /* White */
+        }
+      `}</style>
     </div>
   );
 };

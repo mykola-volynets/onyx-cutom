@@ -1,79 +1,83 @@
 // custom_extensions/frontend/src/types/products.ts
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// This file might need to be renamed or its contents re-evaluated
+// as "Product" and "MicroProduct" concepts have changed.
 
-// Matches CustomProductDBResponse from backend
-export interface Product {
+// Old structures - to be removed or refactored
+// export interface MicroProduct {
+//   name: string;
+//   slug: string;
+//   webLinkPath?: string;
+//   pdfLinkPath?: string;
+//   details?: any; // Kept as any for now, will be specific based on component
+// }
+
+// export interface Project {
+//   id: number;
+//   projectName: string;
+//   projectSlug: string;
+//   product: string; // This will be removed
+//   productSlug: string; // This will be removed
+//   microProduct: MicroProduct; // This structure will change
+// }
+
+// New structure for listing projects
+export interface ProjectListItem {
   id: number;
-  product_name: string;
-  product_description?: string | null;
-  is_discovery_prompts: boolean;
-  is_structuring_prompts: boolean;
-  discovery_prompts?: { [key: string]: string } | null;
-  structuring_prompts?: { [key: string]: string } | null;
-  created_at: string; // Or Date, depending on how you parse it
+  projectName: string;
+  // projectSlug: string; // Frontend can derive this
+  designTemplateName: string | null;
+  microProductName: string | null; // User-defined name for this instance
+  createdAt: string; // Assuming ISO string date
+  viewLinkPath: string;
+  pdfLinkPath: string;
 }
 
-// For creating a new Product
-export interface ProductCreateFormData {
-  id?: number; // Optional: useful for edit page to carry over ID
-  product_name: string;
-  product_description?: string | null;
-  is_discovery_prompts: boolean;
-  is_structuring_prompts: boolean;
-  discovery_prompts_list: string[]; // For Discovery Prompts (free text)
-  structuring_prompts_list: string[]; // For Structuring Prompts (will store the selected template's text)
+// New structure for viewing project details
+export interface ProjectViewDetails {
+  id: number;
+  projectName: string;
+  microProductName: string | null;
+  designTemplateName: string | null;
+  componentName: string | null; // Crucial for frontend component rendering
+  microProductContent: any; // The parsed JSON content
+  createdAt: string; // Assuming ISO string date
 }
 
-// For fetching a single product for editing (matches CustomProductGetResponse)
-export interface ProductEditData extends ProductCreateFormData {
-  id: number; // Ensure ID is present for editing
-  created_at: string;
+// For editing a project
+export interface ProjectDetailForEdit {
+  id: number;
+  projectName:string;
+  design_template_id: number | null;
+  microProductName: string | null;
+  aiResponse: string | null; // Raw AI response text
+  createdAt?: string;
 }
 
-export interface PromptTemplate {
+// If TrainingPlanDetails is still a common structure, keep its definition
+// (It's also defined in TrainingPlanTable.tsx, consider a shared types file)
+export interface StatusInfo {
+  type: string;
+  text: string;
+}
+
+export interface LessonDetail {
+  title: string;
+  check: StatusInfo;
+  contentAvailable: StatusInfo;
+  source: string;
+  hours: number;
+}
+
+export interface SectionDetail {
   id: string;
-  name: string;
-  templateText: string;
-  imageUrl?: string; // Optional image URL for the template
-  imageAltText?: string; // Optional alt text for the image
+  title: string;
+  totalHours: number;
+  lessons: LessonDetail[];
+  autoCalculateHours?: boolean;
 }
 
-export const PROMPT_TEMPLATES: PromptTemplate[] = [
-  {
-    id: 'training-plan-structure-v1',
-    name: 'Structure for Training Plan microproduct',
-    templateText: `It is critical that you strictly adhere to the following markdown formatting and exact keywords for the specified language.
-Your answer should be in LANGUAGE
-
-Overall Structure:
-
-Optionally, begin with a main program title: # [Program Title]
-Modules can be visually separated by a --- line if desired.
-Module Format:
-
-Module Title Line: Start with ##, then Module (English) or Модуль (Russian), the module number, a colon, and the title. Example: ## Module 1: Introduction or ## Модуль 1: Введение. This line must end with a newline.
-Optional Blank Line(s): Zero or more blank lines can follow the module title line.
-Total Time Line: Must be formatted exactly as: **Total Time:** [Value] (English) or **Общее время:** [Значение] (Russian). This line must end with a newline.
-Number of Lessons Line: Must be formatted exactly as: **Number of Lessons:** [Value] (English) or **Количество уроков:** [Значение] (Russian). This line must end with a newline.
-Mandatory Blank Line: Exactly one blank line must follow the "Number of Lessons" / "Количество уроков" line.
-Lessons Header Line: Must be formatted exactly as: ### Lessons (English) or ### Уроки (Russian). This line must end with a newline.
-Lesson Format (within a module, after the ### Lessons/Уроки header):
-
-Lesson Titles:
-English: Numbered list, bolded title. Example: 1. **Lesson Title Text**
-Russian: Hyphenated list, bolded title. Example: - **Название урока**
-Lesson Details: Each detail must be on a new line, indented with two spaces, a hyphen, and a space (-). The keyword must be bolded, followed by a colon, a space, and then the value. Use these exact keywords:
-For English:
-- **Time:** [Value]
-- **Knowledge Assessment:** [Description]
-- **Information Source:** [Description]
-For Russian:
-- **Время:** [Значение]
-- **Проверка знаний:** [Описание]
-- **Источник:** [Описание] (Important: use the keyword "Источник" for Russian source details)
-Blank Lines: Ensure one blank line after all details of one lesson before starting the next lesson title.
-Use the exact keywords and markdown formatting as shown for the specified [TARGET LANGUAGE]. Replace bracketed placeholders like [Value] or [Description] with actual content. If content is unknown, you may use the placeholder itself but maintain the surrounding structure and keywords.`,
-    imageUrl: 'https://via.placeholder.com/100x80?text=TrainingPlan', // Replace with actual image URL
-    imageAltText: 'Training Plan Structure Template Image'
-  }
-];
+export interface TrainingPlanDetails {
+  mainTitle?: string | null;
+  sections: SectionDetail[];
+  detectedLanguage?: string | null;
+}

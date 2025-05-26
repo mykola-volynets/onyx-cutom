@@ -11,37 +11,24 @@ import {
   Section as SectionType,
   Lesson as LessonType,
   StatusInfo,
-  ProjectDetailDataForEdit,
-} from '@/types/trainingPlan'; // Adjust path to your types file
+  ProjectDetailDataForEdit, 
+} from '@/types/trainingPlan'; 
+import { DesignTemplateResponse } from '@/types/designTemplates'; 
 import { PlusCircle, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 
-// Helper Functions
+// Helper Functions (keep as is)
 const createEmptyStatusInfo = (): StatusInfo => ({ type: 'unknown', text: '' });
-
 const createEmptyLesson = (idSuffix: string | number = Date.now()): LessonType => ({
-  id: `L${idSuffix}_${Math.random().toString(36).substr(2, 5)}`,
-  title: '',
-  check: createEmptyStatusInfo(),
-  contentAvailable: createEmptyStatusInfo(),
-  source: '',
-  hours: 0,
+  id: `L${idSuffix}_${Math.random().toString(36).substr(2, 5)}`, title: '',
+  check: createEmptyStatusInfo(), contentAvailable: createEmptyStatusInfo(), source: '', hours: 0,
 });
-
 const createEmptySection = (idSuffix: string | number = Date.now()): SectionType => ({
-  id: `S_${idSuffix}_${Math.random().toString(36).substr(2, 5)}`,
-  title: '',
-  totalHours: 0,
-  lessons: [createEmptyLesson(1)],
-  // NEW: Add autoCalculateHours property for each section
-  autoCalculateHours: true,
+  id: `S_${idSuffix}_${Math.random().toString(36).substr(2, 5)}`, title: '', totalHours: 0,
+  lessons: [createEmptyLesson(1)], autoCalculateHours: true,
 });
-
 const createEmptyTrainingPlan = (initialProjectName?: string): TrainingPlanData => ({
-  mainTitle: initialProjectName || "New Training Plan",
-  sections: [createEmptySection(1)],
-  detectedLanguage: 'en',
+  mainTitle: initialProjectName || "New Training Plan", sections: [createEmptySection(1)], detectedLanguage: 'en',
 });
-
 
 const EditProjectPageComponent = () => {
   const params = useParams();
@@ -49,26 +36,36 @@ const EditProjectPageComponent = () => {
   const projectId = params.id ? (Array.isArray(params.id) ? params.id[0] : params.id) : null;
 
   const [projectName, setProjectName] = useState('');
-  const [product, setProduct] = useState('');
-  const [microProductType, setMicroProductType] = useState('');
-  const [microProductName, setMicroProductName] = useState('');
+  const [microProductName, setMicroProductName] = useState(''); 
+  const [selectedDesignTemplateId, setSelectedDesignTemplateId] = useState<string>('');
 
   const [trainingPlanData, setTrainingPlanData] = useState<TrainingPlanData | null>(null);
+  const [designTemplates, setDesignTemplates] = useState<DesignTemplateResponse[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  
+  const [currentDesignInfo, setCurrentDesignInfo] = useState<{ name: string, component: string } | null>(null);
 
-  // NEW: State to manage auto-calculation for each section's total hours
-  // This will be derived from trainingPlanData.sections now
-
-  const productOptions = ["Strategy", "*Audit"];
-  const microProductTypeOptions: { [key: string]: string[] } = {
-    "Strategy": ["Training Plan"],
-    "*Audit": ["Training Plan"],
-    "": []
-  };
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      setIsLoadingTemplates(true);
+      try {
+        const response = await fetch('/api/custom-projects-backend/design_templates');
+        if (!response.ok) throw new Error('Failed to fetch design templates');
+        const data: DesignTemplateResponse[] = await response.json();
+        setDesignTemplates(data);
+      } catch (error) {
+        console.error("Error fetching design templates:", error);
+      } finally {
+        setIsLoadingTemplates(false);
+      }
+    };
+    fetchTemplates();
+  }, []);
 
   const loadProjectData = useCallback(async () => {
     if (!projectId) return;
@@ -81,7 +78,7 @@ const EditProjectPageComponent = () => {
         headers['X-Dev-Onyx-User-ID'] = devUserId;
       }
 
-      const response = await fetch(`/api/custom-projects-backend/projects/${projectId}`, { headers });
+      const response = await fetch(`/api/custom-projects-backend/projects/${projectId}/edit`, { headers }); 
       if (!response.ok) {
         const errorDataText = await response.text();
         let errorDetail = `HTTP error! status: ${response.status}`;
@@ -96,12 +93,17 @@ const EditProjectPageComponent = () => {
       const data: ProjectDetailDataForEdit = await response.json();
 
       setProjectName(data.projectName || '');
-      setProduct(data.product || '');
-      setMicroProductType(data.microProductType || '');
       setMicroProductName(data.microProductName || '');
+      setSelectedDesignTemplateId(data.design_template_id?.toString() || '');
+      
+      if (data.design_template_name || data.design_component_name) {
+        setCurrentDesignInfo({ 
+            name: data.design_template_name || 'N/A', 
+            component: data.design_component_name || 'N/A' // Fallback if null
+        });
+      }
 
       if (data.microProductContent) {
-        // Ensure new sections have the autoCalculateHours property
         const sectionsWithAutoCalc = data.microProductContent.sections.map(section => ({
           ...section,
           autoCalculateHours: section.autoCalculateHours === undefined ? true : section.autoCalculateHours,
@@ -125,24 +127,38 @@ const EditProjectPageComponent = () => {
       loadProjectData();
     }
   }, [projectId, initialDataLoaded, loadProjectData]);
+  
+   useEffect(() => {
+    if (selectedDesignTemplateId && designTemplates.length > 0) {
+      const template = designTemplates.find(dt => dt.id.toString() === selectedDesignTemplateId);
+      if (template) {
+        // Corrected line: Provide a fallback for component_name if it can be null/undefined
+        setCurrentDesignInfo({ 
+            name: template.template_name, 
+            component: template.component_name ?? 'UnknownComponent' // Fallback to a default string
+        });
+      }
+    }
+  }, [selectedDesignTemplateId, designTemplates]);
 
   const handleSave = async () => {
-    if (!projectId) {
-      alert("Project ID is missing.");
+    if (!projectId || !trainingPlanData) {
+      alert("Project data or training plan data is missing.");
       return;
     }
-    if (!trainingPlanData) {
-        alert("Training plan data is not initialized.");
+     if (!selectedDesignTemplateId) {
+        alert("Please select a design template.");
         return;
     }
     setIsSaving(true);
     setError(null);
 
+    const finalMicroProductName = microProductName.trim() || currentDesignInfo?.name || projectName;
+
     const payload = {
       projectName,
-      product,
-      microProductType,
-      microProductName,
+      design_template_id: parseInt(selectedDesignTemplateId, 10),
+      microProductName: finalMicroProductName,
       microProductContent: trainingPlanData,
     };
 
@@ -196,7 +212,6 @@ const EditProjectPageComponent = () => {
     setTrainingPlanData({ ...trainingPlanData, sections: newSections });
   };
 
-  // NEW: Handler for toggling auto-calculate for a section
   const toggleAutoCalculateHours = (sectionIndex: number) => {
     if (!trainingPlanData) return;
     const newSections = [...trainingPlanData.sections];
@@ -204,7 +219,6 @@ const EditProjectPageComponent = () => {
     if (section) {
       const newAutoCalculateState = !section.autoCalculateHours;
       newSections[sectionIndex] = { ...section, autoCalculateHours: newAutoCalculateState };
-      // If turning auto-calculation ON, recalculate totalHours
       if (newAutoCalculateState) {
         newSections[sectionIndex].totalHours = section.lessons.reduce((sum, lesson) => sum + (Number(lesson.hours) || 0), 0);
       }
@@ -221,7 +235,6 @@ const EditProjectPageComponent = () => {
     newLessons[lessonIndex] = updatedLesson;
     currentSection.lessons = newLessons;
 
-    // MODIFIED: Only auto-calculate if the toggle is on for this section
     if (field === 'hours' && currentSection.autoCalculateHours) {
       currentSection.totalHours = newLessons.reduce((sum, lesson) => sum + (Number(lesson.hours) || 0), 0);
     }
@@ -278,7 +291,6 @@ const EditProjectPageComponent = () => {
     if (newSections[sectionIndex]) {
         const currentSection = { ...newSections[sectionIndex] };
         currentSection.lessons = currentSection.lessons.filter((_, i) => i !== lessonIndex);
-        // MODIFIED: Only auto-calculate if the toggle is on for this section
         if (currentSection.autoCalculateHours) {
           currentSection.totalHours = currentSection.lessons.reduce((sum, lesson) => sum + (Number(lesson.hours) || 0), 0);
         }
@@ -310,59 +322,69 @@ const EditProjectPageComponent = () => {
   if (isLoading && !initialDataLoaded) return <div className="p-8 text-center font-['Inter',_sans-serif]">Loading project details...</div>;
   if (error && !trainingPlanData) return <div className="p-8 text-center text-red-500 font-['Inter',_sans-serif]">Error: {error}</div>;
   if (!projectId || !trainingPlanData) return <div className="p-8 text-center text-red-500 font-['Inter',_sans-serif]">Error: Project data not fully available.</div>;
-
+  
   const inputBaseClasses = "block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
   const labelBaseClasses = "block text-sm font-medium text-black mb-1";
   const smallInputClasses = `${inputBaseClasses} text-black`;
   const sectionTitleClasses = "text-lg font-semibold text-black p-2 border border-gray-300 rounded-md w-full";
   const lessonTitleClasses = `${inputBaseClasses} text-black`;
-  // NEW: Tailwind classes for the switch
   const switchContainerClasses = "flex items-center space-x-2";
   const switchBaseClasses = "relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500";
   const switchKnobClasses = "inline-block w-4 h-4 transform bg-white rounded-full transition-transform";
 
-
   return (
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen font-['Inter',_sans-serif]">
       <div className="max-w-6xl mx-auto bg-white p-6 md:p-8 shadow-lg rounded-lg border border-gray-200">
-        <h1 className="text-2xl font-bold mb-6 text-black">Edit Project (ID: {projectId})</h1>
+        <h1 className="text-2xl font-bold mb-6 text-black">Edit Project Instance (ID: {projectId})</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-8 pb-6 border-b border-gray-200">
           <div>
             <label htmlFor="projectName" className={labelBaseClasses}>Project Name:</label>
             <input type="text" id="projectName" value={projectName} onChange={(e) => setProjectName(e.target.value)} className={`${inputBaseClasses} text-black`}/>
           </div>
+          
           <div>
-            <label htmlFor="product" className={labelBaseClasses}>Product:</label>
-            <select id="product" value={product} onChange={(e) => { setProduct(e.target.value); setMicroProductType(''); setMicroProductName(''); }} className={`${inputBaseClasses} text-black bg-white`}>
-              <option value="">-- Choose Product --</option>
-              {productOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            <label htmlFor="designTemplate" className={labelBaseClasses}>Design Template:</label>
+            <select 
+              id="designTemplate" 
+              value={selectedDesignTemplateId} 
+              onChange={(e) => setSelectedDesignTemplateId(e.target.value)} 
+              className={`${inputBaseClasses} text-black bg-white`}
+              disabled={isLoadingTemplates || designTemplates.length === 0}
+            >
+              <option value="">-- Choose Design Template --</option>
+              {isLoadingTemplates ? (
+                <option disabled>Loading templates...</option>
+              ) : (
+                designTemplates.map(template => (
+                  <option key={template.id} value={template.id.toString()}>{template.template_name}</option>
+                ))
+              )}
             </select>
+            {currentDesignInfo && (
+                 <p className="mt-1 text-xs text-gray-500">
+                    Using: {currentDesignInfo.name} (Component: {currentDesignInfo.component})
+                 </p>
+            )}
           </div>
+          
           <div>
-            <label htmlFor="microProductType" className={labelBaseClasses}>Microproduct Type:</label>
-            <select id="microProductType" value={microProductType} onChange={(e) => setMicroProductType(e.target.value)} className={`${inputBaseClasses} text-black bg-white`} disabled={!product}>
-              <option value="">-- Choose Microproduct Type --</option>
-              {(microProductTypeOptions[product] || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="microProductName" className={labelBaseClasses}>Microproduct Name (Optional):</label>
+            <label htmlFor="microProductName" className={labelBaseClasses}>Instance Name (Optional):</label>
             <input
               type="text" id="microProductName" value={microProductName}
               onChange={(e) => setMicroProductName(e.target.value)}
               className={`${inputBaseClasses} text-black`}
-              placeholder="Custom name (e.g., Onboarding Plan)"
+              placeholder="Custom name (e.g., Q1 Onboarding Plan)"
             />
-             <p className="mt-1 text-xs text-gray-500">If blank, type will be used as name.</p>
+             <p className="mt-1 text-xs text-gray-500">If blank, Design Template name will be used.</p>
           </div>
         </div>
 
-        {trainingPlanData && (
+        {trainingPlanData && currentDesignInfo?.component === 'TrainingPlanTable' && (
           <div className="pt-6">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-black">
-                  Training Plan Details
+                  Content Details
                   {trainingPlanData.detectedLanguage && ` (${trainingPlanData.detectedLanguage.toUpperCase()})`}
                 </h2>
                 <button onClick={addSection} className="flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
@@ -370,13 +392,13 @@ const EditProjectPageComponent = () => {
                 </button>
             </div>
             <div className="mb-4">
-                <label htmlFor="mainTitle" className={labelBaseClasses}>Main Training Plan Title:</label>
+                <label htmlFor="mainTitle" className={labelBaseClasses}>Main Content Title:</label>
                 <input
                   type="text"
                   id="mainTitle"
                   value={trainingPlanData.mainTitle || ''}
                   onChange={(e) => handleTrainingPlanDataChange('mainTitle', e.target.value)}
-                  placeholder="Main Plan Title"
+                  placeholder="Main Content Title"
                   className={`${inputBaseClasses} text-black`}
                 />
             </div>
@@ -409,7 +431,6 @@ const EditProjectPageComponent = () => {
                             className={smallInputClasses}
                         />
                     </div>
-                    {/* MODIFIED: Total Hours input and new Auto-calculate switch */}
                     <div className="flex items-end space-x-3">
                         <div className="flex-grow">
                             <label className="block text-xs font-medium text-black">
@@ -440,46 +461,64 @@ const EditProjectPageComponent = () => {
                     </div>
                 </div>
 
-                <h4 className="text-md font-semibold text-black mb-2 mt-4">Lessons:</h4>
+                <h4 className="text-md font-semibold text-black mb-2 mt-4">Lessons/Items:</h4>
                 {section.lessons.map((lesson, lessonIdx) => (
                   <div key={lesson.id || `lesson-${sectionIdx}-${lessonIdx}`} className="ml-4 mb-4 p-3 border border-gray-200 rounded-md bg-white shadow-sm">
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex-grow">
-                            <label className="block text-xs font-medium text-black">Lesson {lessonIdx + 1} Title:</label>
-                            <input type="text" value={lesson.title} onChange={(e) => handleLessonChange(sectionIdx, lessonIdx, 'title', e.target.value)} placeholder="Lesson Title" className={lessonTitleClasses}/>
+                            <label className="block text-xs font-medium text-black">Item {lessonIdx + 1} Title:</label>
+                            <input type="text" value={lesson.title} onChange={(e) => handleLessonChange(sectionIdx, lessonIdx, 'title', e.target.value)} placeholder="Item Title" className={lessonTitleClasses}/>
                         </div>
                         <div className="flex items-center ml-2 flex-shrink-0">
                             <button onClick={() => moveLesson(sectionIdx, lessonIdx, 'up')} disabled={lessonIdx === 0} className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30" title="Move Up"><ArrowUp size={16}/></button>
                             <button onClick={() => moveLesson(sectionIdx, lessonIdx, 'down')} disabled={lessonIdx === section.lessons.length - 1} className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30" title="Move Down"><ArrowDown size={16}/></button>
-                            <button onClick={() => removeLesson(sectionIdx, lessonIdx)} className="p-1 text-red-500 hover:text-red-700 ml-1" title="Remove Lesson"><Trash2 size={16}/></button>
+                            <button onClick={() => removeLesson(sectionIdx, lessonIdx)} className="p-1 text-red-500 hover:text-red-700 ml-1" title="Remove Item"><Trash2 size={16}/></button>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                         <div>
-                            <label className="block text-xs font-medium text-black">Hours:</label>
+                            <label className="block text-xs font-medium text-black">Hours (if applicable):</label>
                             <input type="number" step="0.1" value={lesson.hours} onChange={(e) => handleLessonChange(sectionIdx, lessonIdx, 'hours', parseFloat(e.target.value) || 0)} placeholder="Hours" className={smallInputClasses}/>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-black">Source:</label>
+                            <label className="block text-xs font-medium text-black">Source (if applicable):</label>
                             <input type="text" value={lesson.source} onChange={(e) => handleLessonChange(sectionIdx, lessonIdx, 'source', e.target.value)} placeholder="Source" className={smallInputClasses}/>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-black">Knowledge Assessment Text:</label>
-                            <input type="text" value={lesson.check.text} onChange={(e) => handleLessonStatusChange(sectionIdx, lessonIdx, 'check', 'text', e.target.value)} placeholder="Assessment Text" className={smallInputClasses}/>
+                            <label className="block text-xs font-medium text-black">Detail/Check Text:</label>
+                            <input type="text" value={lesson.check.text} onChange={(e) => handleLessonStatusChange(sectionIdx, lessonIdx, 'check', 'text', e.target.value)} placeholder="Detail/Check Text" className={smallInputClasses}/>
                         </div>
                          <div>
-                            <label className="block text-xs font-medium text-black">Content Available Text:</label>
-                            <input type="text" value={lesson.contentAvailable.text} onChange={(e) => handleLessonStatusChange(sectionIdx, lessonIdx, 'contentAvailable', 'text', e.target.value)} placeholder="Content Availability Text" className={smallInputClasses}/>
+                            <label className="block text-xs font-medium text-black">Availability Text:</label>
+                            <input type="text" value={lesson.contentAvailable.text} onChange={(e) => handleLessonStatusChange(sectionIdx, lessonIdx, 'contentAvailable', 'text', e.target.value)} placeholder="Availability Text" className={smallInputClasses}/>
                         </div>
                     </div>
                   </div>
                 ))}
                 <button onClick={() => addLesson(sectionIdx)} className="mt-2 flex items-center text-sm text-green-600 hover:text-green-800">
-                  <PlusCircle size={16} className="mr-1"/> Add Lesson to this Section
+                  <PlusCircle size={16} className="mr-1"/> Add Item to this Section
                 </button>
               </div>
             ))}
           </div>
+        )}
+         {trainingPlanData && currentDesignInfo && currentDesignInfo.component !== 'TrainingPlanTable' && (
+            <div className="pt-6 text-center text-gray-600">
+                <p>This project uses the &quot;{currentDesignInfo.name}&quot; design which is displayed using the &quot;{currentDesignInfo.component}&quot; component.</p>
+                <p>Currently, detailed content editing is primarily supported for &quot;TrainingPlanTable&quot; components.</p>
+                <p>You can still edit the Project Name and Instance Name above.</p>
+                <div className="mt-4 p-4 border border-gray-200 rounded-md bg-gray-50">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Raw Content Preview (Read-Only):</h3>
+                    <textarea 
+                        value={JSON.stringify(trainingPlanData, null, 2)} 
+                        readOnly 
+                        className="w-full h-64 p-2 border border-gray-300 rounded-md font-mono text-xs bg-gray-100"
+                    />
+                     <p className="mt-1 text-xs text-gray-500">
+                        Note: The content structure is defined by the selected design template. For advanced editing of this structure, consider modifying the design template or using a specialized editor if available for this component type.
+                    </p>
+                </div>
+            </div>
         )}
 
         <div className="flex justify-end gap-3 mt-8">
@@ -488,7 +527,7 @@ const EditProjectPageComponent = () => {
           </button>
           <button
             onClick={handleSave}
-            disabled={isSaving || isLoading || !projectName || !product || !microProductType}
+            disabled={isSaving || isLoading || !projectName || !selectedDesignTemplateId}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save Changes'}
