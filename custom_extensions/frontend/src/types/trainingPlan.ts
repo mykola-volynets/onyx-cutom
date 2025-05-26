@@ -15,10 +15,11 @@ export interface Lesson { // Kept original name
 }
 
 export interface Section { // Kept original name
-  id: string; 
+  id: string;
   title: string;
   totalHours: number;
   lessons: Lesson[]; // Uses your Lesson interface
+  autoCalculateHours?: boolean; // MODIFIED: Added optional autoCalculateHours
 }
 
 export interface TrainingPlanData { // Kept original name
@@ -36,7 +37,7 @@ export interface ProjectDetailDataForEdit {
   microProductType?: string | null;
   microProductName?: string | null;
   microProductContent?: TrainingPlanData | null; // Uses your TrainingPlanData
-  createdAt?: string | null; 
+  createdAt?: string | null;
 }
 
 // This interface is used by the existing project detail page:

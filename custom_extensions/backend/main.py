@@ -231,6 +231,7 @@ class SectionDetail(BaseModel):
     title: str
     totalHours: float = 0.0
     lessons: List[LessonDetail] = Field(default_factory=list)
+    autoCalculateHours: bool = True # Add this line with a default
     model_config = {"from_attributes": True}
 
 class TrainingPlanDetails(BaseModel):
@@ -254,7 +255,6 @@ class ProjectApiResponse(BaseModel):
     product: str
     productSlug: str
     microProduct: MicroProductApiResponse
-    detectedLanguage: Optional[str] = "en" # Added to pass language to frontend
     model_config = {"from_attributes": True}
 
 class ProjectCreateRequest(BaseModel):
@@ -272,7 +272,7 @@ class ProjectDB(BaseModel):
     product_type: Optional[str] = None
     microproduct_type: Optional[str] = None
     microproduct_name: Optional[str] = None
-    microproduct_content: Optional[TrainingPlanDetails] = None
+    microproduct_content: Optional[TrainingPlanDetails] = None # Remains TrainingPlanDetails for now
     created_at: datetime
     model_config = {"from_attributes": True}
 
@@ -412,7 +412,7 @@ def create_slug(text: Optional[str]) -> str:
     text_processed = re.sub(r'[^\wа-яёa-z0-9\-]+', '', text_processed, flags=re.UNICODE | re.IGNORECASE)
     return text_processed or "generated-slug"
 
-# --- MULTI-LANGUAGE PARSER SECTION ---
+# --- MULTI-LANGUAGE PARSER SECTION (Kept for fallback, PDF generation and other utilities) ---
 CANONICAL_ATTRIBUTE_FIELDS = {
     "check": ["knowledge assessment", "проверка знаний", "перевірка знань", "verificación de conocimientos", "control de conocimientos"],
     "contentAvailable": ["content availability", "наличие контента", "наявність контенту", "contenido disponible"],
@@ -420,44 +420,24 @@ CANONICAL_ATTRIBUTE_FIELDS = {
     "hours": ["time", "время", "тривалість", "час", "duración", "tiempo"],
 }
 LANG_CONFIG = {
-    'ru': {'MODULE_KEYWORD': "Модуль",'TOTAL_TIME_KEYWORD': "Общее время",'LESSONS_COUNT_KEYWORD': "Количество уроков",'LESSONS_HEADER_KEYWORD': "Уроки",'TIME_KEYWORD': "Время",'ASSESSMENT_KEYWORD': "Проверка знаний",'SOURCE_KEYWORD': "Источник",'OUTPUT_LESSON_PREFIX': "Урок",'OUTPUT_ASSESSMENT': "Проверка знаний",'OUTPUT_CONTENT_AVAIL': "Наличие контента",'OUTPUT_SOURCE_INFO': "Источник информации",'OUTPUT_TIME': "Время",'OUTPUT_MODULE_TOTAL_TIME': "Общее время на модуль",'PLACEHOLDER_CONTENT_MISSING': "[ДАННЫЕ О НАЛИЧИИ КОНТЕНТА ОТСУТСТВУЮТ]",'PLACEHOLDER_DATA_MISSING': "[ДАННЫЕ ОТСУТСТВУЮТ]",'MAP_SOURCE_CREATED': "Создано с нуля",'MAP_SOURCE_CREATED_TO': "Создание с нуля",'MAP_SOURCE_EXISTING_INSTRUCTIONS': "Существующие инструкции",'MAP_SOURCE_EXISTING_INSTRUCTIONS_TO': "Существующая инструкция",'MAP_SOURCE_EXISTING_MATERIALS': "Существующие материалы",'MAP_SOURCE_EXISTING_MATERIALS_TO': "Существующие материалы",'TIME_UNIT_SINGULAR': "час",'TIME_UNIT_DECIMAL_PLURAL': "часа",'TIME_UNIT_GENERAL_PLURAL': "часов",'LESSON_ITEM_PREFIX_RE': r"^-",'SPECIAL_SUFFIX_MODULE_1': "",'SUMMARY_PROGRAM_TITLE': "Итог по всей программе:",'SUMMARY_TOTAL_MODULES': "Всего модулей",'SUMMARY_TOTAL_LESSONS': "Всего уроков",'SUMMARY_TOTAL_PROGRAM_TIME': "Общее время на реализацию программы", 'TABLE_HEADER_NAME': "Name", 'TABLE_HEADER_PRODUCT': "Product", 'TABLE_HEADER_MICROPRODUCT': "Microproduct", 'TABLE_HEADER_WEBVIEW': "WebView", 'TABLE_HEADER_PDF': "PDF", 'TABLE_HEADER_EDIT': "Edit"},
-    'en': {'MODULE_KEYWORD': "Module",'TOTAL_TIME_KEYWORD': "Total Time",'LESSONS_COUNT_KEYWORD': "Number of Lessons",'LESSONS_HEADER_KEYWORD': "Lessons",'TIME_KEYWORD': "Time",'ASSESSMENT_KEYWORD': "Knowledge Assessment",'SOURCE_KEYWORD': "Information Source",'OUTPUT_LESSON_PREFIX': "Lesson",'OUTPUT_ASSESSMENT': "Knowledge Assessment",'OUTPUT_CONTENT_AVAIL': "Content Availability",'OUTPUT_SOURCE_INFO': "Information Source",'OUTPUT_TIME': "Time",'OUTPUT_MODULE_TOTAL_TIME': "Total time for module",'PLACEHOLDER_CONTENT_MISSING': "[CONTENT AVAILABILITY DATA MISSING]",'PLACEHOLDER_DATA_MISSING': "[DATA MISSING]",'MAP_SOURCE_CREATED': "Created from scratch",'MAP_SOURCE_CREATED_TO': "Created from scratch",'MAP_SOURCE_EXISTING_INSTRUCTIONS': "Existing instructions",'MAP_SOURCE_EXISTING_INSTRUCTIONS_TO': "Existing instructions",'MAP_SOURCE_EXISTING_MATERIALS': "Existing materials",'MAP_SOURCE_EXISTING_MATERIALS_TO': "Existing materials",'TIME_UNIT_SINGULAR': "hour",'TIME_UNIT_DECIMAL_PLURAL': "hours",'TIME_UNIT_GENERAL_PLURAL': "hours",'LESSON_ITEM_PREFIX_RE': r"^\d+\.",'SPECIAL_SUFFIX_MODULE_1': "",'SUMMARY_PROGRAM_TITLE': "Program Summary:",'SUMMARY_TOTAL_MODULES': "Total modules",'SUMMARY_TOTAL_LESSONS': "Total lessons",'SUMMARY_TOTAL_PROGRAM_TIME': "Total program time", 'TABLE_HEADER_NAME': "Name", 'TABLE_HEADER_PRODUCT': "Product", 'TABLE_HEADER_MICROPRODUCT': "Microproduct", 'TABLE_HEADER_WEBVIEW': "WebView", 'TABLE_HEADER_PDF': "PDF", 'TABLE_HEADER_EDIT': "Edit"},
-    'uk': {'MODULE_KEYWORD': "Модуль",'TOTAL_TIME_KEYWORD': "Загальний час",'LESSONS_COUNT_KEYWORD': "Кількість уроків",'LESSONS_HEADER_KEYWORD': "Уроки",'TIME_KEYWORD': "Час",'ASSESSMENT_KEYWORD': "Перевірка знань",'SOURCE_KEYWORD': "Джерело",'OUTPUT_LESSON_PREFIX': "Урок",'OUTPUT_ASSESSMENT': "Перевірка знань",'OUTPUT_CONTENT_AVAIL': "Наявність контенту",'OUTPUT_SOURCE_INFO': "Джерело інформації",'OUTPUT_TIME': "Час",'OUTPUT_MODULE_TOTAL_TIME': "Загальний час на модуль",'PLACEHOLDER_CONTENT_MISSING': "[ДАНІ ПРО НАЯВНІСТЬ КОНТЕНТУ ВІДСУТНІ]",'PLACEHOLDER_DATA_MISSING': "[ДАНІ ВІДСУТНІ]",'MAP_SOURCE_CREATED': "Створено з нуля",'MAP_SOURCE_CREATED_TO': "Створення з нуля",'MAP_SOURCE_EXISTING_INSTRUCTIONS': "Існуючі інструкції",'MAP_SOURCE_EXISTING_INSTRUCTIONS_TO': "Існуюча інструкція",'MAP_SOURCE_EXISTING_MATERIALS': "Існуючі матеріали",'MAP_SOURCE_EXISTING_MATERIALS_TO': "Існуючі матеріали",'TIME_UNIT_SINGULAR': "година",'TIME_UNIT_DECIMAL_PLURAL': "години",'TIME_UNIT_GENERAL_PLURAL': "годин",'LESSON_ITEM_PREFIX_RE': r"^-",'SPECIAL_SUFFIX_MODULE_1': "",'SUMMARY_PROGRAM_TITLE': "Підсумок по всій програмі:",'SUMMARY_TOTAL_MODULES': "Всього модулів",'SUMMARY_TOTAL_LESSONS': "Всього уроків",'SUMMARY_TOTAL_PROGRAM_TIME': "Загальний час на реалізацію програми", 'TABLE_HEADER_NAME': "Назва", 'TABLE_HEADER_PRODUCT': "Продукт", 'TABLE_HEADER_MICROPRODUCT': "Мікропродукт", 'TABLE_HEADER_WEBVIEW': "Веб-перегляд", 'TABLE_HEADER_PDF': "PDF", 'TABLE_HEADER_EDIT': "Редагувати"}
+    'ru': {'MODULE_KEYWORD': "Модуль",'TOTAL_TIME_KEYWORD': "Общее время",'LESSONS_COUNT_KEYWORD': "Количество уроков",'LESSONS_HEADER_KEYWORD': "Уроки",'TIME_KEYWORD': "Время",'ASSESSMENT_KEYWORD': "Проверка знаний",'SOURCE_KEYWORD': "Источник",'OUTPUT_LESSON_PREFIX': "Урок",'OUTPUT_ASSESSMENT': "Проверка знаний",'OUTPUT_CONTENT_AVAIL': "Наличие контента",'OUTPUT_SOURCE_INFO': "Источник информации",'OUTPUT_TIME': "Время",'OUTPUT_MODULE_TOTAL_TIME': "Общее время на модуль",'PLACEHOLDER_CONTENT_MISSING': "[ДАННЫЕ О НАЛИЧИИ КОНТЕНТА ОТСУТСТВУЮТ]",'PLACEHOLDER_DATA_MISSING': "[ДАННЫЕ ОТСУТСТВУЮТ]",'MAP_SOURCE_CREATED': "Создано с нуля",'MAP_SOURCE_CREATED_TO': "Создание с нуля",'MAP_SOURCE_EXISTING_INSTRUCTIONS': "Существующие инструкции",'MAP_SOURCE_EXISTING_INSTRUCTIONS_TO': "Существующая инструкция",'MAP_SOURCE_EXISTING_MATERIALS': "Существующие материалы",'MAP_SOURCE_EXISTING_MATERIALS_TO': "Существующие материалы",'TIME_UNIT_SINGULAR': "час",'TIME_UNIT_DECIMAL_PLURAL': "часа",'TIME_UNIT_GENERAL_PLURAL': "часов",'LESSON_ITEM_PREFIX_RE': r"^-",'SPECIAL_SUFFIX_MODULE_1': "",'SUMMARY_PROGRAM_TITLE': "Итог по всей программе:",'SUMMARY_TOTAL_MODULES': "Всего модулей",'SUMMARY_TOTAL_LESSONS': "Всего уроков",'SUMMARY_TOTAL_PROGRAM_TIME': "Общее время на реализацию программы"},
+    'en': {'MODULE_KEYWORD': "Module",'TOTAL_TIME_KEYWORD': "Total Time",'LESSONS_COUNT_KEYWORD': "Number of Lessons",'LESSONS_HEADER_KEYWORD': "Lessons",'TIME_KEYWORD': "Time",'ASSESSMENT_KEYWORD': "Knowledge Assessment",'SOURCE_KEYWORD': "Information Source",'OUTPUT_LESSON_PREFIX': "Lesson",'OUTPUT_ASSESSMENT': "Knowledge Assessment",'OUTPUT_CONTENT_AVAIL': "Content Availability",'OUTPUT_SOURCE_INFO': "Information Source",'OUTPUT_TIME': "Time",'OUTPUT_MODULE_TOTAL_TIME': "Total time for module",'PLACEHOLDER_CONTENT_MISSING': "[CONTENT AVAILABILITY DATA MISSING]",'PLACEHOLDER_DATA_MISSING': "[DATA MISSING]",'MAP_SOURCE_CREATED': "Created from scratch",'MAP_SOURCE_CREATED_TO': "Created from scratch",'MAP_SOURCE_EXISTING_INSTRUCTIONS': "Existing instructions",'MAP_SOURCE_EXISTING_INSTRUCTIONS_TO': "Existing instructions",'MAP_SOURCE_EXISTING_MATERIALS': "Existing materials",'MAP_SOURCE_EXISTING_MATERIALS_TO': "Existing materials",'TIME_UNIT_SINGULAR': "hour",'TIME_UNIT_DECIMAL_PLURAL': "hours",'TIME_UNIT_GENERAL_PLURAL': "hours",'LESSON_ITEM_PREFIX_RE': r"^\d+\.",'SPECIAL_SUFFIX_MODULE_1': "",'SUMMARY_PROGRAM_TITLE': "Program Summary:",'SUMMARY_TOTAL_MODULES': "Total modules",'SUMMARY_TOTAL_LESSONS': "Total lessons",'SUMMARY_TOTAL_PROGRAM_TIME': "Total program time"}
 }
 
 def detect_language(text: str, configs: Dict[str, Dict[str, str]] = LANG_CONFIG) -> str:
-    scores = {lang: 0 for lang in configs.keys()}
-    # Add Ukrainian keywords for detection
-    uk_keywords = ['модуль', 'урок', 'загальний час', 'кількість уроків', 'перевірка знань', 'джерело']
-    
-    for lang, config in configs.items():
-        keywords_to_check = [
-            config.get('MODULE_KEYWORD', ''),
-            config.get('LESSONS_HEADER_KEYWORD', ''),
-            config.get('TOTAL_TIME_KEYWORD', '')
-        ]
-        if all(keyword and keyword.lower() in text.lower() for keyword in keywords_to_check):
-            scores[lang] += 3
-
-    if all(score == 0 for score in scores.values()): # Fallback if primary keywords not found
-        for lang, config in configs.items():
-            if config.get('MODULE_KEYWORD', '').lower() in text.lower(): scores[lang] +=1
-            if config.get('TIME_KEYWORD', '').lower() in text.lower(): scores[lang] +=1
-            if lang == 'uk': # Specific check for Ukrainian common words
-                 for uk_keyword in uk_keywords:
-                     if uk_keyword in text.lower():
-                         scores['uk'] +=1
-    
-    # Determine best match
-    if not any(scores.values()): # If still no score
-        return 'en' # Default to English if unsure
-
-    best_lang = max(scores, key=scores.get)
-    # Ensure a minimum threshold if multiple languages have some score
-    if scores[best_lang] > 0:
-        return best_lang
-    
-    return 'en' # Default to English if still unsure
+    en_score = 0; ru_score = 0
+    if configs['en']['MODULE_KEYWORD'] in text and configs['en']['LESSONS_HEADER_KEYWORD'] in text and configs['en']['TOTAL_TIME_KEYWORD'] in text: en_score += 3
+    if configs['ru']['MODULE_KEYWORD'] in text and configs['ru']['LESSONS_HEADER_KEYWORD'] in text and configs['ru']['TOTAL_TIME_KEYWORD'] in text: ru_score += 3
+    if en_score == 0 and ru_score == 0:
+        if configs['en']['MODULE_KEYWORD'] in text: en_score +=1
+        if configs['ru']['MODULE_KEYWORD'] in text: ru_score +=1
+        if configs['en']['TIME_KEYWORD'] in text: en_score +=1
+        if configs['ru']['TIME_KEYWORD'] in text: ru_score +=1
+    if en_score > ru_score and en_score > 0: return 'en'
+    elif ru_score > en_score and ru_score > 0: return 'ru'
+    elif en_score > 0 : return 'en'
+    elif ru_score > 0 : return 'ru'
+    return 'ru' # Default to Russian if unsure or scores are equal
 
 
 def extract_float_time(time_str_from_new: Optional[str]) -> float:
@@ -479,8 +459,9 @@ def format_total_time_display(time_float: float, lang_cfg: Dict[str, str]) -> st
     return f"{num_str} {lang_cfg['TIME_UNIT_GENERAL_PLURAL']}"
 
 def transform_text_new_to_old(new_text: str, lang_configs: Dict = LANG_CONFIG) -> tuple[str, str]:
+    # This function is part of the old parser, kept for compatibility
     detected_lang = detect_language(new_text, lang_configs)
-    lang_cfg = lang_configs.get(detected_lang, lang_configs['en']) # Default to 'en' if lang not found
+    lang_cfg = lang_configs.get(detected_lang, lang_configs['ru'])
     output_lines = []
     module_header_parts = [
         rf"## ({lang_cfg['MODULE_KEYWORD']}\s*(\d+)\s*:\s*([^\n]+))\n", r"\s*",
@@ -559,12 +540,14 @@ def parse_content_available_versatile(text_val: str) -> dict:
     if text_lower in ["да", "yes", "так", "sí"]: return {"type": "yes", "text": "100%"}
     if text_lower in ["нет", "no", "ні"]: return {"type": "no", "text": text_val.strip()}
     if "%" in text_val: return {"type": "percentage", "text": text_val.strip()}
-    return {"type": "yes", "text": "100%"}
+    return {"type": "yes", "text": "100%"} # Default to yes if not clearly no or percentage
 
 def parse_training_plan_from_string(original_content_str: str, main_table_title: str) -> Optional[TrainingPlanDetails]:
+    # This is the OLD parser, kept for fallback for existing string data in DB.
+    # New projects will use the LLM-based parser.
     transformed_content_str, detected_lang = transform_text_new_to_old(original_content_str)
     if not transformed_content_str or not transformed_content_str.strip():
-        return TrainingPlanDetails(mainTitle=f"Content for {main_table_title} not parsable/empty (Old Parser)", sections=[], detectedLanguage=detected_lang or 'en') # Default to 'en'
+        return TrainingPlanDetails(mainTitle=f"Content for {main_table_title} not parsable/empty (Old Parser)", sections=[], detectedLanguage=detected_lang or 'ru')
 
     plan_data = {"mainTitle": main_table_title, "sections": [], "detectedLanguage": detected_lang}
     current_section_dict: Optional[Dict[str, Any]] = None; current_lesson_dict: Optional[Dict[str, Any]] = None
@@ -635,16 +618,17 @@ def parse_training_plan_from_string(original_content_str: str, main_table_title:
     elif not plan_data.get("mainTitle"): plan_data["mainTitle"] = main_table_title
     try: return TrainingPlanDetails(**plan_data)
     except Exception as e: print(f"Error Pydantic TrainingPlanDetails (Old Parser): {e}. Data: {plan_data}"); traceback.print_exc()
-    return TrainingPlanDetails(mainTitle=plan_data.get("mainTitle") or "Parse Error (Old Parser)", sections=[], detectedLanguage=detected_lang or 'en') # Default to 'en'
+    return TrainingPlanDetails(mainTitle=plan_data.get("mainTitle") or "Parse Error (Old Parser)", sections=[], detectedLanguage=detected_lang)
 
 # --- New LLM-based Parser ---
 async def parse_ai_response_with_llm(
     ai_response: str,
-    project_name: str, 
+    project_name: str, # Used for error messages or context if needed
     target_json_example: Optional[str] = None
 ) -> Optional[TrainingPlanDetails]:
     if not LLM_API_KEY:
         print("ERROR: LLM_API_KEY (e.g., COHERE_API_KEY) not configured. Cannot parse AI response with LLM.")
+        # Fallback to a simple error message in the content
         return TrainingPlanDetails(
             mainTitle=f"LLM Parser Error for {project_name}",
             sections=[SectionDetail(id="error", title="LLM API Key not configured.", lessons=[])],
@@ -652,14 +636,14 @@ async def parse_ai_response_with_llm(
         )
 
     actual_json_example = target_json_example or DEFAULT_TRAINING_PLAN_JSON_EXAMPLE_FOR_LLM
-    detected_lang_by_rules = detect_language(ai_response) 
 
+    # Enhanced prompt for Cohere or similar LLM
     prompt_message = f"""
 You are a highly accurate text-to-JSON parsing assistant. Your task is to convert the *entirety* of the following unstructured text into a single, structured JSON object.
-Ensure *all* modules (each starting with '## Module X: ...', '## Модуль X: ...', '## Модуль X: ...' or similar) and their respective sections and lessons present in the "Raw text to parse" are included in your JSON output's 'sections' array. Do not truncate or omit any modules or their content from the input.
+Ensure *all* modules (each starting with '## Module X: ...', '## Модуль X: ...' or similar) and their respective sections and lessons present in the "Raw text to parse" are included in your JSON output's 'sections' array. Do not truncate or omit any modules or their content from the input.
 The desired JSON output format is exemplified below. Ensure all fields from the text are mapped correctly to the JSON structure and that your output strictly follows this JSON format.
 Pay close attention to data types: strings should be quoted (e.g., "text": ""), numerical values should be numbers (not strings), and lists should be arrays. Null values are not permitted for string fields; use an empty string "" instead if text is absent but the field itself is required according to the example structure.
-Maintain the original language of the input text for all textual content in the JSON, unless a specific transformation is requested (like for 'type' fields). The detected language of the text is '{detected_lang_by_rules}'. This language code must be used for the `detectedLanguage` field in the output JSON.
+Maintain the original language of the input text for all textual content in the JSON, unless a specific transformation is requested (like for 'type' fields).
 
 Key Parsing Instructions:
 - Main Title: The 'mainTitle' should be extracted from the primary title of the program, often found at the beginning (e.g., '# Program Title: ...', '# Программа обучения...'). It should be in the original language.
@@ -688,7 +672,7 @@ Key Parsing Instructions:
     - If 'Content Availability' (or its equivalent) is not mentioned for a lesson, the 'contentAvailable' field in the JSON should default to `{{"type": "yes", "text": "100%"}}`.
     - If 'Content Availability' IS mentioned, parse it according to the text. Common types for 'contentAvailable' include 'yes' (meaning "100%"), 'no', 'percentage'. If 'Content Availability' is present but has no specific text, use an empty string "" for its 'text' field, and "unknown_availability" for its 'type' field.
 - Missing Information: If specific information for other fields (like 'source' or 'hours') is not found in the text, use a sensible default (e.g., empty string for 'source', 0.0 for 'hours') or omit optional fields if appropriate, but always try to match the example structure and ensure field types are correct. Maintain original language for text fields.
-- Language Detection: The 'detectedLanguage' field must be set to '{detected_lang_by_rules}'. All other textual fields like titles, sources, and particularly `check.text` should remain in that original detected language.
+- Language Detection: The 'detectedLanguage' field (e.g., "en", "ru") should be determined from the main language of the input text. All other textual fields like titles, sources, and particularly `check.text` should remain in that original detected language.
 
 Raw text to parse:
 ---
@@ -701,44 +685,52 @@ Example of the desired JSON output structure (ensure your output strictly follow
 ---
 
 Return ONLY the JSON object corresponding to the parsed text. Do not include any other explanatory text or markdown formatting (like ```json ... ```) around the JSON.
-The entire output must be a single, valid JSON object and must include all modules and all their lessons found in the input, with textual content in the original language, and the `detectedLanguage` field set to '{detected_lang_by_rules}'.
+The entire output must be a single, valid JSON object and must include all modules and all their lessons found in the input, with textual content in the original language.
     """
 
     print("--- DEBUG: LLM Input (Raw aiResponse) ---")
     print(ai_response)
     print("--- DEBUG: LLM Input (Prompt Message) ---")
-    # print(prompt_message) # Potentially very long
+    print(prompt_message)
 
     headers = {
         "Authorization": f"Bearer {LLM_API_KEY}",
         "Content-Type": "application/json",
     }
+    # Example payload for Cohere Chat API, adjust if using a different LLM/endpoint
     payload = {
         "model": LLM_DEFAULT_MODEL,
         "message": prompt_message,
-        "temperature": 0.2, 
+        # Adjust parameters as needed, e.g., temperature for creativity/precision
+        "temperature": 0.2, # Lower temperature for more deterministic JSON output
     }
 
+    detected_lang_by_rules = detect_language(ai_response) # Detect language beforehand
+
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client: 
+        async with httpx.AsyncClient(timeout=60.0) as client: # Increased timeout for LLM calls
             print(f"Calling LLM API at {LLM_API_URL} for project: {project_name}")
             response = await client.post(LLM_API_URL, headers=headers, json=payload)
             response.raise_for_status()
             llm_api_response_data = response.json()
 
-            # print("--- DEBUG: LLM Raw API Output ---")
-            # print(json.dumps(llm_api_response_data, indent=2, ensure_ascii=False))
+            print("--- DEBUG: LLM Raw API Output ---")
+            print(json.dumps(llm_api_response_data, indent=2, ensure_ascii=False))
 
+            # Extract the text content from LLM's response (specific to Cohere Chat API structure)
+            # This part needs to be adapted based on the actual LLM API response structure
             json_text_output = None
-            if "text" in llm_api_response_data: 
+            if "text" in llm_api_response_data: # Common for Cohere's direct text generation
                 json_text_output = llm_api_response_data["text"]
             elif "chatHistory" in llm_api_response_data and llm_api_response_data["chatHistory"]:
+                # For Cohere chat, the last message from the assistant
                 last_message = next((msg for msg in reversed(llm_api_response_data["chatHistory"]) if msg.get("role") == "CHATBOT"), None)
                 if last_message and "message" in last_message:
                     json_text_output = last_message["message"]
-                else: 
+                else: # Fallback to text if that is present.
                     json_text_output = llm_api_response_data.get("text","")
             elif llm_api_response_data.get("generations") and isinstance(llm_api_response_data["generations"], list) and llm_api_response_data["generations"][0].get("text"):
+                # Common for Cohere generate endpoint
                 json_text_output = llm_api_response_data["generations"][0]["text"]
             
             if json_text_output is None:
@@ -749,15 +741,16 @@ The entire output must be a single, valid JSON object and must include all modul
                     detectedLanguage=detected_lang_by_rules
                 )
             
-            # print("--- DEBUG: LLM Extracted Text Output ---")
-            # print(json_text_output)
+            print("--- DEBUG: LLM Extracted Text Output ---")
+            print(json_text_output)
             
+            # Clean the output: remove potential markdown code blocks if LLM adds them
             json_text_output = re.sub(r"^```json\s*|\s*```$", "", json_text_output.strip(), flags=re.MULTILINE)
 
             try:
                 parsed_json_data = json.loads(json_text_output)
-                # print("--- DEBUG: LLM Parsed JSON Data ---")
-                # print(json.dumps(parsed_json_data, indent=2, ensure_ascii=False))
+                print("--- DEBUG: LLM Parsed JSON Data ---")
+                print(json.dumps(parsed_json_data, indent=2, ensure_ascii=False))
             except json.JSONDecodeError as json_e:
                 print(f"Failed to decode JSON from LLM for project {project_name}. Error: {json_e}. Raw output: '{json_text_output[:500]}...'")
                 return TrainingPlanDetails(
@@ -766,26 +759,26 @@ The entire output must be a single, valid JSON object and must include all modul
                     detectedLanguage=detected_lang_by_rules
                 )
 
+            # Validate with Pydantic model
             try:
+                # If 'detectedLanguage' is not part of the LLM output, ensure it's set from rule-based detection
                 if 'detectedLanguage' not in parsed_json_data or not parsed_json_data['detectedLanguage']:
                     parsed_json_data['detectedLanguage'] = detected_lang_by_rules
                 
+                # Ensure mainTitle is present, use project_name if not.
                 if 'mainTitle' not in parsed_json_data or not parsed_json_data['mainTitle']:
-                     # Try to extract a title from the first few lines if LLM misses it
-                    first_lines = "\n".join(ai_response.splitlines()[:3])
-                    title_match = re.search(r"^(?:#+\s*)?(.+)", first_lines)
-                    parsed_json_data['mainTitle'] = title_match.group(1).strip() if title_match else project_name
-
+                    parsed_json_data['mainTitle'] = project_name
 
                 training_plan = TrainingPlanDetails(**parsed_json_data)
                 print(f"Successfully parsed AI response with LLM for project: {project_name}")
                 return training_plan
-            except Exception as p_e: 
+            except Exception as p_e: # Catches Pydantic validation errors and others
                 print(f"Error validating LLM output against Pydantic model for {project_name}: {p_e}. Parsed JSON: {str(parsed_json_data)[:500]}")
+                # Return the raw parsed JSON if Pydantic fails, but log error, or wrap in a basic TrainingPlanDetails
                 return TrainingPlanDetails(
-                    mainTitle=parsed_json_data.get('mainTitle') or f"LLM Data Validation Error for {project_name}",
-                    sections=parsed_json_data.get('sections', [SectionDetail(id="error", title=f"LLM data validation failed: {str(p_e)[:100]}", lessons=[])]),
-                    detectedLanguage=parsed_json_data.get('detectedLanguage', detected_lang_by_rules) 
+                    mainTitle=f"LLM Data Validation Error for {project_name}",
+                    sections=[SectionDetail(id="error", title=f"LLM data validation failed: {str(p_e)[:100]}", lessons=[])],
+                    detectedLanguage=parsed_json_data.get('detectedLanguage', detected_lang_by_rules) # Use language from JSON if present
                 )
 
     except httpx.HTTPStatusError as http_e:
@@ -793,8 +786,10 @@ The entire output must be a single, valid JSON object and must include all modul
         error_detail = f"LLM API error ({http_e.response.status_code})"
         try:
             error_body = http_e.response.json()
-            if "message" in error_body: error_detail += f": {error_body['message']}"
-        except: pass 
+            if "message" in error_body:
+                error_detail += f": {error_body['message']}"
+        except:
+            pass # Keep generic error if body not JSON or no message
         return TrainingPlanDetails(
             mainTitle=f"LLM API Error for {project_name}",
             sections=[SectionDetail(id="error", title=error_detail, lessons=[])],
@@ -837,31 +832,32 @@ async def add_pipeline(pipeline_data: MicroproductPipelineCreateRequest, pool: a
         return MicroproductPipelineDBResponse(**response_data)
     except Exception as e: print(f"Error inserting pipeline: {e}"); traceback.print_exc(); raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on pipeline insert: {str(e)}")
 
-@app.get("/api/custom/pipelines", response_model=List[MicroproductPipelineGetResponse]) 
+@app.get("/api/custom/pipelines", response_model=List[MicroproductPipelineGetResponse]) # Changed response_model
 async def get_pipelines(pool: asyncpg.Pool = Depends(get_db_pool)):
     query = "SELECT id, pipeline_name, pipeline_description, is_prompts_data_collection, is_prompts_data_formating, prompts_data_collection, prompts_data_formating, created_at FROM microproduct_pipelines ORDER BY created_at DESC;"
     try:
         async with pool.acquire() as conn: rows = await conn.fetch(query)
         pipelines_list = []
         for row in rows:
+            # Convert to DBResponse first to prepare for from_db_model
             db_model_data = {
                 "id": row["id"],
                 "pipeline_name": row["pipeline_name"],
                 "pipeline_description": row["pipeline_description"],
-                "is_discovery_prompts": row["is_prompts_data_collection"], 
-                "is_structuring_prompts": row["is_prompts_data_formating"], 
+                "is_discovery_prompts": row["is_prompts_data_collection"], # Correct mapping
+                "is_structuring_prompts": row["is_prompts_data_formating"], # Correct mapping
                 "discovery_prompts": row["prompts_data_collection"],
                 "structuring_prompts": row["prompts_data_formating"],
                 "created_at": row["created_at"]
             }
             db_model_instance = MicroproductPipelineDBResponse(**db_model_data)
+            # Now use from_db_model to get the GetResponse version with the list
             pipelines_list.append(MicroproductPipelineGetResponse.from_db_model(db_model_instance))
         return pipelines_list
     except Exception as e:
         print(f"Error fetching pipelines: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching pipelines: {str(e)}")
-
 @app.get("/api/custom/pipelines/{pipeline_id}", response_model=MicroproductPipelineGetResponse)
 async def get_pipeline(pipeline_id: int, pool: asyncpg.Pool = Depends(get_db_pool)):
     query = "SELECT id, pipeline_name, pipeline_description, is_prompts_data_collection, is_prompts_data_formating, prompts_data_collection, prompts_data_formating, created_at FROM microproduct_pipelines WHERE id = $1;"
@@ -906,21 +902,26 @@ async def delete_pipeline(pipeline_id: int, pool: asyncpg.Pool = Depends(get_db_
 async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
     db_microproduct_name_to_store = project_data.microProductName if project_data.microProductName and project_data.microProductName.strip() else project_data.microProductType
     
+    # Use the new LLM-based parser
     parsed_content: Optional[TrainingPlanDetails] = await parse_ai_response_with_llm(
         ai_response=project_data.aiResponse,
         project_name=project_data.projectName,
-        target_json_example=project_data.target_json_example 
+        target_json_example=project_data.target_json_example # Pass custom example if provided
     )
 
     content_to_store_for_db = None
     if parsed_content:
+        # If LLM parsing failed and returned an error-state TrainingPlanDetails, store that.
+        # Otherwise, store the successfully parsed content.
         try:
             content_to_store_for_db = parsed_content.model_dump(mode='json', exclude_none=True)
-        except AttributeError: 
+        except AttributeError: # Should not happen if parse_ai_response_with_llm always returns TrainingPlanDetails
             content_to_store_for_db = json.loads(parsed_content.json(exclude_none=True))
     else:
+        # This case should ideally be handled within parse_ai_response_with_llm by returning an error-state TrainingPlanDetails.
+        # However, as a safety net:
         print(f"LLM parsing returned None for project {project_data.projectName}. Storing minimal error content.")
-        fallback_lang = detect_language(project_data.aiResponse) 
+        fallback_lang = detect_language(project_data.aiResponse) # Detect from original input for fallback
         error_content = TrainingPlanDetails(
             mainTitle=f"Parsing Error for {project_data.projectName}",
             sections=[SectionDetail(id="error", title="Failed to parse AI response with LLM.", lessons=[])],
@@ -939,23 +940,18 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
         if not row:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create project entry.")
         
+        # Ensure the microproduct_content from DB is correctly formed for ProjectDB model
+        # This handles if content_to_store_for_db was None or if DB returns it differently
         db_content = row["microproduct_content"]
-        final_content_for_model = None
         if db_content and isinstance(db_content, dict):
-            try:
-                final_content_for_model = TrainingPlanDetails(**db_content)
-            except Exception as e:
-                print(f"Pydantic validation error for DB JSON content (project add): {e}")
-                final_content_for_model = TrainingPlanDetails(mainTitle=f"Content for {row['project_name']} (validation error)", sections=[], detectedLanguage=db_content.get('detectedLanguage','en'))
-
-        elif db_content and isinstance(db_content, str): 
+            final_content_for_model = TrainingPlanDetails(**db_content)
+        elif db_content and isinstance(db_content, str): # Should not happen with JSONB, but defensive
             try:
                 final_content_for_model = TrainingPlanDetails(**json.loads(db_content))
             except:
-                final_content_for_model = parse_training_plan_from_string(db_content, row["project_name"]) # Fallback to old parser
+                final_content_for_model = None # Or some error state TrainingPlanDetails
         else:
-            final_content_for_model = TrainingPlanDetails(mainTitle=f"No content for {row['project_name']}", sections=[], detectedLanguage='en')
-
+            final_content_for_model = None
 
         return ProjectDB(
             id=row["id"],
@@ -989,8 +985,13 @@ async def get_project_details_for_edit(project_id: int, onyx_user_id: str = Depe
                     parsed_content_for_response = TrainingPlanDetails(**db_content)
                 except Exception as e:
                     print(f"Pydantic validation error for DB JSON content (project {project_id}): {e}")
-                    parsed_content_for_response = TrainingPlanDetails(mainTitle=f"Content for {row_dict['project_name']} (validation error)", sections=[], detectedLanguage=db_content.get('detectedLanguage','en'))
-            elif isinstance(db_content, str): 
+                    # Fallback for potentially malformed JSON in DB or if it's a string from old parser
+                    if isinstance(db_content, str): # Should ideally not happen with JSONB if data is good
+                        parsed_content_for_response = parse_training_plan_from_string(db_content, row_dict["project_name"])
+                    else: # Malformed JSON dict
+                        parsed_content_for_response = TrainingPlanDetails(mainTitle=f"Content for {row_dict['project_name']} (validation error)", sections=[], detectedLanguage='ru')
+
+            elif isinstance(db_content, str): # Old parser data stored as string
                 parsed_content_for_response = parse_training_plan_from_string(db_content, row_dict["project_name"])
         
         return ProjectDetailForEditResponse(
@@ -1031,7 +1032,7 @@ async def update_project_in_db(project_id: int, project_update_data: ProjectUpda
                 final_content_for_model = TrainingPlanDetails(**db_content)
             except Exception as e:
                 print(f"Pydantic validation error for updated DB JSON content (project {project_id}): {e}")
-                final_content_for_model = TrainingPlanDetails(mainTitle=f"Content for {row['project_name']} (validation error)", sections=[], detectedLanguage=db_content.get('detectedLanguage','en'))
+                # Potentially fallback or error state, but for update, assume data is now structured
         
         return ProjectDB(
             id=row["id"],
@@ -1040,7 +1041,7 @@ async def update_project_in_db(project_id: int, project_update_data: ProjectUpda
             product_type=row["product_type"],
             microproduct_type=row["microproduct_type"],
             microproduct_name=row["microproduct_name"],
-            microproduct_content=final_content_for_model, 
+            microproduct_content=final_content_for_model, # Use validated content
             created_at=row["created_at"]
         )
     except HTTPException as e: raise e
@@ -1048,31 +1049,21 @@ async def update_project_in_db(project_id: int, project_update_data: ProjectUpda
 
 @app.get("/api/custom/projects", response_model=List[ProjectApiResponse])
 async def get_user_projects_from_db_transformed(onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
-    # Fetch content as well to determine language
-    select_query = "SELECT id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, created_at FROM projects WHERE onyx_user_id = $1 ORDER BY created_at DESC;"
+    select_query = "SELECT id, project_name, product_type, microproduct_type, microproduct_name, created_at FROM projects WHERE onyx_user_id = $1 ORDER BY created_at DESC;"
     try:
         async with pool.acquire() as conn: db_rows = await conn.fetch(select_query, onyx_user_id)
         transformed_projects: List[ProjectApiResponse] = []
         for r_dict_full in [dict(row) for row in db_rows]:
             project_db_id = r_dict_full.get('id')
             if project_db_id is None: print(f"WARNING: Project row encountered without an ID (user: {onyx_user_id}): {r_dict_full.get('project_name')}"); continue
-            
-            detected_lang = 'en' # Default
-            content_json = r_dict_full.get('microproduct_content')
-            if content_json and isinstance(content_json, dict) and content_json.get('detectedLanguage'):
-                detected_lang = content_json['detectedLanguage']
-            elif content_json and isinstance(content_json, str): # Fallback for old string format
-                _, detected_lang_from_str = transform_text_new_to_old(content_json)
-                if detected_lang_from_str: detected_lang = detected_lang_from_str
-            
             pn = r_dict_full.get('project_name', 'N/A'); pt = r_dict_full.get('product_type', 'N/A')
             name_for_display = r_dict_full.get('microproduct_name') or r_dict_full.get('microproduct_type', 'Unnamed MicroProduct')
             type_for_slug_generation = r_dict_full.get('microproduct_type');
             if not type_for_slug_generation: type_for_slug_generation = "default-mptype-slug"
             ps = create_slug(pn); pts_slug = create_slug(pt); mpt_type_slug = create_slug(type_for_slug_generation)
             wlp = f"/projects/{ps}/{pts_slug}/{mpt_type_slug}"; pdf_doc_identifier_slug = create_slug(f'{pn}_{pt}_{type_for_slug_generation}'); pdflp = f"pdf/{pdf_doc_identifier_slug}"
-            mpa = MicroProductApiResponse(name=name_for_display, slug=mpt_type_slug, webLinkPath=wlp, pdfLinkPath=pdflp, details=None) # Details not needed for table view
-            pra = ProjectApiResponse(id=project_db_id, projectName=pn, projectSlug=ps, product=pt, productSlug=pts_slug, microProduct=mpa, detectedLanguage=detected_lang)
+            mpa = MicroProductApiResponse(name=name_for_display, slug=mpt_type_slug, webLinkPath=wlp, pdfLinkPath=pdflp, details=None)
+            pra = ProjectApiResponse(id=project_db_id, projectName=pn, projectSlug=ps, product=pt, productSlug=pts_slug, microProduct=mpa)
             transformed_projects.append(pra)
         return transformed_projects
     except Exception as e: print(f"Error fetching projects: {e}"); traceback.print_exc(); raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error while fetching projects: {str(e)}")
@@ -1092,33 +1083,23 @@ async def get_microproduct_detail_from_db(project_slug: str, product_slug: str, 
         microproduct_type_for_routing = found_project_row_dict.get('microproduct_type') or "default-type"
         microproduct_content_json = found_project_row_dict.get('microproduct_content')
         details_data: Optional[TrainingPlanDetails] = None
-        detected_lang_for_details = 'en' # Default
 
         if microproduct_content_json:
-            if isinstance(microproduct_content_json, dict): 
+            if isinstance(microproduct_content_json, dict): # Modern JSONB data
                 try:
                     details_data = TrainingPlanDetails(**microproduct_content_json)
-                    if details_data and details_data.detectedLanguage:
-                        detected_lang_for_details = details_data.detectedLanguage
                 except Exception as pydantic_e:
                     print(f"Error validating TrainingPlanDetails from DB JSON for project {project_name_from_db} (detail view): {pydantic_e}")
-                    detected_lang_for_details = microproduct_content_json.get('detectedLanguage', 'en')
-                    details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_display_name} (validation error)", sections=[], detectedLanguage=detected_lang_for_details)
-            elif isinstance(microproduct_content_json, str): 
+                    details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_display_name} (validation error)", sections=[], detectedLanguage=microproduct_content_json.get('detectedLanguage', 'ru'))
+            elif isinstance(microproduct_content_json, str): # Legacy string data, try old parser
                 print(f"Attempting to parse legacy string data for project {project_name_from_db}")
                 details_data = parse_training_plan_from_string(microproduct_content_json, project_name_from_db)
-                if details_data and details_data.detectedLanguage:
-                    detected_lang_for_details = details_data.detectedLanguage
-            else: 
-                details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_display_name} (unknown format)", sections=[], detectedLanguage=detected_lang_for_details)
+            else: # Should not happen
+                details_data = TrainingPlanDetails(mainTitle=f"Content for {microproduct_display_name} (unknown format)", sections=[], detectedLanguage='ru')
         else:
-            details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_display_name}", sections=[], detectedLanguage=detected_lang_for_details)
+            details_data = TrainingPlanDetails(mainTitle=f"No content for {microproduct_display_name}", sections=[], detectedLanguage='ru')
             
         web_link_path = f"/projects/{project_slug}/{product_slug}/{micro_product_type_slug}"; pdf_doc_identifier_slug = create_slug(f"{project_name_from_db}_{product_type_from_db}_{microproduct_type_for_routing}"); pdf_link_path = f"pdf/{pdf_doc_identifier_slug}"
-        
-        if details_data: # Ensure detected language is set
-             details_data.detectedLanguage = detected_lang_for_details
-
         return MicroProductApiResponse(name=microproduct_display_name, slug=micro_product_type_slug, webLinkPath=web_link_path, pdfLinkPath=pdf_link_path, details=details_data)
     except HTTPException as e: raise e
     except Exception as e: print(f"Error fetching microproduct detail: {e}"); traceback.print_exc(); raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Server error: {str(e)}")
@@ -1136,18 +1117,17 @@ async def download_micro_product_pdf_from_db(document_slug: str, onyx_user_id: s
             user_friendly_pdf_filename = f"{create_slug(mp_name_for_pdf_context)}_{uuid.uuid4().hex[:8]}.pdf"; break
     if not target_row_dict: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"PDF definition not found for slug: {document_slug}")
     
-    content_json = target_row_dict.get('microproduct_content'); details_pdf: Optional[TrainingPlanDetails] = None; detected_lang_for_pdf = 'en' # Default to 'en'
+    content_json = target_row_dict.get('microproduct_content'); details_pdf: Optional[TrainingPlanDetails] = None; detected_lang_for_pdf = 'ru'
     
     if content_json:
-        if isinstance(content_json, dict): 
+        if isinstance(content_json, dict): # Modern JSONB data
             try:
                 details_pdf = TrainingPlanDetails(**content_json)
                 if details_pdf and details_pdf.detectedLanguage: detected_lang_for_pdf = details_pdf.detectedLanguage
             except Exception as pydantic_e:
                 print(f"Error validating TrainingPlanDetails from DB JSON for PDF ({document_slug}): {pydantic_e}")
-                detected_lang_for_pdf = content_json.get('detectedLanguage', 'en')
-                details_pdf = TrainingPlanDetails(mainTitle=f"Content for '{mp_name_for_pdf_context}' (validation error).", sections=[], detectedLanguage=detected_lang_for_pdf)
-        elif isinstance(content_json, str): 
+                details_pdf = TrainingPlanDetails(mainTitle=f"Content for '{mp_name_for_pdf_context}' (validation error).", sections=[], detectedLanguage=content_json.get('detectedLanguage', 'ru'))
+        elif isinstance(content_json, str): # Legacy string data, try old parser
             print(f"Attempting to parse legacy string data for PDF generation (project: {project_name_for_pdf_context})")
             try:
                 parsed_from_str = parse_training_plan_from_string(content_json, project_name_for_pdf_context)
@@ -1160,9 +1140,9 @@ async def download_micro_product_pdf_from_db(document_slug: str, onyx_user_id: s
     unique_output_filename = f"{document_slug}_{uuid.uuid4().hex[:12]}.pdf"
     try:
         context_data_for_pdf = {'details': details_pdf.model_dump(exclude_none=True)}
-        current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['en']) # Default to 'en' if lang_cfg not found
-        context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf; context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg.get('TIME_UNIT_SINGULAR', 'hour')
-        context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg.get('TIME_UNIT_DECIMAL_PLURAL', 'hours'); context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg.get('TIME_UNIT_GENERAL_PLURAL', 'hours')
+        current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru'])
+        context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf; context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg['TIME_UNIT_SINGULAR']
+        context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg['TIME_UNIT_DECIMAL_PLURAL']; context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg['TIME_UNIT_GENERAL_PLURAL']
         pdf_path = await generate_pdf_from_html_template("training_plan_pdf_template.html", context_data_for_pdf, unique_output_filename)
         if not os.path.exists(pdf_path): raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="PDF file not found after generation.")
         return FileResponse(path=pdf_path, filename=user_friendly_pdf_filename, media_type='application/pdf', headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"})
@@ -1181,10 +1161,10 @@ async def delete_multiple_projects(delete_request: ProjectsDeleteRequest, onyx_u
     except Exception as e: print(f"Error deleting projects for user {onyx_user_id}, IDs {delete_request.project_ids}: {e}"); traceback.print_exc(); raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error during deletion: {str(e)}")
 
 # --- Design Template Endpoints ---
-ALLOWED_MICROPRODUCT_TYPES = ["Training Plan", "Course Module", "FAQ Document", "Tutorial Script", "Marketing Copy", "Onboarding Material", "Sales Script"] 
+ALLOWED_MICROPRODUCT_TYPES = ["Training Plan", "Course Module", "FAQ Document", "Tutorial Script", "Marketing Copy", "Onboarding Material", "Sales Script"] # Customize this list
 
 @app.get("/api/custom/microproduct_types", response_model=List[str])
-async def get_allowed_microproduct_types_list(): 
+async def get_allowed_microproduct_types_list(): # Renamed to avoid conflict if you have other type getters
     return ALLOWED_MICROPRODUCT_TYPES
 
 @app.post("/api/custom/design_templates/upload_image", responses={
@@ -1280,7 +1260,7 @@ async def get_design_template(
 @app.put("/api/custom/design_templates/update/{template_id}", response_model=DesignTemplateResponse)
 async def update_design_template(
     template_id: int,
-    template_data: DesignTemplateUpdate, 
+    template_data: DesignTemplateUpdate, # Use the new update model
     pool: asyncpg.Pool = Depends(get_db_pool)
 ):
     async with pool.acquire() as conn:
@@ -1337,6 +1317,7 @@ async def delete_design_template(
 
         if template_to_delete["design_image_path"]:
             image_file_on_disk = template_to_delete["design_image_path"].lstrip('/') 
+            # More robust way to get the filename if path is /static_design_images/filename.ext
             if template_to_delete["design_image_path"].startswith(f"/{STATIC_DESIGN_IMAGES_DIR}/"):
                 filename_only = template_to_delete["design_image_path"][len(f"/{STATIC_DESIGN_IMAGES_DIR}/"):]
                 full_image_path = os.path.join(STATIC_DESIGN_IMAGES_DIR, filename_only)
@@ -1349,9 +1330,9 @@ async def delete_design_template(
                         print(f"Error deleting image file {full_image_path}: {e}. Continuing with DB record deletion.")
                 else:
                     print(f"Image file not found for deletion: {full_image_path}")
-            else: 
-                full_image_path = os.path.join(os.getcwd(), image_file_on_disk) 
-                if os.path.exists(full_image_path): 
+            else: # Fallback for potentially different path structures, though STATIC_DESIGN_IMAGES_DIR should prefix
+                full_image_path = os.path.join(os.getcwd(), image_file_on_disk) # Assuming relative to current if not starting with specific dir
+                if os.path.exists(full_image_path): # Check again with this path
                     try:
                         os.remove(full_image_path)
                         print(f"Successfully deleted image file (fallback path): {full_image_path}")
@@ -1361,10 +1342,17 @@ async def delete_design_template(
                         print(f"Image file not found for deletion (fallback path): {full_image_path}")
 
 
+        # Delete the database record
         deleted_count_status = await conn.execute("DELETE FROM design_templates WHERE id = $1", template_id)
     
     if deleted_count_status == "DELETE 0": 
+        # This check might be redundant if template_to_delete check already passed and transactionality is not explicitly managed here for this sequence.
+        # However, keeping for robustness in case of race conditions or other issues if multiple requests occur.
+        # If template_to_delete was None, we've already raised 404.
+        # This mainly catches if the delete operation itself reported 0 rows affected unexpectedly.
         print(f"DELETE operation reported 0 rows affected for template ID {template_id}, though it was found initially.")
+        # Depending on desired strictness, could raise 404 or 500 here too.
+        # For now, if template_to_delete was found, we proceed assuming deletion was okay or handled by DB.
     
     return {"detail": f"Successfully initiated deletion for design template with ID {template_id}."}
 

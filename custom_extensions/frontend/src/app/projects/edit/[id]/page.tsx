@@ -6,8 +6,8 @@
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { 
-  TrainingPlanData, 
+import {
+  TrainingPlanData,
   Section as SectionType,
   Lesson as LessonType,
   StatusInfo,
@@ -22,7 +22,7 @@ const createEmptyLesson = (idSuffix: string | number = Date.now()): LessonType =
   id: `L${idSuffix}_${Math.random().toString(36).substr(2, 5)}`,
   title: '',
   check: createEmptyStatusInfo(),
-  contentAvailable: createEmptyStatusInfo(), 
+  contentAvailable: createEmptyStatusInfo(),
   source: '',
   hours: 0,
 });
@@ -32,12 +32,14 @@ const createEmptySection = (idSuffix: string | number = Date.now()): SectionType
   title: '',
   totalHours: 0,
   lessons: [createEmptyLesson(1)],
+  // NEW: Add autoCalculateHours property for each section
+  autoCalculateHours: true,
 });
 
 const createEmptyTrainingPlan = (initialProjectName?: string): TrainingPlanData => ({
   mainTitle: initialProjectName || "New Training Plan",
   sections: [createEmptySection(1)],
-  detectedLanguage: 'en', 
+  detectedLanguage: 'en',
 });
 
 
@@ -50,13 +52,16 @@ const EditProjectPageComponent = () => {
   const [product, setProduct] = useState('');
   const [microProductType, setMicroProductType] = useState('');
   const [microProductName, setMicroProductName] = useState('');
-  
+
   const [trainingPlanData, setTrainingPlanData] = useState<TrainingPlanData | null>(null);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+
+  // NEW: State to manage auto-calculation for each section's total hours
+  // This will be derived from trainingPlanData.sections now
 
   const productOptions = ["Strategy", "*Audit"];
   const microProductTypeOptions: { [key: string]: string[] } = {
@@ -71,7 +76,7 @@ const EditProjectPageComponent = () => {
     setError(null);
     try {
       const headers: HeadersInit = {};
-      const devUserId = "dummy-onyx-user-id-for-testing"; 
+      const devUserId = "dummy-onyx-user-id-for-testing";
       if (devUserId && process.env.NODE_ENV === 'development') {
         headers['X-Dev-Onyx-User-ID'] = devUserId;
       }
@@ -89,14 +94,19 @@ const EditProjectPageComponent = () => {
         throw new Error(errorDetail);
       }
       const data: ProjectDetailDataForEdit = await response.json();
-      
+
       setProjectName(data.projectName || '');
       setProduct(data.product || '');
       setMicroProductType(data.microProductType || '');
       setMicroProductName(data.microProductName || '');
-      
+
       if (data.microProductContent) {
-        setTrainingPlanData(data.microProductContent);
+        // Ensure new sections have the autoCalculateHours property
+        const sectionsWithAutoCalc = data.microProductContent.sections.map(section => ({
+          ...section,
+          autoCalculateHours: section.autoCalculateHours === undefined ? true : section.autoCalculateHours,
+        }));
+        setTrainingPlanData({...data.microProductContent, sections: sectionsWithAutoCalc});
       } else {
         setTrainingPlanData(createEmptyTrainingPlan(data.projectName));
       }
@@ -108,7 +118,7 @@ const EditProjectPageComponent = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [projectId]); 
+  }, [projectId]);
 
   useEffect(() => {
     if (projectId && !initialDataLoaded) {
@@ -138,11 +148,11 @@ const EditProjectPageComponent = () => {
 
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      const devUserId = "dummy-onyx-user-id-for-testing"; 
+      const devUserId = "dummy-onyx-user-id-for-testing";
       if (devUserId && process.env.NODE_ENV === 'development') {
         headers['X-Dev-Onyx-User-ID'] = devUserId;
       }
-      
+
       const response = await fetch(`/api/custom-projects-backend/projects/update/${projectId}`, {
         method: 'PUT',
         headers: headers,
@@ -170,7 +180,7 @@ const EditProjectPageComponent = () => {
       setIsSaving(false);
     }
   };
-  
+
   const handleTrainingPlanDataChange = (field: keyof TrainingPlanData, value: any) => {
     setTrainingPlanData(prev => {
         const basePlan = prev || createEmptyTrainingPlan(projectName);
@@ -180,10 +190,26 @@ const EditProjectPageComponent = () => {
 
   const handleSectionChange = (sectionIndex: number, field: keyof SectionType, value: any) => {
     if (!trainingPlanData) return;
-    const newSections = trainingPlanData.sections.map((s, idx) => 
+    const newSections = trainingPlanData.sections.map((s, idx) =>
       idx === sectionIndex ? { ...s, [field]: value } : s
     );
     setTrainingPlanData({ ...trainingPlanData, sections: newSections });
+  };
+
+  // NEW: Handler for toggling auto-calculate for a section
+  const toggleAutoCalculateHours = (sectionIndex: number) => {
+    if (!trainingPlanData) return;
+    const newSections = [...trainingPlanData.sections];
+    const section = newSections[sectionIndex];
+    if (section) {
+      const newAutoCalculateState = !section.autoCalculateHours;
+      newSections[sectionIndex] = { ...section, autoCalculateHours: newAutoCalculateState };
+      // If turning auto-calculation ON, recalculate totalHours
+      if (newAutoCalculateState) {
+        newSections[sectionIndex].totalHours = section.lessons.reduce((sum, lesson) => sum + (Number(lesson.hours) || 0), 0);
+      }
+      setTrainingPlanData({ ...trainingPlanData, sections: newSections });
+    }
   };
 
   const handleLessonChange = (sectionIndex: number, lessonIndex: number, field: keyof LessonType, value: any) => {
@@ -195,13 +221,14 @@ const EditProjectPageComponent = () => {
     newLessons[lessonIndex] = updatedLesson;
     currentSection.lessons = newLessons;
 
-    if (field === 'hours') {
+    // MODIFIED: Only auto-calculate if the toggle is on for this section
+    if (field === 'hours' && currentSection.autoCalculateHours) {
       currentSection.totalHours = newLessons.reduce((sum, lesson) => sum + (Number(lesson.hours) || 0), 0);
     }
     newSections[sectionIndex] = currentSection;
     setTrainingPlanData({ ...trainingPlanData, sections: newSections });
   };
-  
+
   const handleLessonStatusChange = (sectionIndex: number, lessonIndex: number, field: 'check' | 'contentAvailable', subField: keyof StatusInfo, value: string) => {
       if (!trainingPlanData) return;
       const newSections = [...trainingPlanData.sections];
@@ -210,7 +237,7 @@ const EditProjectPageComponent = () => {
       const lesson = { ...newLessons[lessonIndex] };
       const updatedStatusInfo = { ...(lesson[field] || createEmptyStatusInfo()), [subField]: value };
       (lesson as any)[field] = updatedStatusInfo;
-      
+
       newLessons[lessonIndex] = lesson;
       currentSection.lessons = newLessons;
       newSections[sectionIndex] = currentSection;
@@ -220,9 +247,10 @@ const EditProjectPageComponent = () => {
   const addSection = () => {
     setTrainingPlanData(prev => {
         const basePlan = prev || createEmptyTrainingPlan(projectName);
+        const newSection = createEmptySection(basePlan.sections?.length ? basePlan.sections.length + 1 : 1);
         return {
             ...basePlan,
-            sections: [...(basePlan.sections || []), createEmptySection(basePlan.sections?.length ? basePlan.sections.length + 1 : 1)],
+            sections: [...(basePlan.sections || []), newSection],
         };
     });
   };
@@ -250,12 +278,15 @@ const EditProjectPageComponent = () => {
     if (newSections[sectionIndex]) {
         const currentSection = { ...newSections[sectionIndex] };
         currentSection.lessons = currentSection.lessons.filter((_, i) => i !== lessonIndex);
-        currentSection.totalHours = currentSection.lessons.reduce((sum, lesson) => sum + (Number(lesson.hours) || 0), 0);
+        // MODIFIED: Only auto-calculate if the toggle is on for this section
+        if (currentSection.autoCalculateHours) {
+          currentSection.totalHours = currentSection.lessons.reduce((sum, lesson) => sum + (Number(lesson.hours) || 0), 0);
+        }
         newSections[sectionIndex] = currentSection;
         setTrainingPlanData({ ...trainingPlanData, sections: newSections });
     }
   };
-  
+
    const moveLesson = (sectionIndex: number, lessonIndex: number, direction: 'up' | 'down') => {
     if (!trainingPlanData) return;
     const newSections = [...trainingPlanData.sections];
@@ -270,7 +301,7 @@ const EditProjectPageComponent = () => {
     const temp = lessons[lessonIndex];
     lessons[lessonIndex] = lessons[targetIndex];
     lessons[targetIndex] = temp;
-    
+
     currentSection.lessons = lessons;
     newSections[sectionIndex] = currentSection;
     setTrainingPlanData({ ...trainingPlanData, sections: newSections });
@@ -281,16 +312,21 @@ const EditProjectPageComponent = () => {
   if (!projectId || !trainingPlanData) return <div className="p-8 text-center text-red-500 font-['Inter',_sans-serif]">Error: Project data not fully available.</div>;
 
   const inputBaseClasses = "block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
-  const labelBaseClasses = "block text-sm font-medium text-black mb-1"; // Changed to text-black
-  const smallInputClasses = `${inputBaseClasses} text-black`; // Added text-black
-  const sectionTitleClasses = "text-lg font-semibold text-black p-2 border border-gray-300 rounded-md w-full"; // Changed to text-black
-  const lessonTitleClasses = `${inputBaseClasses} text-black`; // Changed to text-black
+  const labelBaseClasses = "block text-sm font-medium text-black mb-1";
+  const smallInputClasses = `${inputBaseClasses} text-black`;
+  const sectionTitleClasses = "text-lg font-semibold text-black p-2 border border-gray-300 rounded-md w-full";
+  const lessonTitleClasses = `${inputBaseClasses} text-black`;
+  // NEW: Tailwind classes for the switch
+  const switchContainerClasses = "flex items-center space-x-2";
+  const switchBaseClasses = "relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500";
+  const switchKnobClasses = "inline-block w-4 h-4 transform bg-white rounded-full transition-transform";
+
 
   return (
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen font-['Inter',_sans-serif]">
       <div className="max-w-6xl mx-auto bg-white p-6 md:p-8 shadow-lg rounded-lg border border-gray-200">
-        <h1 className="text-2xl font-bold mb-6 text-black">Edit Project (ID: {projectId})</h1> {/* Changed to text-black */}
-        
+        <h1 className="text-2xl font-bold mb-6 text-black">Edit Project (ID: {projectId})</h1>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-8 pb-6 border-b border-gray-200">
           <div>
             <label htmlFor="projectName" className={labelBaseClasses}>Project Name:</label>
@@ -325,23 +361,23 @@ const EditProjectPageComponent = () => {
         {trainingPlanData && (
           <div className="pt-6">
             <div className="flex justify-between items-center mb-4">
-                 <h2 className="text-xl font-semibold text-black"> {/* Changed to text-black */}
-                    Training Plan Details
-                    {trainingPlanData.detectedLanguage && ` (${trainingPlanData.detectedLanguage.toUpperCase()})`}
+                <h2 className="text-xl font-semibold text-black">
+                  Training Plan Details
+                  {trainingPlanData.detectedLanguage && ` (${trainingPlanData.detectedLanguage.toUpperCase()})`}
                 </h2>
-                 <button onClick={addSection} className="flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <button onClick={addSection} className="flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                     <PlusCircle size={16} className="mr-2"/> Add Section
                 </button>
             </div>
             <div className="mb-4">
-                 <label htmlFor="mainTitle" className={labelBaseClasses}>Main Training Plan Title:</label>
-                 <input
-                    type="text"
-                    id="mainTitle"
-                    value={trainingPlanData.mainTitle || ''}
-                    onChange={(e) => handleTrainingPlanDataChange('mainTitle', e.target.value)}
-                    placeholder="Main Plan Title"
-                    className={`${inputBaseClasses} text-black`}
+                <label htmlFor="mainTitle" className={labelBaseClasses}>Main Training Plan Title:</label>
+                <input
+                  type="text"
+                  id="mainTitle"
+                  value={trainingPlanData.mainTitle || ''}
+                  onChange={(e) => handleTrainingPlanDataChange('mainTitle', e.target.value)}
+                  placeholder="Main Plan Title"
+                  className={`${inputBaseClasses} text-black`}
                 />
             </div>
 
@@ -349,13 +385,13 @@ const EditProjectPageComponent = () => {
               <div key={section.id || `section-${sectionIdx}`} className="mb-6 p-4 border border-gray-300 rounded-lg bg-slate-50 shadow">
                 <div className="flex justify-between items-center mb-3">
                     <div className="flex-grow mr-2">
-                         <label className="block text-xs font-medium text-black">Section Title (e.g., Module 1: Introduction)</label> {/* Changed to text-black */}
+                         <label className="block text-xs font-medium text-black">Section Title (e.g., Module 1: Introduction)</label>
                         <input
                             type="text"
                             value={section.title}
                             onChange={(e) => handleSectionChange(sectionIdx, 'title', e.target.value)}
                             placeholder="Section Title"
-                            className={sectionTitleClasses} // Uses updated class
+                            className={sectionTitleClasses}
                         />
                     </div>
                   <button onClick={() => removeSection(sectionIdx)} className="p-1.5 text-red-500 hover:text-red-700" title="Remove Section">
@@ -364,32 +400,52 @@ const EditProjectPageComponent = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label className="block text-xs font-medium text-black">Section ID (e.g., №1, Mod1):</label> {/* Changed to text-black */}
+                        <label className="block text-xs font-medium text-black">Section ID (e.g., №1, Mod1):</label>
                         <input
                             type="text"
                             value={section.id}
                             onChange={(e) => handleSectionChange(sectionIdx, 'id', e.target.value)}
                             placeholder="Section ID"
-                            className={smallInputClasses} // Uses updated class
+                            className={smallInputClasses}
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-black">Total Hours (auto-calculated):</label> {/* Changed to text-black */}
-                        <input
-                            type="number"
-                            value={section.totalHours.toFixed(1)}
-                            readOnly 
-                            className={`${smallInputClasses} bg-gray-100`}
-                        />
+                    {/* MODIFIED: Total Hours input and new Auto-calculate switch */}
+                    <div className="flex items-end space-x-3">
+                        <div className="flex-grow">
+                            <label className="block text-xs font-medium text-black">
+                                Total Hours {section.autoCalculateHours ? "(auto-calculated)" : "(manual)"}:
+                            </label>
+                            <input
+                                type="number"
+                                value={section.totalHours.toFixed(1)}
+                                readOnly={section.autoCalculateHours}
+                                onChange={(e) => !section.autoCalculateHours && handleSectionChange(sectionIdx, 'totalHours', parseFloat(e.target.value) || 0)}
+                                className={`${smallInputClasses} ${section.autoCalculateHours ? 'bg-gray-100' : 'bg-white'}`}
+                            />
+                        </div>
+                        <div className={switchContainerClasses} title="Toggle auto-calculation of total hours">
+                            <button
+                                type="button"
+                                onClick={() => toggleAutoCalculateHours(sectionIdx)}
+                                className={`${switchBaseClasses} ${section.autoCalculateHours ? 'bg-green-600' : 'bg-gray-300'}`}
+                                aria-pressed={section.autoCalculateHours}
+                            >
+                                <span className="sr-only">Toggle auto-calculate hours</span>
+                                <span
+                                className={`${switchKnobClasses} ${section.autoCalculateHours ? 'translate-x-5' : 'translate-x-1'}`}
+                                />
+                            </button>
+                             <span className="text-xs text-gray-600">{section.autoCalculateHours ? "Auto" : "Manual"}</span>
+                        </div>
                     </div>
                 </div>
-                
-                <h4 className="text-md font-semibold text-black mb-2 mt-4">Lessons:</h4> {/* Changed to text-black */}
+
+                <h4 className="text-md font-semibold text-black mb-2 mt-4">Lessons:</h4>
                 {section.lessons.map((lesson, lessonIdx) => (
                   <div key={lesson.id || `lesson-${sectionIdx}-${lessonIdx}`} className="ml-4 mb-4 p-3 border border-gray-200 rounded-md bg-white shadow-sm">
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex-grow">
-                            <label className="block text-xs font-medium text-black">Lesson {lessonIdx + 1} Title:</label> {/* Changed to text-black */}
+                            <label className="block text-xs font-medium text-black">Lesson {lessonIdx + 1} Title:</label>
                             <input type="text" value={lesson.title} onChange={(e) => handleLessonChange(sectionIdx, lessonIdx, 'title', e.target.value)} placeholder="Lesson Title" className={lessonTitleClasses}/>
                         </div>
                         <div className="flex items-center ml-2 flex-shrink-0">
@@ -400,19 +456,19 @@ const EditProjectPageComponent = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                         <div>
-                            <label className="block text-xs font-medium text-black">Hours:</label> {/* Changed to text-black */}
+                            <label className="block text-xs font-medium text-black">Hours:</label>
                             <input type="number" step="0.1" value={lesson.hours} onChange={(e) => handleLessonChange(sectionIdx, lessonIdx, 'hours', parseFloat(e.target.value) || 0)} placeholder="Hours" className={smallInputClasses}/>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-black">Source:</label> {/* Changed to text-black */}
+                            <label className="block text-xs font-medium text-black">Source:</label>
                             <input type="text" value={lesson.source} onChange={(e) => handleLessonChange(sectionIdx, lessonIdx, 'source', e.target.value)} placeholder="Source" className={smallInputClasses}/>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-black">Knowledge Assessment Text:</label> {/* Changed to text-black */}
+                            <label className="block text-xs font-medium text-black">Knowledge Assessment Text:</label>
                             <input type="text" value={lesson.check.text} onChange={(e) => handleLessonStatusChange(sectionIdx, lessonIdx, 'check', 'text', e.target.value)} placeholder="Assessment Text" className={smallInputClasses}/>
                         </div>
                          <div>
-                            <label className="block text-xs font-medium text-black">Content Available Text:</label> {/* Changed to text-black */}
+                            <label className="block text-xs font-medium text-black">Content Available Text:</label>
                             <input type="text" value={lesson.contentAvailable.text} onChange={(e) => handleLessonStatusChange(sectionIdx, lessonIdx, 'contentAvailable', 'text', e.target.value)} placeholder="Content Availability Text" className={smallInputClasses}/>
                         </div>
                     </div>
@@ -425,7 +481,7 @@ const EditProjectPageComponent = () => {
             ))}
           </div>
         )}
-        
+
         <div className="flex justify-end gap-3 mt-8">
           <button type="button" onClick={() => router.push('/projects')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
             Cancel
