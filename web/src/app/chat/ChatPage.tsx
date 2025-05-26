@@ -1,6 +1,6 @@
 "use client";
 
-import React, {
+import React, { 
   Dispatch,
   SetStateAction,
   useCallback,
@@ -121,7 +121,7 @@ import {
 
 import { getSourceMetadata } from "@/lib/sources";
 import { UserSettingsModal } from "./modal/UserSettingsModal";
-import { AgenticMessage } from "./message/AgenticMessage"; // Assuming AgenticMessage is imported
+import { AgenticMessage } from "./message/AgenticMessage"; 
 import AssistantModal from "../assistants/mine/AssistantModal";
 import { useSidebarShortcut } from "@/lib/browserUtilities";
 import { FilePickerModal } from "./my-documents/components/FilePicker";
@@ -183,7 +183,7 @@ export function ChatPage({
     addSelectedFolder,
     clearSelectedItems,
     folders: userFolders,
-    files: allUserFiles,
+    files: allUserFiles, 
     uploadFile,
     currentMessageFiles,
     setCurrentMessageFiles,
@@ -219,6 +219,12 @@ export function ChatPage({
 
   const settings = useContext(SettingsContext);
   const enterpriseSettings = settings?.enterpriseSettings;
+
+  const [selectedDocuments, setSelectedDocuments] = useState<OnyxDocument[]>(
+    []
+  );
+  const [selectedDocumentTokens, setSelectedDocumentTokens] = useState(0);
+
 
   const [toggleDocSelection, setToggleDocSelection] = useState(false);
   const [documentSidebarVisible, setDocumentSidebarVisible] = useState(false);
@@ -260,7 +266,7 @@ export function ChatPage({
       );
       toggle(false);
     }
-  }, [user]);
+  }, [user, toggle, sidebarVisible]);
 
   const processSearchParamsAndSubmitMessage = (searchParamsString: string) => {
     const newSearchParams = new URLSearchParams(searchParamsString);
@@ -304,9 +310,6 @@ export function ChatPage({
           (assistant) => assistant.id === defaultAssistantId
         )
         : undefined
-  );
-  const search_param_temperature = searchParams?.get(
-    SEARCH_PARAM_NAMES.TEMPERATURE
   );
 
   const setSelectedAssistantFromId = (assistantId: number) => {
@@ -399,6 +402,12 @@ export function ChatPage({
     Prism.highlightAll();
     setIsReady(true);
   }, []);
+  
+  const clearSelectedDocuments = () => {
+    setSelectedDocuments([]);
+    setSelectedDocumentTokens(0);
+    clearSelectedItems();
+  };
 
   useEffect(() => {
     const priorChatSessionId = chatSessionIdRef.current;
@@ -416,7 +425,7 @@ export function ChatPage({
       filterManager.setTimeRange(null);
       setCurrentMessageFiles([]);
       if (chatSessionIdRef.current !== null) {
-        clearSelectedDocuments();
+        clearSelectedDocuments(); 
         setHasPerformedInitialScroll(false);
       }
     }
@@ -531,12 +540,9 @@ export function ChatPage({
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    userFolders,
-    searchParams?.get(SEARCH_PARAM_NAMES.USER_FOLDER_ID),
-    searchParams?.get(SEARCH_PARAM_NAMES.ALL_MY_DOCUMENTS),
-    // addSelectedFolder, // These were causing infinite loops as they are recreated on each render
-    // clearSelectedItems, // This too
+  }, [ 
+    userFolders, 
+    searchParams 
   ]);
 
   const [message, setMessage] = useState(
@@ -586,7 +592,7 @@ export function ChatPage({
       completeMessageMapOverride || currentMessageMap(completeMessageDetail);
     const newCompleteMessageMap = structuredClone(frozenCompleteMessageMap);
 
-    if (newCompleteMessageMap.size === 0) {
+    if (newCompleteMessageMap.size === 0 && messages.length > 0) { 
       const systemMessageId = messages[0].parentMessageId || SYSTEM_MESSAGE_ID;
       const firstMessageId = messages[0].messageId;
       const dummySystemMessage: Message = {
@@ -620,7 +626,7 @@ export function ChatPage({
       }
       newCompleteMessageMap.set(message.messageId, message);
     });
-    if (makeLatestChildMessage) {
+    if (makeLatestChildMessage && messages.length > 0) { 
       const currentMessageChain = buildLatestMessageChain(
         frozenCompleteMessageMap
       );
@@ -806,22 +812,25 @@ export function ChatPage({
         "*"
       );
     }
-  }, [submittedMessage, currentSessionChatState]);
+  }, [submittedMessage, currentSessionChatState, messageHistory.length]);
 
   const [maxTokens, setMaxTokens] = useState<number>(4096);
 
   useEffect(() => {
     async function fetchMaxTokens() {
-      const response = await fetch(
-        `/api/chat/max-selected-document-tokens?persona_id=${liveAssistant?.id}`
-      );
-      if (response.ok) {
-        const maxTokens = (await response.json()).max_tokens as number;
-        setMaxTokens(maxTokens);
+      if (liveAssistant) { 
+        const response = await fetch(
+          `/api/chat/max-selected-document-tokens?persona_id=${liveAssistant.id}`
+        );
+        if (response.ok) {
+          const maxTokensData = (await response.json()).max_tokens as number;
+          setMaxTokens(maxTokensData);
+        }
       }
     }
     fetchMaxTokens();
   }, [liveAssistant]);
+
 
   const filterManager = useFilters();
   const [isChatSearchModalOpen, setIsChatSearchModalOpen] = useState(false);
@@ -929,18 +938,22 @@ export function ChatPage({
     }
   };
 
+  // Corrected dependency array for this useEffect based on previous working version
   useEffect(() => {
     if (
-      (!personaIncludesRetrieval &&
-        (!selectedDocuments || selectedDocuments.length === 0) &&
-        documentSidebarVisible) ||
-      chatSessionIdRef.current == undefined
+      liveAssistant && // Ensure liveAssistant is defined before use
+      !personaIncludesRetrieval(liveAssistant) &&
+      (!selectedDocuments || selectedDocuments.length === 0) &&
+      documentSidebarVisible
     ) {
       setDocumentSidebarVisible(false);
     }
-    clientScrollToBottom();
+    if (chatSessionIdRef.current !== null) {
+        clientScrollToBottom();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatSessionIdRef.current]);
+
 
   const loadNewPageLogic = (event: MessageEvent) => {
     if (event.data.type === SUBMIT_MESSAGE_TYPES.PAGE_CHANGE) {
@@ -958,7 +971,7 @@ export function ChatPage({
       processSearchParamsAndSubmitMessage(searchParams.toString());
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, router]);
+  }, [searchParams, router]); 
 
   useEffect(() => {
     adjustDocumentSidebarWidth();
@@ -1090,7 +1103,7 @@ export function ChatPage({
     setLoadingError(null);
   };
 
-  // NEW CODE START: Definition of handleApplyProductPrompts
+  // NEW/MODIFIED CODE START: handleApplyProductPrompts to combine prompts
   const handleApplyProductPrompts = async (prompts: string[]) => {
     if (!liveAssistant) {
       setPopup({
@@ -1100,27 +1113,43 @@ export function ChatPage({
       return;
     }
   
-    const currentChatStateValue = currentChatState();
-    if (currentChatStateValue !== "input") {
-      console.log(`Current chat state is ${currentChatStateValue}, stopping generation.`);
+    if (currentChatState() !== "input") {
+      console.log(`ChatPage: Current chat state is ${currentChatState()}, stopping generation before applying prompts.`);
       stopGenerating();
-      await new Promise(resolve => setTimeout(resolve, 300)); 
-    }
-    
-    for (const promptStr of prompts) {
-      if (promptStr && promptStr.trim() !== "") {
-         console.log(`Submitting prompt via onSubmit: "${promptStr.trim()}"`);
-        await onSubmit({ 
-          messageOverride: promptStr.trim(),
-          queryOverride: undefined, 
-          forceSearch: undefined,
-          alternativeAssistantOverride: null, 
-          modelOverride: undefined, 
-         });
+      // Wait for generation to fully stop. A simple timeout might be needed
+      // if stopGenerating() doesn't immediately set chatState to "input".
+      await new Promise(resolve => setTimeout(resolve, 300)); // Small delay
+      if (currentChatState() !== "input") {
+        console.warn("ChatPage: Chat state did not return to 'input' after stopGenerating. Proceeding cautiously.");
+        // Potentially add a more robust check or longer wait here if needed
+      } else {
+        console.log("ChatPage: Chat state is now 'input', proceeding with combined prompt.");
       }
     }
+  
+    if (prompts && prompts.length > 0) {
+      const combinedPrompt = prompts
+        .map((prompt, index) => `Prompt ${index + 1}: ${prompt.trim()}`)
+        .join("\n\n"); // Separate prompts by two newlines
+
+      if (combinedPrompt.trim() !== "") {
+        console.log(`ChatPage: Submitting combined prompt:\n"${combinedPrompt}"`);
+        await onSubmit({ 
+          messageOverride: combinedPrompt,
+          messageIdToResend: undefined, 
+          queryOverride: undefined, 
+          forceSearch: undefined,
+          isSeededChat: false, 
+          alternativeAssistantOverride: null, 
+          modelOverride: undefined,
+          regenerationRequest: undefined, 
+        });
+      }
+    }
+    console.log("ChatPage: Combined product prompts processed.");
   };
-  // NEW CODE END
+  // NEW/MODIFIED CODE END
+
 
   const onSubmit = async ({
     messageIdToResend,
@@ -1203,12 +1232,14 @@ export function ChatPage({
           type: "error",
         });
       } else {
-        setPopup({
-          message: "Please wait for the response to complete",
-          type: "error",
-        });
+        if (!messageOverride) { 
+          setPopup({
+            message: "Please wait for the response to complete",
+            type: "error",
+          });
+          return;
+        }
       }
-      return;
     }
 
     setAlternativeGeneratingAssistant(alternativeAssistantOverride);
@@ -1221,7 +1252,7 @@ export function ChatPage({
 
     if (isNewSession) {
       currChatSessionId = await createChatSession(
-        liveAssistant?.id || 0,
+        liveAssistant?.id || 0, 
         searchParamBasedChatSessionName
       );
     } else {
@@ -1244,8 +1275,8 @@ export function ChatPage({
       new Map(prev).set(currChatSessionId, controller)
     );
 
-    const messageToResend = messageHistory.find(
-      (message) => message.messageId === messageIdToResend
+    const messageToResendFromHistory = messageHistory.find( 
+      (msg) => msg.messageId === messageIdToResend
     );
     if (messageIdToResend) {
       updateRegenerationState(
@@ -1254,15 +1285,15 @@ export function ChatPage({
       );
     }
     const messageToResendParent =
-      messageToResend?.parentMessageId !== null &&
-        messageToResend?.parentMessageId !== undefined
-        ? currentMap.get(messageToResend.parentMessageId)
+      messageToResendFromHistory?.parentMessageId !== null &&
+        messageToResendFromHistory?.parentMessageId !== undefined
+        ? currentMap.get(messageToResendFromHistory.parentMessageId)
         : null;
-    const messageToResendIndex = messageToResend
-      ? messageHistory.indexOf(messageToResend)
+    const messageToResendIndex = messageToResendFromHistory
+      ? messageHistory.indexOf(messageToResendFromHistory)
       : null;
 
-    if (!messageToResend && messageIdToResend !== undefined) {
+    if (!messageToResendFromHistory && messageIdToResend !== undefined) {
       setPopup({
         message:
           "Failed to re-send message - please refresh the page and try again.",
@@ -1272,7 +1303,7 @@ export function ChatPage({
       updateChatState("input", frozenSessionId);
       return;
     }
-    let currMessage = messageToResend ? messageToResend.message : message;
+    let currMessage = messageToResendFromHistory ? messageToResendFromHistory.message : message;
     if (messageOverride) {
       currMessage = messageOverride;
     }
@@ -1297,15 +1328,33 @@ export function ChatPage({
       currentAssistantId = alternativeAssistantOverride.id;
     } else if (alternativeAssistant) {
       currentAssistantId = alternativeAssistant.id;
-    } else {
+    } else if (liveAssistant) { 
       currentAssistantId = liveAssistant.id;
+    } else {
+      console.error("No live assistant available for message submission.");
+      setPopup({ type: "error", message: "No assistant selected." });
+      updateChatState("input", frozenSessionId);
+      return;
     }
 
     resetInputBar();
-    let messageUpdates: Message[] | null = null;
+    
+    let filesForCurrentSubmission: FileDescriptor[] = []; 
+    
+    if (overrideFileDescriptors) {
+      filesForCurrentSubmission = overrideFileDescriptors;
+    } else if (!messageIdToResend && !isSeededChat) {
+      // Only use currentMessageFiles for new, user-initiated messages
+      filesForCurrentSubmission = currentMessageFiles;
+    }
+    // This 'localFilesStream' variable is block-scoped to onSubmit and will hold files for the current submission.
+    let localFilesStream = filesForCurrentSubmission;
+
+
+    let messageUpdates: Message[] | null = null; 
     let answer = "";
     let second_level_answer = "";
-    const stopReason: StreamStopReason | null = null;
+    let currentStopReason: StreamStopReason | null = null; 
     let query: string | null = null;
     let retrievalType: RetrievalType =
       selectedDocuments.length > 0
@@ -1326,7 +1375,7 @@ export function ChatPage({
     let includeAgentic = false;
     let secondLevelMessageId: number | null = null;
     let isAgentic: boolean = false;
-    let files: FileDescriptor[] = [];
+    
     let initialFetchDetails: null | {
       user_message_id: number;
       assistant_message_id: number;
@@ -1341,7 +1390,7 @@ export function ChatPage({
         signal: controller.signal,
         message: currMessage,
         alternateAssistantId: currentAssistantId,
-        fileDescriptors: overrideFileDescriptors || currentMessageFiles,
+        fileDescriptors: filesForCurrentSubmission, 
         parentMessageId:
           regenerationRequest?.parentMessage.messageId ||
           lastSuccessfulMessageId,
@@ -1407,8 +1456,8 @@ export function ChatPage({
                 "First packet should contain message response info "
               );
               if (Object.hasOwn(packet, "error")) {
-                const error = (packet as StreamingError).error;
-                setLoadingError(error);
+                const errorPacket = (packet as StreamingError).error;
+                setLoadingError(errorPacket);
                 updateChatState("input");
                 return;
               }
@@ -1427,7 +1476,7 @@ export function ChatPage({
                   : user_message_id,
                 message: currMessage,
                 type: "user",
-                files: files, 
+                files: filesForCurrentSubmission, 
                 toolCall: null,
                 parentMessageId: parentMessage?.messageId || SYSTEM_MESSAGE_ID,
               },
@@ -1490,9 +1539,9 @@ export function ChatPage({
               const userFilesPacket = (packet as UserKnowledgeFilePacket).user_files;
               const newUserFiles = userFilesPacket.filter(
                 (newFile) =>
-                  !files.some((existingFile) => existingFile.id === newFile.id)
+                  !localFilesStream.some((existingFile) => existingFile.id === newFile.id) 
               );
-              files = files.concat(newUserFiles);
+              localFilesStream = localFilesStream.concat(newUserFiles); 
             }
             if (Object.hasOwn(packet, "is_agentic")) {
               isAgentic = (packet as any).is_agentic;
@@ -1648,8 +1697,8 @@ export function ChatPage({
             } else if (Object.hasOwn(packet, "message_id")) {
               finalMessage = packet as BackendMessage;
             } else if (Object.hasOwn(packet, "stop_reason")) {
-              const stop_reason = (packet as StreamStopInfo).stop_reason;
-              if (stop_reason === StreamStopReason.CONTEXT_LENGTH) {
+              currentStopReason = (packet as StreamStopInfo).stop_reason; 
+              if (currentStopReason === StreamStopReason.CONTEXT_LENGTH) {
                 updateCanContinue(true, frozenSessionId);
               }
             }
@@ -1657,7 +1706,7 @@ export function ChatPage({
             parentMessage =
               parentMessage || frozenMessageMap?.get(SYSTEM_MESSAGE_ID)!;
 
-            const updateFn = (messages: Message[]) => {
+            const updateFn = (messagesToUpdate: Message[]) => { 
               const replacementsMap = regenerationRequest
                 ? new Map([
                   [
@@ -1672,7 +1721,7 @@ export function ChatPage({
                 : null;
 
               const newMessageDetails = upsertToCompleteMessageMap({
-                messages: messages,
+                messages: messagesToUpdate,
                 replacementsMap: replacementsMap,
                 completeMessageMapOverride: currentMap,
                 chatSessionId: frozenSessionId!,
@@ -1689,7 +1738,7 @@ export function ChatPage({
                   : initialFetchDetails.user_message_id!,
                 message: currMessage,
                 type: "user",
-                files: files, 
+                files: localFilesStream, 
                 toolCall: null,
                 parentMessageId: lastSuccessfulMessageId ?? systemMessageId,
                 childrenMessageIds: [
@@ -1719,7 +1768,7 @@ export function ChatPage({
                 alternateAssistantID: alternativeAssistant?.id,
                 stackTrace: stackTrace,
                 overridden_model: finalMessage?.overridden_model,
-                stopReason: stopReason,
+                stopReason: currentStopReason, 
                 sub_questions: sub_questions,
                 second_level_generating: second_level_generating,
                 agentic_docs: agenticDocs,
@@ -1752,7 +1801,7 @@ export function ChatPage({
               initialFetchDetails?.user_message_id || TEMP_USER_MESSAGE_ID,
             message: currMessage,
             type: "user",
-            files: files, // Use accumulated files here as well
+            files: localFilesStream, 
             toolCall: null,
             parentMessageId: parentMessage?.messageId || SYSTEM_MESSAGE_ID,
           },
@@ -1776,7 +1825,7 @@ export function ChatPage({
     setAgenticGenerating(false);
     resetRegenerationState(currentSessionId());
 
-    updateChatState("input");
+    updateChatState("input"); 
     if (isNewSession) {
       console.log("Setting up new session");
       if (finalMessage) {
@@ -1807,7 +1856,9 @@ export function ChatPage({
       setSelectedMessageForDocDisplay(finalMessage.message_id);
     }
     setAlternativeGeneratingAssistant(null);
-    setSubmittedMessage("");
+    if (!messageOverride) { // Only clear user-typed messages
+      setSubmittedMessage("");
+    }
   };
 
   const onFeedback = async (
@@ -1958,27 +2009,18 @@ export function ChatPage({
 
   useEffect(() => {
     if (liveAssistant) {
-      const hasSearchTool = liveAssistant.tools.some(
-        (tool) =>
-          tool.in_code_tool_id === SEARCH_TOOL_ID &&
-          liveAssistant.user_file_ids?.length == 0 &&
-          liveAssistant.user_folder_ids?.length == 0
-      );
+      const hasSearchTool = personaIncludesRetrieval(liveAssistant); 
       setRetrievalEnabled(hasSearchTool);
       if (!hasSearchTool) {
         filterManager.clearFilters();
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveAssistant]);
 
   const [retrievalEnabled, setRetrievalEnabled] = useState(() => {
     if (liveAssistant) {
-      return liveAssistant.tools.some(
-        (tool) =>
-          tool.in_code_tool_id === SEARCH_TOOL_ID &&
-          liveAssistant.user_file_ids?.length == 0 &&
-          liveAssistant.user_folder_ids?.length == 0
-      );
+      return personaIncludesRetrieval(liveAssistant); 
     }
     return false;
   });
@@ -1996,10 +2038,6 @@ export function ChatPage({
   const innerSidebarElementRef = useRef<HTMLDivElement>(null);
   const [settingsToggled, setSettingsToggled] = useState(false);
 
-  const [selectedDocuments, setSelectedDocuments] = useState<OnyxDocument[]>(
-    []
-  );
-  const [selectedDocumentTokens, setSelectedDocumentTokens] = useState(0);
 
   const currentPersona = alternativeAssistant || liveAssistant;
 
@@ -2031,8 +2069,8 @@ export function ChatPage({
         }
         const data = await response.json();
         router.push(data.redirect_url);
-      } catch (error) {
-        console.error("Error seeding chat from Slack:", error);
+      } catch (fetchError: any) { 
+        console.error("Error seeding chat from Slack:", fetchError);
         setPopup({
           message: "Failed to load chat from Slack",
           type: "error",
@@ -2040,11 +2078,11 @@ export function ChatPage({
       }
     };
     handleSlackChatRedirect();
-  }, [searchParams, router, setPopup ]); // Added setPopup to dependency array
+  }, [searchParams, router, setPopup]); 
 
   useEffect(() => {
     llmManager.updateImageFilesPresent(imageFileInMessageHistory);
-  }, [imageFileInMessageHistory, llmManager]); // Added llmManager
+  }, [imageFileInMessageHistory, llmManager]); 
 
   const pathname = usePathname();
   useEffect(() => {
@@ -2163,12 +2201,6 @@ export function ChatPage({
         <NoAssistantModal isAdmin={isAdmin} />
       </>
     );
-
-  const clearSelectedDocuments = () => {
-    setSelectedDocuments([]);
-    setSelectedDocumentTokens(0);
-    clearSelectedItems();
-  };
 
   const toggleDocumentSelection = (document: OnyxDocument) => {
     setSelectedDocuments((prev) =>
@@ -2609,12 +2641,12 @@ export function ChatPage({
                                       onEdit={(editedContent) => {
                                         const parentMessageId =
                                           message.parentMessageId!;
-                                        const parentMessage =
+                                        const currentParentMessage = 
                                           messageMap.get(parentMessageId)!;
                                         upsertToCompleteMessageMap({
                                           messages: [
                                             {
-                                              ...parentMessage,
+                                              ...currentParentMessage,
                                               latestChildMessageId: null,
                                             },
                                           ],
@@ -2679,7 +2711,7 @@ export function ChatPage({
                                   messageHistory[i + 1]?.type === "assistant"
                                     ? messageHistory[i + 1]?.message
                                     : undefined;
-                                const agenticDocs =
+                                const agenticDocsFromHistory = 
                                   messageHistory[i + 1]?.type === "assistant"
                                     ? messageHistory[i + 1]?.documents
                                     : undefined;
@@ -2698,8 +2730,8 @@ export function ChatPage({
                                       descriptor.id === file.file_id
                                   )
                                 );
-
-                                if (message.is_agentic) { // Render AgenticMessage
+                                
+                                if (message.is_agentic) { 
                                   return (
                                     <div
                                       className="text-text"
@@ -2712,9 +2744,6 @@ export function ChatPage({
                                       }
                                     >
                                       <AgenticMessage
-                                        // NOTE: onApplyProductPrompts is NOT passed here,
-                                        // as AgenticMessage props don't include it.
-                                        // If this button is needed on AgenticMessage, its props interface must be updated.
                                         resubmit={handleResubmitLastMessage}
                                         error={uncaughtError}
                                         isStreamingQuestions={
@@ -2759,7 +2788,7 @@ export function ChatPage({
                                           ) || []
                                         }
                                         agenticDocs={
-                                          message.agentic_docs || agenticDocs
+                                          message.agentic_docs || agenticDocsFromHistory
                                         }
                                         toggleDocDisplay={(
                                           agentic: boolean
@@ -2872,7 +2901,6 @@ export function ChatPage({
                                             currentSessionChatState !=
                                             "toolBuilding")
                                         }
-                                        // `hasDocs` is not a prop of AgenticMessage based on the error, so it's removed.
                                         handleFeedback={
                                           i === messageHistory.length - 1 &&
                                             currentSessionChatState != "input"
@@ -2887,7 +2915,7 @@ export function ChatPage({
                                     </div>
                                   );
                                 } else {
-                                  // Regular AIMessage (not agentic)
+                                  // Regular AIMessage
                                   return (
                                     <div
                                       className="text-text"
@@ -2900,7 +2928,7 @@ export function ChatPage({
                                       }
                                     >
                                       <AIMessage
-                                        onApplyProductPrompts={handleApplyProductPrompts} // Pass prop here
+                                        onApplyProductPrompts={handleApplyProductPrompts}
                                         userKnowledgeFiles={userFiles}
                                         docs={
                                           message?.documents &&
@@ -2983,7 +3011,7 @@ export function ChatPage({
                                             currentSessionChatState !=
                                             "toolBuilding")
                                         }
-                                        hasDocs={ // This prop is valid for AIMessage
+                                        hasDocs={ 
                                           (message.documents &&
                                             message.documents.length > 0) ===
                                           true
@@ -3065,7 +3093,7 @@ export function ChatPage({
                                 return (
                                   <div key={messageReactComponentKey}>
                                     <AIMessage
-                                      onApplyProductPrompts={handleApplyProductPrompts} // Pass prop here for consistency if AIMessage handles errors
+                                      onApplyProductPrompts={handleApplyProductPrompts} 
                                       setPresentingDocument={
                                         setPresentingDocument
                                       }
@@ -3109,7 +3137,7 @@ export function ChatPage({
                                 key={`${messageHistory.length}-${chatSessionIdRef.current}`}
                               >
                                 <AIMessage
-                                  onApplyProductPrompts={handleApplyProductPrompts} // Pass prop here for consistency
+                                  onApplyProductPrompts={handleApplyProductPrompts} 
                                   setPresentingDocument={setPresentingDocument}
                                   key={-3}
                                   currentPersona={liveAssistant}
@@ -3135,7 +3163,7 @@ export function ChatPage({
                             {loadingError && (
                               <div key={-1}>
                                 <AIMessage
-                                  onApplyProductPrompts={handleApplyProductPrompts} // Pass prop here for consistency
+                                  onApplyProductPrompts={handleApplyProductPrompts} 
                                   setPresentingDocument={setPresentingDocument}
                                   currentPersona={liveAssistant}
                                   messageId={-1}
