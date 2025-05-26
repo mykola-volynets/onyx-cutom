@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import React from 'react';
-import { X, HelpCircle } from 'lucide-react'; 
+import { X, HelpCircle } from 'lucide-react';
 import { TrainingPlanData, Section, Lesson } from '@/types/trainingPlan';
 
 // --- Custom SVG Icons (Keep your existing icon definitions) ---
@@ -33,12 +33,13 @@ const NewPracticeIcon = ({ color = '#FF1414', className = '' }) => (
 
 // --- StatusBadge Component ---
 const StatusBadge = ({ type, text, columnContext }: { type: string; text: string; columnContext?: 'check' | 'contentAvailable' }) => {
-  const iconColor = '#FF1414'; 
+  const iconColor = '#FF1414';
   const defaultIconSize = "w-4 h-4";
 
   if (columnContext === 'contentAvailable') {
     return (
-      <div className="inline-flex items-center space-x-1">
+      // MODIFIED: space-x-1 to space-x-2
+      <div className="inline-flex items-center space-x-2">
         <NewPieChartIcon color={iconColor} className={`${defaultIconSize} shrink-0`} />
         <span className="text-xs font-medium text-gray-700">{text}</span>
       </div>
@@ -48,30 +49,34 @@ const StatusBadge = ({ type, text, columnContext }: { type: string; text: string
   switch (type) {
     case 'test':
     case 'video_test':
-      return ( <div className="inline-flex items-center space-x-1.5"> <NewTestIcon color={iconColor} className={`${defaultIconSize} shrink-0`} /> <span className="text-xs font-medium text-gray-700">{text}</span> </div> );
-    
+      // MODIFIED: space-x-1.5 to space-x-2
+      return ( <div className="inline-flex items-center space-x-2"> <NewTestIcon color={iconColor} className={`${defaultIconSize} shrink-0`} /> <span className="text-xs font-medium text-gray-700">{text}</span> </div> );
+
     case 'practice':
     case 'practice_supervisor':
-    case 'role_play': 
-    case 'demo_supervisor': 
+    case 'role_play':
+    case 'demo_supervisor':
     case 'error_analysis_supervisor':
     case 'demo_practice':
     case 'practice_case':
     case 'practice_discussion':
-    case 'oral_quiz': 
+    case 'oral_quiz':
     case 'photo_analysis':
-    case 'other_check': 
-      return ( <div className="inline-flex items-center space-x-1.5"> <NewPracticeIcon color={iconColor} className={`${defaultIconSize} shrink-0`} /> <span className="text-xs font-medium text-gray-700">{text}</span> </div> );
-    
-    case 'percent': 
-    case 'yes': 
-    case 'none': 
-    case 'no': 
-    case 'unknown_availability': 
-        return ( <div className="inline-flex items-center space-x-1.5"> <HelpCircle size={14} style={{ color: iconColor }} className="shrink-0"/> <span className="text-xs font-medium text-gray-700">{text || type}</span> </div> );
+    case 'other_check':
+      // MODIFIED: space-x-1.5 to space-x-2
+      return ( <div className="inline-flex items-center space-x-2"> <NewPracticeIcon color={iconColor} className={`${defaultIconSize} shrink-0`} /> <span className="text-xs font-medium text-gray-700">{text}</span> </div> );
 
-    default: 
-      return ( <div className="inline-flex items-center space-x-1.5"> <HelpCircle size={14} style={{ color: iconColor }} className="shrink-0"/> <span className="text-xs font-medium text-gray-700">{text || type}</span> </div> );
+    case 'percent':
+    case 'yes':
+    case 'none':
+    case 'no':
+    case 'unknown_availability':
+        // MODIFIED: space-x-1.5 to space-x-2
+        return ( <div className="inline-flex items-center space-x-2"> <HelpCircle size={14} style={{ color: iconColor }} className="shrink-0"/> <span className="text-xs font-medium text-gray-700">{text || type}</span> </div> );
+
+    default:
+      // MODIFIED: space-x-1.5 to space-x-2
+      return ( <div className="inline-flex items-center space-x-2"> <HelpCircle size={14} style={{ color: iconColor }} className="shrink-0"/> <span className="text-xs font-medium text-gray-700">{text || type}</span> </div> );
   }
 };
 
@@ -88,8 +93,8 @@ const localizationConfig = {
     source: "Источник информации",
     time: "Время",
     timeUnitSingular: "ч",
-    timeUnitDecimalPlural: "ч", // For values like 1.5, 2.5, 21, 22-24, 31, 32-34 etc.
-    timeUnitGeneralPlural: "ч", // For 0, 5-20 and others ending in 0 or 5-9
+    timeUnitDecimalPlural: "ч", 
+    timeUnitGeneralPlural: "ч", 
   },
   en: {
     moduleAndLessons: "Module and Lessons",
@@ -103,14 +108,12 @@ const localizationConfig = {
   },
 };
 
-// Helper function for Russian pluralization of hours (optional, but good for accuracy)
-// This is a simplified version. A more robust one would handle all cases.
 const getRussianHourUnit = (hours: number, units: typeof localizationConfig['ru']) => {
   const h_int = Math.floor(hours);
   const h_mod10 = h_int % 10;
   const h_mod100 = h_int % 100;
 
-  if (hours !== h_int) { // Decimal
+  if (hours !== h_int) { 
     return units.timeUnitDecimalPlural;
   }
   if (h_mod100 >= 11 && h_mod100 <= 14) {
@@ -127,7 +130,7 @@ const getRussianHourUnit = (hours: number, units: typeof localizationConfig['ru'
 
 
 const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) => {
-  const iconBaseColor = '#FF1414'; 
+  const iconBaseColor = '#FF1414';
   const dataToDisplay = initialData;
   const sections = dataToDisplay?.sections;
   const mainTitle = dataToDisplay?.mainTitle;
@@ -139,70 +142,73 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) =>
   if (!dataToDisplay || !sections || sections.length === 0) {
      return <div className="p-8 text-center">No training plan data available.</div>;
   }
-  
+
   const formatHoursDisplay = (hours: number, language: 'ru' | 'en') => {
     if (hours <= 0) return '-';
     const currentUnits = localizationConfig[language];
     if (language === 'en') {
       return `${hours}${hours === 1 ? currentUnits.timeUnitSingular : currentUnits.timeUnitGeneralPlural}`;
     }
-    // Russian specific pluralization
     return `${hours}${getRussianHourUnit(hours, currentUnits as typeof localizationConfig['ru'])}`;
   };
 
 
   return (
     <div className="font-['Inter',_sans-serif] bg-gray-50">
-      <div className="shadow-lg rounded-lg overflow-hidden border border-gray-200 bg-white">
+      {/* MODIFIED: border-gray-200 to border-gray-300 for slightly darker table border */}
+      <div className="shadow-lg rounded-lg overflow-hidden border border-gray-300 bg-white">
         {mainTitle && (
             <div className="bg-gray-800 text-white p-4">
                 <h1 className="text-xl md:text-2xl font-bold">{mainTitle}</h1>
             </div>
          )}
 
-        <div className="grid grid-cols-10 gap-0 text-gray-500 p-4 text-xs font-semibold items-center border-b border-gray-200 uppercase tracking-wider">
-            <div className="col-span-10 sm:col-span-4 pr-2 border-r border-gray-300">{localized.moduleAndLessons}</div>
-            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">{localized.knowledgeCheck}</div>
-            <div className="col-span-5 sm:col-span-1 text-left px-2 border-r border-gray-300">{localized.contentAvailability}</div>
-            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-300">{localized.source}</div>
-            <div className="col-span-5 sm:col-span-1 text-center px-2">{localized.time}</div>
+        {/* MODIFIED: border-b-gray-200 to border-b-gray-300; border-r-gray-300 to border-r-gray-400; Time col: text-center to text-left */}
+        <div className="grid grid-cols-10 gap-0 text-gray-500 p-4 text-xs font-semibold items-center border-b border-gray-300 uppercase tracking-wider">
+            <div className="col-span-10 sm:col-span-4 pr-2 border-r border-gray-400">{localized.moduleAndLessons}</div>
+            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-400">{localized.knowledgeCheck}</div>
+            <div className="col-span-5 sm:col-span-1 text-left px-2 border-r border-gray-400">{localized.contentAvailability}</div>
+            <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-400">{localized.source}</div>
+            <div className="col-span-5 sm:col-span-1 text-left px-2">{localized.time}</div> {/* MODIFIED: text-center to text-left */}
         </div>
 
         <div className="text-sm">
           {sections.map((section: Section) => (
             <React.Fragment key={section.id}>
-               <div className="grid grid-cols-10 gap-0 bg-gray-100 p-4 font-semibold items-center border-t border-gray-200">
-                  <div className="col-span-10 sm:col-span-9 flex items-center space-x-2 pr-2 border-r border-gray-300">
+               {/* MODIFIED: border-t-gray-200 to border-t-gray-300; border-r-gray-300 to border-r-gray-400 */}
+               <div className="grid grid-cols-10 gap-0 bg-gray-100 p-4 font-semibold items-center border-t border-gray-300">
+                  <div className="col-span-10 sm:col-span-9 flex items-center space-x-2 pr-2 border-r border-gray-400">
                       <span className="inline-flex items-center justify-center text-white rounded-sm w-auto px-1.5 h-5 text-xs font-bold" style={{ backgroundColor: iconBaseColor }}>{section.id}</span>
                       <span className="font-semibold text-gray-800">{section.title}</span>
                   </div>
-                  <div className="col-span-10 sm:col-span-1 flex items-center justify-start space-x-1 font-semibold px-2"> 
-                      <div className="w-4 flex justify-center"> 
+                  {/* MODIFIED: space-x-1 to space-x-2 */}
+                  <div className="col-span-10 sm:col-span-1 flex items-center justify-start space-x-2 font-semibold px-2">
+                      <div className="w-4 flex justify-center">
                         <NewClockIcon color={iconBaseColor} className="w-4 h-4"/>
                       </div>
-                      {/* Updated Section Hours */}
                       <span style={{ color: iconBaseColor }} className="flex-grow text-left">
                         {formatHoursDisplay(section.totalHours, lang)}
-                      </span> 
+                      </span>
                   </div>
                </div>
               {section.lessons.map((lesson: Lesson, lessonIndex: number) => (
-                    <div key={lessonIndex} className="grid grid-cols-10 gap-0 p-4 items-center border-t border-gray-200 hover:bg-gray-50 transition-colors duration-150 min-h-[50px]">
-                      <div className="col-span-10 sm:col-span-4 text-gray-800 pr-2 border-r border-gray-300">{lesson.title}</div>
-                      <div className="col-span-5 sm:col-span-2 flex justify-start px-2 border-r border-gray-300">
+                    // MODIFIED: border-t-gray-200 to border-t-gray-300; border-r-gray-300 to border-r-gray-400
+                    <div key={lessonIndex} className="grid grid-cols-10 gap-0 p-4 items-center border-t border-gray-300 hover:bg-gray-50 transition-colors duration-150 min-h-[50px]"> {/* You can adjust min-h-[50px] if "longer" implies taller rows */}
+                      <div className="col-span-10 sm:col-span-4 text-gray-800 pr-2 border-r border-gray-400">{lesson.title}</div>
+                      <div className="col-span-5 sm:col-span-2 flex justify-start px-2 border-r border-gray-400">
                           <StatusBadge type={lesson.check.type} text={lesson.check.text} columnContext="check" />
                       </div>
-                      <div className="col-span-5 sm:col-span-1 flex justify-start px-2 border-r border-gray-300">
+                      <div className="col-span-5 sm:col-span-1 flex justify-start px-2 border-r border-gray-400">
                            <StatusBadge type={lesson.contentAvailable.type} text={lesson.contentAvailable.text} columnContext="contentAvailable" />
                       </div>
-                      <div className="col-span-10 sm:col-span-2 text-gray-600 px-2 border-r border-gray-300">
+                      <div className="col-span-10 sm:col-span-2 text-gray-600 px-2 border-r border-gray-400">
                            {lesson.source}
                       </div>
-                      <div className="col-span-10 sm:col-span-1 flex items-center justify-start space-x-1 text-gray-500 px-2">
+                      {/* MODIFIED: space-x-1 to space-x-2 */}
+                      <div className="col-span-10 sm:col-span-1 flex items-center justify-start space-x-2 text-gray-500 px-2">
                          <div className="w-4 flex justify-center">
                             <NewClockIcon color={iconBaseColor} className="w-4 h-4" />
                          </div>
-                         {/* Updated Lesson Hours */}
                          <span className="flex-grow text-left">
                            {formatHoursDisplay(lesson.hours, lang)}
                          </span>
@@ -217,4 +223,3 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) =>
   );
 };
 export default TrainingPlanTable;
-
