@@ -27,11 +27,41 @@ interface ProjectEntry {
   product: string;
   productSlug: string;
   microProduct: MicroProduct;
+  detectedLanguage?: string; // Added to receive language from backend
 }
 
 interface GroupedProjects {
   [projectName: string]: ProjectEntry[];
 }
+
+// Define translations for table headers
+const tableHeaderTranslations: Record<string, Record<string, string>> = {
+  en: {
+    name: 'Name',
+    product: 'Product',
+    microproduct: 'Microproduct',
+    webView: 'WebView',
+    pdf: 'PDF',
+    edit: 'Edit',
+  },
+  ru: {
+    name: 'Имя',
+    product: 'Продукт',
+    microproduct: 'Микропродукт',
+    webView: 'Веб-Просмотр',
+    pdf: 'PDF',
+    edit: 'Редакт.',
+  },
+  uk: {
+    name: 'Назва',
+    product: 'Продукт',
+    microproduct: 'Мікропродукт',
+    webView: 'Веб-перегляд',
+    pdf: 'PDF',
+    edit: 'Редаг.',
+  },
+};
+
 
 const ProjectsTable: React.FC = () => {
   const [projectsData, setProjectsData] = useState<ProjectEntry[]>([]);
@@ -80,6 +110,17 @@ const ProjectsTable: React.FC = () => {
       return acc;
     }, {} as GroupedProjects);
   }, [projectsData]);
+
+  // Determine the language for headers - uses the language of the first project or defaults to 'en'
+  const displayLanguage = useMemo(() => {
+    if (projectsData.length > 0 && projectsData[0].detectedLanguage) {
+      return projectsData[0].detectedLanguage;
+    }
+    return 'en'; // Default language
+  }, [projectsData]);
+
+  const headers = tableHeaderTranslations[displayLanguage] || tableHeaderTranslations.en;
+
 
   const handleToggleExpand = (projectName: string) => {
     setExpandedProjects(prev => ({ ...prev, [projectName]: !prev[projectName] }));
@@ -192,12 +233,12 @@ const ProjectsTable: React.FC = () => {
                     disabled={projectsData.length === 0}
                   />
                 </th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Name</th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Product</th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Microproduct</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">WebView</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">PDF</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Edit</th>
+                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">{headers.name}</th>
+                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">{headers.product}</th>
+                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">{headers.microproduct}</th>
+                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">{headers.webView}</th>
+                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">{headers.pdf}</th>
+                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">{headers.edit}</th>
               </tr>
             </thead>
             {Object.entries(groupedProjects).map(([projectName, entries], groupIndex) => {
