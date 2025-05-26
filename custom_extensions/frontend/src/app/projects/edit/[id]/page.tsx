@@ -1,11 +1,9 @@
 // custom_extensions/frontend/src/app/projects/edit/[id]/page.tsx
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+// import Image from 'next/image'; // No longer needed
 import {
   TrainingPlanData,
   Section as SectionType,
@@ -15,6 +13,9 @@ import {
 } from '@/types/trainingPlan'; 
 import { DesignTemplateResponse } from '@/types/designTemplates'; 
 import { PlusCircle, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+
+const CUSTOM_API_BASE_URL = '/api/custom-projects-backend';
+// const CUSTOM_BACKEND_ROOT_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_ROOT_URL || ''; // No longer needed
 
 // Helper Functions (keep as is)
 const createEmptyStatusInfo = (): StatusInfo => ({ type: 'unknown', text: '' });
@@ -30,6 +31,7 @@ const createEmptyTrainingPlan = (initialProjectName?: string): TrainingPlanData 
   mainTitle: initialProjectName || "New Training Plan", sections: [createEmptySection(1)], detectedLanguage: 'en',
 });
 
+
 const EditProjectPageComponent = () => {
   const params = useParams();
   const router = useRouter();
@@ -38,7 +40,7 @@ const EditProjectPageComponent = () => {
   const [projectName, setProjectName] = useState('');
   const [microProductName, setMicroProductName] = useState(''); 
   const [selectedDesignTemplateId, setSelectedDesignTemplateId] = useState<string>('');
-
+  
   const [trainingPlanData, setTrainingPlanData] = useState<TrainingPlanData | null>(null);
   const [designTemplates, setDesignTemplates] = useState<DesignTemplateResponse[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
@@ -48,13 +50,14 @@ const EditProjectPageComponent = () => {
   const [error, setError] = useState<string | null>(null);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   
+  // imagePath removed from currentDesignInfo state
   const [currentDesignInfo, setCurrentDesignInfo] = useState<{ name: string, component: string } | null>(null);
 
   useEffect(() => {
     const fetchTemplates = async () => {
       setIsLoadingTemplates(true);
       try {
-        const response = await fetch('/api/custom-projects-backend/design_templates');
+        const response = await fetch(`${CUSTOM_API_BASE_URL}/design_templates`);
         if (!response.ok) throw new Error('Failed to fetch design templates');
         const data: DesignTemplateResponse[] = await response.json();
         setDesignTemplates(data);
@@ -67,8 +70,9 @@ const EditProjectPageComponent = () => {
     fetchTemplates();
   }, []);
 
-  const loadProjectData = useCallback(async () => {
-    if (!projectId) return;
+  const loadProjectData = useCallback(async (currentProjectId: string) => {
+    // ... (loadProjectData logic remains similar, just don't use/set imagePath from data)
+    if (!currentProjectId) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -78,30 +82,26 @@ const EditProjectPageComponent = () => {
         headers['X-Dev-Onyx-User-ID'] = devUserId;
       }
 
-      const response = await fetch(`/api/custom-projects-backend/projects/${projectId}/edit`, { headers }); 
+      const response = await fetch(`${CUSTOM_API_BASE_URL}/projects/${currentProjectId}/edit`, { headers }); 
       if (!response.ok) {
         const errorDataText = await response.text();
         let errorDetail = `HTTP error! status: ${response.status}`;
-        try {
-            const errorJson = JSON.parse(errorDataText);
-            errorDetail = errorJson.detail || errorDetail;
-        } catch(e) {
-            errorDetail = `${errorDetail} - ${errorDataText.substring(0,100)}`;
-        }
+        try { const errorJson = JSON.parse(errorDataText); errorDetail = errorJson.detail || errorDetail; } 
+        catch(e) { errorDetail = `${errorDetail} - ${errorDataText.substring(0,100)}`; }
         throw new Error(errorDetail);
       }
       const data: ProjectDetailDataForEdit = await response.json();
 
       setProjectName(data.projectName || '');
       setMicroProductName(data.microProductName || '');
-      setSelectedDesignTemplateId(data.design_template_id?.toString() || '');
+      const designIdStr = data.design_template_id?.toString() || '';
+      setSelectedDesignTemplateId(designIdStr);
       
-      if (data.design_template_name || data.design_component_name) {
-        setCurrentDesignInfo({ 
-            name: data.design_template_name || 'N/A', 
-            component: data.design_component_name || 'N/A' // Fallback if null
-        });
-      }
+      setCurrentDesignInfo({ 
+          name: data.design_template_name || 'N/A', 
+          component: data.design_component_name || 'N/A',
+          // imagePath: data.design_image_path // Removed
+      });
 
       if (data.microProductContent) {
         const sectionsWithAutoCalc = data.microProductContent.sections.map(section => ({
@@ -120,30 +120,35 @@ const EditProjectPageComponent = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [projectId]);
+  }, []); 
 
   useEffect(() => {
-    if (projectId && !initialDataLoaded) {
-      loadProjectData();
+    if (projectId && !initialDataLoaded && !isLoadingTemplates) { 
+        if(designTemplates.length > 0 || !isLoadingTemplates) {
+            loadProjectData(projectId);
+        }
     }
-  }, [projectId, initialDataLoaded, loadProjectData]);
+  }, [projectId, initialDataLoaded, loadProjectData, designTemplates, isLoadingTemplates]);
   
-   useEffect(() => {
+   useEffect(() => { 
     if (selectedDesignTemplateId && designTemplates.length > 0) {
       const template = designTemplates.find(dt => dt.id.toString() === selectedDesignTemplateId);
       if (template) {
-        // Corrected line: Provide a fallback for component_name if it can be null/undefined
         setCurrentDesignInfo({ 
             name: template.template_name, 
-            component: template.component_name ?? 'UnknownComponent' // Fallback to a default string
+            component: template.component_name ?? 'UnknownComponent',
+            // imagePath: template.design_image_path // Removed
         });
       }
+    } else if (!selectedDesignTemplateId && initialDataLoaded) { 
+        //setCurrentDesignInfo(null); // Or clear parts of it
     }
-  }, [selectedDesignTemplateId, designTemplates]);
+  }, [selectedDesignTemplateId, designTemplates, initialDataLoaded]);
 
+  // ... (handleSubmit and other handlers remain the same) ...
   const handleSave = async () => {
-    if (!projectId || !trainingPlanData) {
-      alert("Project data or training plan data is missing.");
+    if (!projectId ) { 
+      alert("Project data is missing.");
       return;
     }
      if (!selectedDesignTemplateId) {
@@ -159,7 +164,7 @@ const EditProjectPageComponent = () => {
       projectName,
       design_template_id: parseInt(selectedDesignTemplateId, 10),
       microProductName: finalMicroProductName,
-      microProductContent: trainingPlanData,
+      microProductContent: trainingPlanData, 
     };
 
     try {
@@ -178,12 +183,8 @@ const EditProjectPageComponent = () => {
       if (!response.ok) {
         const errorDataText = await response.text();
         let errorDetail = `HTTP error! status: ${response.status}`;
-        try {
-            const errorJson = JSON.parse(errorDataText);
-            errorDetail = errorJson.detail || errorDetail;
-        } catch(e) {
-             errorDetail = `${errorDetail} - ${errorDataText.substring(0,100)}`;
-        }
+        try { const errorJson = JSON.parse(errorDataText); errorDetail = errorJson.detail || errorDetail; } 
+        catch(e) { errorDetail = `${errorDetail} - ${errorDataText.substring(0,100)}`;}
         throw new Error(errorDetail);
       }
       alert("Project updated successfully!");
@@ -196,14 +197,12 @@ const EditProjectPageComponent = () => {
       setIsSaving(false);
     }
   };
-
   const handleTrainingPlanDataChange = (field: keyof TrainingPlanData, value: any) => {
     setTrainingPlanData(prev => {
         const basePlan = prev || createEmptyTrainingPlan(projectName);
         return { ...basePlan, [field]: value };
     });
   };
-
   const handleSectionChange = (sectionIndex: number, field: keyof SectionType, value: any) => {
     if (!trainingPlanData) return;
     const newSections = trainingPlanData.sections.map((s, idx) =>
@@ -211,7 +210,6 @@ const EditProjectPageComponent = () => {
     );
     setTrainingPlanData({ ...trainingPlanData, sections: newSections });
   };
-
   const toggleAutoCalculateHours = (sectionIndex: number) => {
     if (!trainingPlanData) return;
     const newSections = [...trainingPlanData.sections];
@@ -225,7 +223,6 @@ const EditProjectPageComponent = () => {
       setTrainingPlanData({ ...trainingPlanData, sections: newSections });
     }
   };
-
   const handleLessonChange = (sectionIndex: number, lessonIndex: number, field: keyof LessonType, value: any) => {
     if (!trainingPlanData) return;
     const newSections = [...trainingPlanData.sections];
@@ -241,7 +238,6 @@ const EditProjectPageComponent = () => {
     newSections[sectionIndex] = currentSection;
     setTrainingPlanData({ ...trainingPlanData, sections: newSections });
   };
-
   const handleLessonStatusChange = (sectionIndex: number, lessonIndex: number, field: 'check' | 'contentAvailable', subField: keyof StatusInfo, value: string) => {
       if (!trainingPlanData) return;
       const newSections = [...trainingPlanData.sections];
@@ -250,30 +246,23 @@ const EditProjectPageComponent = () => {
       const lesson = { ...newLessons[lessonIndex] };
       const updatedStatusInfo = { ...(lesson[field] || createEmptyStatusInfo()), [subField]: value };
       (lesson as any)[field] = updatedStatusInfo;
-
       newLessons[lessonIndex] = lesson;
       currentSection.lessons = newLessons;
       newSections[sectionIndex] = currentSection;
       setTrainingPlanData({ ...trainingPlanData, sections: newSections });
   };
-
   const addSection = () => {
     setTrainingPlanData(prev => {
         const basePlan = prev || createEmptyTrainingPlan(projectName);
         const newSection = createEmptySection(basePlan.sections?.length ? basePlan.sections.length + 1 : 1);
-        return {
-            ...basePlan,
-            sections: [...(basePlan.sections || []), newSection],
-        };
+        return { ...basePlan, sections: [...(basePlan.sections || []), newSection] };
     });
   };
-
   const removeSection = (sectionIndex: number) => {
     if (!trainingPlanData) return;
     const newSections = trainingPlanData.sections.filter((_, i) => i !== sectionIndex);
     setTrainingPlanData({ ...trainingPlanData, sections: newSections });
   };
-
   const addLesson = (sectionIndex: number) => {
     if (!trainingPlanData) return;
     const newSections = [...trainingPlanData.sections];
@@ -284,7 +273,6 @@ const EditProjectPageComponent = () => {
         setTrainingPlanData({ ...trainingPlanData, sections: newSections });
     }
   };
-
   const removeLesson = (sectionIndex: number, lessonIndex: number) => {
     if (!trainingPlanData) return;
     const newSections = [...trainingPlanData.sections];
@@ -298,30 +286,25 @@ const EditProjectPageComponent = () => {
         setTrainingPlanData({ ...trainingPlanData, sections: newSections });
     }
   };
-
    const moveLesson = (sectionIndex: number, lessonIndex: number, direction: 'up' | 'down') => {
     if (!trainingPlanData) return;
     const newSections = [...trainingPlanData.sections];
     if (!newSections[sectionIndex]) return;
-
     const currentSection = { ...newSections[sectionIndex] };
     const lessons = [...currentSection.lessons];
     const targetIndex = direction === 'up' ? lessonIndex - 1 : lessonIndex + 1;
-
     if (targetIndex < 0 || targetIndex >= lessons.length) return;
-
     const temp = lessons[lessonIndex];
     lessons[lessonIndex] = lessons[targetIndex];
     lessons[targetIndex] = temp;
-
     currentSection.lessons = lessons;
     newSections[sectionIndex] = currentSection;
     setTrainingPlanData({ ...trainingPlanData, sections: newSections });
   };
 
   if (isLoading && !initialDataLoaded) return <div className="p-8 text-center font-['Inter',_sans-serif]">Loading project details...</div>;
-  if (error && !trainingPlanData) return <div className="p-8 text-center text-red-500 font-['Inter',_sans-serif]">Error: {error}</div>;
-  if (!projectId || !trainingPlanData) return <div className="p-8 text-center text-red-500 font-['Inter',_sans-serif]">Error: Project data not fully available.</div>;
+  if (error && (!trainingPlanData && !initialDataLoaded)) return <div className="p-8 text-center text-red-500 font-['Inter',_sans-serif]">Error: {error}</div>;
+  if (!projectId) return <div className="p-8 text-center text-red-500 font-['Inter',_sans-serif]">Error: Project ID missing.</div>;
   
   const inputBaseClasses = "block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
   const labelBaseClasses = "block text-sm font-medium text-black mb-1";
@@ -331,6 +314,7 @@ const EditProjectPageComponent = () => {
   const switchContainerClasses = "flex items-center space-x-2";
   const switchBaseClasses = "relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500";
   const switchKnobClasses = "inline-block w-4 h-4 transform bg-white rounded-full transition-transform";
+
 
   return (
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen font-['Inter',_sans-serif]">
@@ -366,6 +350,7 @@ const EditProjectPageComponent = () => {
                     Using: {currentDesignInfo.name} (Component: {currentDesignInfo.component})
                  </p>
             )}
+            {/* Image display removed */}
           </div>
           
           <div>
@@ -380,8 +365,9 @@ const EditProjectPageComponent = () => {
           </div>
         </div>
 
-        {trainingPlanData && currentDesignInfo?.component === 'TrainingPlanTable' && (
+        {trainingPlanData && currentDesignInfo?.component === 'TrainingPlanTable' ? (
           <div className="pt-6">
+            {/* ... TrainingPlanTable editor UI ... */}
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-black">
                   Content Details
@@ -394,73 +380,39 @@ const EditProjectPageComponent = () => {
             <div className="mb-4">
                 <label htmlFor="mainTitle" className={labelBaseClasses}>Main Content Title:</label>
                 <input
-                  type="text"
-                  id="mainTitle"
-                  value={trainingPlanData.mainTitle || ''}
+                  type="text" id="mainTitle" value={trainingPlanData.mainTitle || ''}
                   onChange={(e) => handleTrainingPlanDataChange('mainTitle', e.target.value)}
-                  placeholder="Main Content Title"
-                  className={`${inputBaseClasses} text-black`}
+                  placeholder="Main Content Title" className={`${inputBaseClasses} text-black`}
                 />
             </div>
-
             {trainingPlanData.sections.map((section, sectionIdx) => (
               <div key={section.id || `section-${sectionIdx}`} className="mb-6 p-4 border border-gray-300 rounded-lg bg-slate-50 shadow">
                 <div className="flex justify-between items-center mb-3">
                     <div className="flex-grow mr-2">
                          <label className="block text-xs font-medium text-black">Section Title (e.g., Module 1: Introduction)</label>
-                        <input
-                            type="text"
-                            value={section.title}
-                            onChange={(e) => handleSectionChange(sectionIdx, 'title', e.target.value)}
-                            placeholder="Section Title"
-                            className={sectionTitleClasses}
-                        />
+                        <input type="text" value={section.title} onChange={(e) => handleSectionChange(sectionIdx, 'title', e.target.value)} placeholder="Section Title" className={sectionTitleClasses}/>
                     </div>
-                  <button onClick={() => removeSection(sectionIdx)} className="p-1.5 text-red-500 hover:text-red-700" title="Remove Section">
-                    <Trash2 size={20} />
-                  </button>
+                  <button onClick={() => removeSection(sectionIdx)} className="p-1.5 text-red-500 hover:text-red-700" title="Remove Section"><Trash2 size={20} /></button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label className="block text-xs font-medium text-black">Section ID (e.g., №1, Mod1):</label>
-                        <input
-                            type="text"
-                            value={section.id}
-                            onChange={(e) => handleSectionChange(sectionIdx, 'id', e.target.value)}
-                            placeholder="Section ID"
-                            className={smallInputClasses}
-                        />
+                        <input type="text" value={section.id} onChange={(e) => handleSectionChange(sectionIdx, 'id', e.target.value)} placeholder="Section ID" className={smallInputClasses} />
                     </div>
                     <div className="flex items-end space-x-3">
                         <div className="flex-grow">
-                            <label className="block text-xs font-medium text-black">
-                                Total Hours {section.autoCalculateHours ? "(auto-calculated)" : "(manual)"}:
-                            </label>
-                            <input
-                                type="number"
-                                value={section.totalHours.toFixed(1)}
-                                readOnly={section.autoCalculateHours}
-                                onChange={(e) => !section.autoCalculateHours && handleSectionChange(sectionIdx, 'totalHours', parseFloat(e.target.value) || 0)}
-                                className={`${smallInputClasses} ${section.autoCalculateHours ? 'bg-gray-100' : 'bg-white'}`}
-                            />
+                            <label className="block text-xs font-medium text-black">Total Hours {section.autoCalculateHours ? "(auto-calculated)" : "(manual)"}:</label>
+                            <input type="number" value={section.totalHours.toFixed(1)} readOnly={section.autoCalculateHours} onChange={(e) => !section.autoCalculateHours && handleSectionChange(sectionIdx, 'totalHours', parseFloat(e.target.value) || 0)} className={`${smallInputClasses} ${section.autoCalculateHours ? 'bg-gray-100' : 'bg-white'}`} />
                         </div>
                         <div className={switchContainerClasses} title="Toggle auto-calculation of total hours">
-                            <button
-                                type="button"
-                                onClick={() => toggleAutoCalculateHours(sectionIdx)}
-                                className={`${switchBaseClasses} ${section.autoCalculateHours ? 'bg-green-600' : 'bg-gray-300'}`}
-                                aria-pressed={section.autoCalculateHours}
-                            >
+                            <button type="button" onClick={() => toggleAutoCalculateHours(sectionIdx)} className={`${switchBaseClasses} ${section.autoCalculateHours ? 'bg-green-600' : 'bg-gray-300'}`} aria-pressed={section.autoCalculateHours}>
                                 <span className="sr-only">Toggle auto-calculate hours</span>
-                                <span
-                                className={`${switchKnobClasses} ${section.autoCalculateHours ? 'translate-x-5' : 'translate-x-1'}`}
-                                />
+                                <span className={`${switchKnobClasses} ${section.autoCalculateHours ? 'translate-x-5' : 'translate-x-1'}`} />
                             </button>
                              <span className="text-xs text-gray-600">{section.autoCalculateHours ? "Auto" : "Manual"}</span>
                         </div>
                     </div>
                 </div>
-
                 <h4 className="text-md font-semibold text-black mb-2 mt-4">Lessons/Items:</h4>
                 {section.lessons.map((lesson, lessonIdx) => (
                   <div key={lesson.id || `lesson-${sectionIdx}-${lessonIdx}`} className="ml-4 mb-4 p-3 border border-gray-200 rounded-md bg-white shadow-sm">
@@ -501,12 +453,11 @@ const EditProjectPageComponent = () => {
               </div>
             ))}
           </div>
-        )}
-         {trainingPlanData && currentDesignInfo && currentDesignInfo.component !== 'TrainingPlanTable' && (
-            <div className="pt-6 text-center text-gray-600">
-                <p>This project uses the &quot;{currentDesignInfo.name}&quot; design which is displayed using the &quot;{currentDesignInfo.component}&quot; component.</p>
-                <p>Currently, detailed content editing is primarily supported for &quot;TrainingPlanTable&quot; components.</p>
-                <p>You can still edit the Project Name and Instance Name above.</p>
+        ) : trainingPlanData && currentDesignInfo ? (
+             <div className="pt-6 text-center text-gray-600">
+                <p>This project uses the design &quot;{currentDesignInfo.name}&quot; which is displayed using the &quot;{currentDesignInfo.component}&quot; component.</p>
+                <p>Currently, detailed content editing is primarily supported for &quot;TrainingPlanTable&quot; components via this interface.</p>
+                <p>You can still edit the Project Name, Instance Name, and selected Design Template above.</p>
                 <div className="mt-4 p-4 border border-gray-200 rounded-md bg-gray-50">
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">Raw Content Preview (Read-Only):</h3>
                     <textarea 
@@ -515,11 +466,11 @@ const EditProjectPageComponent = () => {
                         className="w-full h-64 p-2 border border-gray-300 rounded-md font-mono text-xs bg-gray-100"
                     />
                      <p className="mt-1 text-xs text-gray-500">
-                        Note: The content structure is defined by the selected design template. For advanced editing of this structure, consider modifying the design template or using a specialized editor if available for this component type.
+                        Note: The content structure is defined by the selected design template. Changes to raw content here are not directly supported and might not persist correctly for non-TrainingPlanTable designs.
                     </p>
                 </div>
             </div>
-        )}
+        ) : null}
 
         <div className="flex justify-end gap-3 mt-8">
           <button type="button" onClick={() => router.push('/projects')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">

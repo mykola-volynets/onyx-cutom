@@ -307,6 +307,7 @@ class ProjectDetailForEditResponse(BaseModel):
     createdAt: Optional[datetime] = None
     design_template_name: Optional[str] = None
     design_component_name: Optional[str] = None
+    design_image_path: Optional[str] = None
     model_config = {"from_attributes": True}
 
 class ProjectUpdateRequest(BaseModel):
@@ -831,17 +832,46 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
 
 @app.get("/api/custom/projects/{project_id}/edit", response_model=ProjectDetailForEditResponse)
 async def get_project_details_for_edit(project_id: int, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
-    query = "SELECT p.id, p.project_name, p.microproduct_name, p.microproduct_content, p.created_at, p.design_template_id, dt.template_name as design_template_name, dt.component_name as design_component_name, p.product_type, p.microproduct_type FROM projects p LEFT JOIN design_templates dt ON p.design_template_id = dt.id WHERE p.id = $1 AND p.onyx_user_id = $2;"
+    query = """
+        SELECT 
+            p.id, p.project_name, p.microproduct_name, p.microproduct_content, p.created_at,
+            p.design_template_id, dt.template_name as design_template_name, 
+            dt.component_name as design_component_name,
+            dt.design_image_path as design_image_path, -- <<< ADD THIS LINE
+            p.product_type, p.microproduct_type 
+        FROM projects p
+        LEFT JOIN design_templates dt ON p.design_template_id = dt.id
+        WHERE p.id = $1 AND p.onyx_user_id = $2;
+    """
     try:
         async with pool.acquire() as conn: row = await conn.fetchrow(query, project_id, onyx_user_id)
         if not row: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
-        row_dict = dict(row); db_content = row_dict.get("microproduct_content"); parsed_content_for_response: Optional[TrainingPlanDetails] = None
+        
+        row_dict = dict(row)
+        db_content = row_dict.get("microproduct_content")
+        parsed_content_for_response: Optional[TrainingPlanDetails] = None
+
         if db_content:
             if isinstance(db_content, dict):
-                try: parsed_content_for_response = TrainingPlanDetails(**db_content)
-                except Exception as e: print(f"Pydantic validation error for DB JSON (project {project_id}): {e}"); parsed_content_for_response = TrainingPlanDetails(mainTitle=f"Content for {row_dict['project_name']} (validation error)", sections=[], detectedLanguage='ru')
-            elif isinstance(db_content, str): parsed_content_for_response = parse_training_plan_from_string(db_content, row_dict["project_name"])
-        return ProjectDetailForEditResponse(id=row_dict["id"], projectName=row_dict["project_name"], microProductName=row_dict.get("microproduct_name"), design_template_id=row_dict.get("design_template_id"), microProductContent=parsed_content_for_response, createdAt=row_dict.get("created_at"), design_template_name=row_dict.get("design_template_name"), design_component_name=row_dict.get("design_component_name"))
+                try:
+                    parsed_content_for_response = TrainingPlanDetails(**db_content)
+                except Exception as e:
+                    print(f"Pydantic validation error for DB JSON content (project {project_id}): {e}")
+                    parsed_content_for_response = TrainingPlanDetails(mainTitle=f"Content for {row_dict['project_name']} (validation error)", sections=[], detectedLanguage='ru')
+            elif isinstance(db_content, str): 
+                parsed_content_for_response = parse_training_plan_from_string(db_content, row_dict["project_name"])
+        
+        return ProjectDetailForEditResponse(
+            id=row_dict["id"], 
+            projectName=row_dict["project_name"], 
+            microProductName=row_dict.get("microproduct_name"), 
+            design_template_id=row_dict.get("design_template_id"),
+            microProductContent=parsed_content_for_response, 
+            createdAt=row_dict.get("created_at"),
+            design_template_name=row_dict.get("design_template_name"),
+            design_component_name=row_dict.get("design_component_name"),
+            design_image_path=row_dict.get("design_image_path") # <<< ADD THIS LINE
+        )
     except HTTPException as e: raise e
     except Exception as e: print(f"Error fetching project {project_id} for edit: {e}"); traceback.print_exc(); raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching project details: {str(e)}")
 

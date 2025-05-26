@@ -5,7 +5,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Link as LinkIcon, FileText, Trash2, Pencil, ChevronDown, ChevronRight } from 'lucide-react';
-import { ProjectListItem } from '@/types/trainingPlan'; // Using the updated type
+import { ProjectListItem } from '@/types/trainingPlan'; 
 
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
 
@@ -52,7 +52,7 @@ const ProjectsTable: React.FC = () => {
 
   const groupedProjects = useMemo(() => {
     return projectsData.reduce((acc, project) => {
-      const { projectName } = project; // Group by main project name
+      const { projectName } = project; 
       if (!acc[projectName]) {
         acc[projectName] = [];
       }
@@ -64,24 +64,23 @@ const ProjectsTable: React.FC = () => {
   const handleToggleExpand = (projectName: string) => {
     setExpandedProjects(prev => ({ ...prev, [projectName]: !prev[projectName] }));
   };
-
-  const handlePdfClick = (projectId: number, microProductName: string | null | undefined) => {
-    const docNameSlug = microProductName ? slugify(microProductName) : 'document';
-    const fullProxiedPdfUrl = `${CUSTOM_BACKEND_URL}/pdf/${projectId}/${docNameSlug}`;
-    window.open(fullProxiedPdfUrl, '_blank');
-  };
   
-  const slugify = (text: string): string => {
-    if (!text) return "default-slug";
+  const slugify = (text: string | null | undefined): string => {
+    if (!text) return "document";
     return text
       .toString()
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, '-') // Replace spaces with -
-      .replace(/[^\w-]+/g, '') // Remove all non-word chars
-      .replace(/--+/g, '-'); // Replace multiple - with single -
+      .replace(/\s+/g, '-') 
+      .replace(/[^\w-]+/g, '') 
+      .replace(/--+/g, '-'); 
   }
 
+  const handlePdfClick = (projectId: number, microProductName: string | null | undefined) => {
+    const docNameSlug = slugify(microProductName);
+    const fullProxiedPdfUrl = `${CUSTOM_BACKEND_URL}/pdf/${projectId}/${docNameSlug}`;
+    window.open(fullProxiedPdfUrl, '_blank');
+  };
 
   const handleSelectAllChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = event.target.checked;
@@ -130,14 +129,13 @@ const ProjectsTable: React.FC = () => {
         throw new Error(errorData.detail);
       }
       const result = await response.json();
-      setProjectsData(prevProjects => prevProjects.filter(p => !validSelectedIds.includes(p.id)));
-      setSelectedProjectIds([]);
       alert(result.detail || `${validSelectedIds.length} project(s) deleted successfully.`);
-      fetchProjects(); // Refresh the list
+      fetchProjects(); 
     } catch (e: any) {
       alert(`Error deleting projects: ${e.message || "Unknown error."}`);
     } finally {
       setIsDeleting(false);
+      setSelectedProjectIds([]); 
     }
   };
 
@@ -184,14 +182,14 @@ const ProjectsTable: React.FC = () => {
                 </th>
                 <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Project Name</th>
                 <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Instance / Design Name</th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Design Category</th>
+                {/* Design Category column REMOVED */}
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">View</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">PDF</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Edit</th>
               </tr>
             </thead>
             {Object.entries(groupedProjects).map(([projectName, entries], groupIndex) => {
-              const isCurrentlyExpanded = expandedProjects[projectName] === undefined ? true : !!expandedProjects[projectName]; // Default to expanded
+              const isCurrentlyExpanded = expandedProjects[projectName] === undefined ? true : !!expandedProjects[projectName];
               const projectIdsInGroup = entries.map(e => e.id).filter(id => typeof id === 'number');
               const areAllInGroupSelected = projectIdsInGroup.length > 0 && projectIdsInGroup.every(id => selectedProjectIds.includes(id));
               
@@ -214,7 +212,8 @@ const ProjectsTable: React.FC = () => {
                           checked={areAllInGroupSelected} onChange={handleSelectGroupChange} disabled={projectIdsInGroup.length === 0} 
                           onClick={(e) => e.stopPropagation()} />
                       </td>
-                      <td colSpan={6} className="text-left py-3 px-4 font-semibold">
+                      {/* Adjusted colSpan since Design Category is removed */}
+                      <td colSpan={4} className="text-left py-3 px-4 font-semibold"> 
                         <div className="flex items-center">
                           {isCurrentlyExpanded ? <ChevronDown size={18} className="mr-2 expand-collapse-icon" /> : <ChevronRight size={18} className="mr-2 expand-collapse-icon" />}
                           {projectName} ({entries.length} instances)
@@ -224,7 +223,7 @@ const ProjectsTable: React.FC = () => {
                   )}
                   
                   {entries.map((item, itemIndex) => {
-                    const detailPageUrl = `/projects/view/${item.id}`; // New view path
+                    const detailPageUrl = `/projects/view/${item.id}`; 
                     const isRowSelected = typeof item.id === 'number' && selectedProjectIds.includes(item.id);
                     
                     const rowVisibleClass = entries.length > 1 ? (isCurrentlyExpanded ? 'expanded-group-item-visible' : 'expanded-group-item-hidden') : '';
@@ -244,13 +243,13 @@ const ProjectsTable: React.FC = () => {
                               onChange={(e) => {if (typeof item.id === 'number') handleRowCheckboxChange(item.id, e.target.checked)}} />
                         </td>
                         <td className={`text-left py-3 px-4 ${entries.length > 1 ? 'pl-10' : ''}`}>
-                          {entries.length > 1 ? "" : item.projectName}
+                          {entries.length === 1 ? item.projectName : ""}
                         </td>
                         <td className="text-left py-3 px-4">{item.microproduct_name || item.design_template_name || 'N/A'}</td>
-                        <td className="text-left py-3 px-4">{item.design_microproduct_type || 'N/A'}</td>
+                        {/* Design Category cell REMOVED */}
                         <td className="text-center py-3 px-4">
-                          <Link href={detailPageUrl} legacyBehavior>
-                              <a target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 inline-block"><LinkIcon size={18} /></a>
+                          <Link href={detailPageUrl} className="text-blue-500 hover:text-blue-700 inline-block">
+                            <LinkIcon size={18} />
                           </Link>
                         </td>
                         <td className="text-center py-3 px-4">
@@ -283,13 +282,19 @@ const ProjectsTable: React.FC = () => {
           display: none;
         }
         .expanded-group-item-visible {
-          display: table-row;
+          display: table-row; 
+        }
+        tr.project-item-row-expanded { 
+            display: table-row !important;
+        }
+        tr.project-item-row-collapsed { 
+            display: none !important;
         }
         .expanded-group-item-even {
-            background-color: #f9fafb; /* Tailwind's gray-50 */
+            background-color: #f9fafb; 
         }
         .expanded-group-item-odd {
-            background-color: #ffffff; /* White */
+            background-color: #ffffff; 
         }
       `}</style>
     </div>

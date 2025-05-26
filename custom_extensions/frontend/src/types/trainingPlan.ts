@@ -43,6 +43,7 @@ export interface ProjectDetailDataForEdit {
   // Information from the linked design template (read-only on edit page, for context)
   design_template_name?: string | null;
   design_component_name?: string | null;
+  design_image_path?: string | null;
 }
 
 // Type for the project list API response (simplified)
