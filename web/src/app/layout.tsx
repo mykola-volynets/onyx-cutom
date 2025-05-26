@@ -56,8 +56,8 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return {
-    title: enterpriseSettings?.application_name || "Onyx",
-    description: "Question answering for your documents",
+    title: "Content Builder AI",
+    description: "Create online course in just 30 minutes with the help of AI",
     icons: {
       icon: logoLocation,
     },

@@ -2,8 +2,8 @@
 import './globals.css'; // Your global styles and Tailwind imports
 
 export const metadata = {
-  title: 'Custom Onyx Projects',
-  description: 'Projects and Microproducts Extension',
+  title: 'Content Builder AI',
+  description: 'Create online course in just 30 minutes with the help of AI',
 };
 
 export default function RootLayout({
