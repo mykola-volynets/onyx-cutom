@@ -3,6 +3,7 @@ FROM node:18-slim AS base
 
 WORKDIR /app
 
+# This will copy package.json from custom_extensions/frontend/package.json
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
 
 RUN \
@@ -12,6 +13,7 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
+# This will copy all files from custom_extensions/frontend to /app
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1

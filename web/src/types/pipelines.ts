@@ -1,5 +1,3 @@
-// custom_extensions/frontend/src/types/pipelines.ts
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export interface PromptTemplate {
   id: string;
@@ -16,7 +14,7 @@ export interface Pipeline {
   is_discovery_prompts: boolean;
   is_structuring_prompts: boolean;
   // This should now be the primary way to access discovery prompts
-  discovery_prompts_list?: string[] | null; 
+  discovery_prompts_list?: string[] | null;
   structuring_prompts_list?: string[] | null;
   // Remove or mark as deprecated if the backend no longer sends these for the list endpoint
   discovery_prompts?: { [key: string]: string } | null; // Potentially remove if backend fully switched
@@ -41,19 +39,19 @@ export interface Pipeline {
   pipeline_description?: string | null;
   is_discovery_prompts: boolean;
   is_structuring_prompts: boolean;
-  discovery_prompts?: { [key: string]: string } | null; 
+  discovery_prompts?: { [key: string]: string } | null;
   structuring_prompts?: { [key: string]: string } | null;
   created_at: string; // Or Date
 }
 
 // For form data (Create and also shape of data for Edit form state)
 export interface PipelineFormData { // Combined for simplicity, 'id' distinguishes create/edit
-  id?: number; 
+  id?: number;
   pipeline_name: string;
   pipeline_description?: string | null;
   is_discovery_prompts: boolean;
   is_structuring_prompts: boolean;
-  discovery_prompts_list: string[]; 
+  discovery_prompts_list: string[];
   structuring_prompts_list: string[]; // Will store the TEXT of selected templates
 }
 

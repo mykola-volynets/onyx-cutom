@@ -6,6 +6,7 @@ import {
   FiChevronLeft,
   FiTool,
   FiGlobe,
+  FiShuffle, // Added for the new button icon
 } from "react-icons/fi";
 import { FeedbackType } from "../types";
 import React, {
@@ -82,6 +83,9 @@ import {
   removeThinkingTokens,
 } from "../utils/thinkingTokens";
 import { FileResponse } from "../my-documents/DocumentsContext";
+
+// Import the new modal
+import MakeIntoProductModal from "@/components/chat/MakeIntoProductModal"; 
 
 const TOOLS_WITH_CUSTOM_HANDLING = [
   SEARCH_TOOL_NAME,
@@ -243,6 +247,7 @@ export const AIMessage = ({
   index,
   documentSidebarVisible,
   removePadding,
+  onApplyProductPrompts, // New prop
 }: {
   userKnowledgeFiles?: FileResponse[];
   index?: number;
@@ -273,15 +278,17 @@ export const AIMessage = ({
   regenerate?: (modelOverRide: LlmDescriptor) => Promise<void>;
   setPresentingDocument: (document: MinimalOnyxDocument) => void;
   removePadding?: boolean;
+  onApplyProductPrompts?: (prompts: string[]) => void; // New prop
 }) => {
   const toolCallGenerating = toolCall && !toolCall.tool_result;
 
-  // Check if content contains thinking tokens (complete or partial)
   const hasThinkingTokens = useMemo(() => {
     return (
       hasCompletedThinkingTokens(content) || hasPartialThinkingTokens(content)
     );
   }, [content]);
+
+  const [makeIntoProductModalOpen, setMakeIntoProductModalOpen] = useState(false); // State for new modal
 
   const handleAddToProjects = () => {
     let messageText = "";
@@ -295,68 +302,51 @@ export const AIMessage = ({
 
     if (!messageText.trim() && typeof finalContentProcessed !== 'string' && typeof content !== 'string' && !markdownRef.current) {
       console.warn("Could not extract simple text from AI message for 'Add to projects'.");
-      // Decide if you want to proceed with empty/placeholder or alert the user
     }
 
-    // 1. Generate a unique key for sessionStorage
     const storageKey = `ai_response_for_project_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-  
-    // 2. Save the AI response text to sessionStorage
+    
     try {
       sessionStorage.setItem(storageKey, messageText.trim());
     } catch (e) {
       console.error("Error saving to sessionStorage:", e);
-      // Fallback or alert user if storage is full or disabled
       alert("Could not temporarily store AI response. It might be too large or web storage is disabled.");
       return;
     }
 
-    // 3. Construct the target URL with the key
-    // const customProjectsUiDomain = process.env.NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN;
-    // const customProjectsUiDomain = 'https://ml-dev.contentbuilder.ai';
-    // const targetUrl = `${customProjectsUiDomain}/custom-projects-ui/add-to-project?responseKey=${encodeURIComponent(storageKey)}`;
-    const customProjectsUiDomain = process.env.NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN || 'https://ml.contentbuilder.ai'; // Fallback is good practice
+    const customProjectsUiDomain = process.env.NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN || 'https://ml.contentbuilder.ai'; 
     const targetUrl = `${customProjectsUiDomain}/custom-projects-ui/add-to-project?responseKey=${encodeURIComponent(storageKey)}`;
     console.log('Using customProjectsUiDomain from env:', customProjectsUiDomain);
     console.log('Constructed targetUrl:', targetUrl);
-  
-    // 4. Open the new tab
+    
     window.open(targetUrl, "_blank");
   };
 
-  // Extract thinking content
+  const handleOpenMakeIntoProductModal = () => {
+    setMakeIntoProductModalOpen(true);
+  };
+
+
   const thinkingContent = useMemo(() => {
     if (!hasThinkingTokens) return "";
     return extractThinkingContent(content);
   }, [content, hasThinkingTokens]);
 
-  // Track if thinking is complete
   const isThinkingTokenComplete = useMemo(() => {
     return isThinkingComplete(thinkingContent);
   }, [thinkingContent]);
 
-  // Extract final content (remove thinking tokens)
   const finalContent = useMemo(() => {
     if (!hasThinkingTokens) return content;
     return removeThinkingTokens(content);
   }, [content, hasThinkingTokens]);
 
-  // Only show the message content when we've completed the thinking section
-  // or there are no thinking tokens to begin with
   const shouldShowContent = useMemo(() => {
     if (!hasThinkingTokens) return true;
-
-    // If the message is complete, we always show the content
     if (isComplete) return true;
-
-    // If thinking is not complete, we don't show the content yet
     if (!isThinkingTokenComplete) return false;
-
-    // If thinking is complete but we're not done with the message yet,
-    // only show the content if there's actually something to show
     const cleanedContent =
       typeof finalContent === "string" ? finalContent.trim() : finalContent;
-
     return !!cleanedContent && cleanedContent !== "";
   }, [hasThinkingTokens, isComplete, isThinkingTokenComplete, finalContent]);
 
@@ -393,7 +383,6 @@ export const AIMessage = ({
   const { isHovering, trackedElementRef, hoverElementRef } = useMouseTracking();
 
   const settings = useContext(SettingsContext);
-  // this is needed to give Prism a chance to load
 
   const selectedDocumentIds =
     selectedDocuments?.map((document) => document.document_id) || [];
@@ -458,7 +447,7 @@ export const AIMessage = ({
         {props.children}
       </MemoizedAnchor>
     ),
-    [docs]
+    [docs, userKnowledgeFiles, setPresentingDocument]
   );
 
   const currentMessageInd = messageId
@@ -474,7 +463,7 @@ export const AIMessage = ({
             const url = new URL(doc.link);
             return `https://${url.hostname}`;
           } catch {
-            return doc.link; // fallback to full link if parsing fails
+            return doc.link; 
           }
         }) || []
     )
@@ -505,8 +494,6 @@ export const AIMessage = ({
   );
   const markdownRef = useRef<HTMLDivElement>(null);
 
-  // Process selection copying with HTML formatting
-
   const renderedMarkdown = useMemo(() => {
     if (typeof finalContentProcessed !== "string") {
       return finalContentProcessed;
@@ -532,109 +519,151 @@ export const AIMessage = ({
     otherMessagesCanSwitchTo.length > 1;
 
   return (
-    <div
-      id={isComplete ? "onyx-ai-message" : undefined}
-      ref={trackedElementRef}
-      className={`py-5  ml-4 lg:px-5 relative flex
-        
-        ${removePadding && "!pl-24 -mt-12"}`}
-    >
+    <>
       <div
-        className={`mx-auto ${
-          shared ? "w-full" : "w-[90%]"
-        }  max-w-message-max`}
+        id={isComplete ? "onyx-ai-message" : undefined}
+        ref={trackedElementRef}
+        className={`py-5  ml-4 lg:px-5 relative flex
+         
+          ${removePadding && "!pl-24 -mt-12"}`}
       >
-        <div className={`lg:mr-12 ${!shared && "mobile:ml-0 md:ml-8"}`}>
-          <div className="flex items-start">
-            {!removePadding && (
-              <AssistantIcon
-                className="mobile:hidden"
-                size={24}
-                assistant={alternativeAssistant || currentPersona}
-              />
-            )}
+        <div
+          className={`mx-auto ${
+            shared ? "w-full" : "w-[90%]"
+          }  max-w-message-max`}
+        >
+          <div className={`lg:mr-12 ${!shared && "mobile:ml-0 md:ml-8"}`}>
+            <div className="flex items-start">
+              {!removePadding && (
+                <AssistantIcon
+                  className="mobile:hidden"
+                  size={24}
+                  assistant={alternativeAssistant || currentPersona}
+                />
+              )}
 
-            <div className="w-full">
-              <div className="max-w-message-max break-words">
-                <div className="w-full desktop:ml-4">
-                  <div className="max-w-message-max break-words">
-                    {userKnowledgeFiles.length == 0 &&
-                      (!toolCall || toolCall.tool_name === SEARCH_TOOL_NAME ? (
-                        <>
-                          {query !== undefined && (
-                            <div className="mb-1">
-                              <SearchSummary
-                                index={index || 0}
-                                query={query}
-                                finished={toolCall?.tool_result != undefined}
-                                handleSearchQueryEdit={handleSearchQueryEdit}
-                                docs={docs || []}
-                                toggleDocumentSelection={
-                                  toggleDocumentSelection!
-                                }
-                                userFileSearch={retrievalDisabled ?? false}
-                              />
-                            </div>
-                          )}
-
-                          {handleForceSearch &&
-                            content &&
-                            query === undefined &&
-                            !hasDocs &&
-                            !retrievalDisabled && (
+              <div className="w-full">
+                <div className="max-w-message-max break-words">
+                  <div className="w-full desktop:ml-4">
+                    <div className="max-w-message-max break-words">
+                      {userKnowledgeFiles.length == 0 &&
+                        (!toolCall || toolCall.tool_name === SEARCH_TOOL_NAME ? (
+                          <>
+                            {query !== undefined && (
                               <div className="mb-1">
-                                <SkippedSearch
-                                  handleForceSearch={handleForceSearch}
+                                <SearchSummary
+                                  index={index || 0}
+                                  query={query}
+                                  finished={toolCall?.tool_result != undefined}
+                                  handleSearchQueryEdit={handleSearchQueryEdit}
+                                  docs={docs || []}
+                                  toggleDocumentSelection={
+                                    toggleDocumentSelection!
+                                  }
+                                  userFileSearch={retrievalDisabled ?? false}
                                 />
                               </div>
                             )}
-                        </>
-                      ) : null)}
-                    {userKnowledgeFiles && (
-                      <UserKnowledgeFiles
-                        userKnowledgeFiles={userKnowledgeFiles}
-                      />
-                    )}
 
-                    {!userKnowledgeFiles &&
-                      toolCall &&
-                      !TOOLS_WITH_CUSTOM_HANDLING.includes(
-                        toolCall.tool_name
-                      ) && (
-                        <ToolRunDisplay
-                          toolName={
-                            toolCall.tool_result && content
-                              ? `Used "${toolCall.tool_name}"`
-                              : `Using "${toolCall.tool_name}"`
-                          }
-                          toolLogo={
-                            <FiTool size={15} className="my-auto mr-1" />
-                          }
-                          isRunning={!toolCall.tool_result || !content}
+                            {handleForceSearch &&
+                              content &&
+                              query === undefined &&
+                              !hasDocs &&
+                              !retrievalDisabled && (
+                                <div className="mb-1">
+                                  <SkippedSearch
+                                    handleForceSearch={handleForceSearch}
+                                  />
+                                </div>
+                              )}
+                          </>
+                        ) : null)}
+                      {userKnowledgeFiles && (
+                        <UserKnowledgeFiles
+                          userKnowledgeFiles={userKnowledgeFiles}
                         />
                       )}
-                    {toolCall &&
-                      (!files || files.length == 0) &&
-                      toolCall.tool_name === IMAGE_GENERATION_TOOL_NAME &&
-                      !toolCall.tool_result && <GeneratingImageDisplay />}
-                    {toolCall &&
-                      toolCall.tool_name === INTERNET_SEARCH_TOOL_NAME && (
-                        <ToolRunDisplay
-                          toolName={
-                            toolCall.tool_result
-                              ? `Searched the internet`
-                              : `Searching the internet`
-                          }
-                          toolLogo={
-                            <FiGlobe size={15} className="my-auto mr-1" />
-                          }
-                          isRunning={!toolCall.tool_result}
-                        />
-                      )}
-                    {userKnowledgeFiles.length == 0 &&
-                      docs &&
-                      docs.length > 0 && (
+
+                      {!userKnowledgeFiles &&
+                        toolCall &&
+                        !TOOLS_WITH_CUSTOM_HANDLING.includes(
+                          toolCall.tool_name
+                        ) && (
+                          <ToolRunDisplay
+                            toolName={
+                              toolCall.tool_result && content
+                                ? `Used "${toolCall.tool_name}"`
+                                : `Using "${toolCall.tool_name}"`
+                            }
+                            toolLogo={
+                              <FiTool size={15} className="my-auto mr-1" />
+                            }
+                            isRunning={!toolCall.tool_result || !content}
+                          />
+                        )}
+                      {toolCall &&
+                        (!files || files.length == 0) &&
+                        toolCall.tool_name === IMAGE_GENERATION_TOOL_NAME &&
+                        !toolCall.tool_result && <GeneratingImageDisplay />}
+                      {toolCall &&
+                        toolCall.tool_name === INTERNET_SEARCH_TOOL_NAME && (
+                          <ToolRunDisplay
+                            toolName={
+                              toolCall.tool_result
+                                ? `Searched the internet`
+                                : `Searching the internet`
+                            }
+                            toolLogo={
+                              <FiGlobe size={15} className="my-auto mr-1" />
+                            }
+                            isRunning={!toolCall.tool_result}
+                          />
+                        )}
+                      {userKnowledgeFiles.length == 0 &&
+                        docs &&
+                        docs.length > 0 && (
+                          <div
+                            className={`mobile:hidden ${
+                              (query ||
+                                toolCall?.tool_name ===
+                                  INTERNET_SEARCH_TOOL_NAME) &&
+                              "mt-2"
+                            }  -mx-8 w-full mb-4 flex relative`}
+                          >
+                            <div className="w-full">
+                              <div className="px-8 flex gap-x-2">
+                                {!settings?.isMobile &&
+                                  docs.length > 0 &&
+                                  docs
+                                    .slice(0, 2)
+                                    .map((doc: OnyxDocument, ind: number) => (
+                                      <SourceCard
+                                        document={doc}
+                                        key={ind}
+                                        setPresentingDocument={() =>
+                                          setPresentingDocument({
+                                            document_id: doc.document_id,
+                                            semantic_identifier: doc.document_id,
+                                          })
+                                        }
+                                      />
+                                    ))}
+                                <SeeMoreBlock
+                                  toggled={documentSidebarVisible!}
+                                  toggleDocumentSelection={
+                                    toggleDocumentSelection!
+                                  }
+                                  docs={docs}
+                                  webSourceDomains={webSourceDomains}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                      {userKnowledgeFiles && userKnowledgeFiles.length > 0 && (
                         <div
+                          key={10}
                           className={`mobile:hidden ${
                             (query ||
                               toolCall?.tool_name ===
@@ -645,309 +674,298 @@ export const AIMessage = ({
                           <div className="w-full">
                             <div className="px-8 flex gap-x-2">
                               {!settings?.isMobile &&
-                                docs.length > 0 &&
-                                docs
+                                userKnowledgeFiles.length > 0 &&
+                                userKnowledgeFiles
                                   .slice(0, 2)
-                                  .map((doc: OnyxDocument, ind: number) => (
-                                    <SourceCard
-                                      document={doc}
+                                  .map((file: FileResponse, ind: number) => (
+                                    <FileSourceCard
+                                      relevantDocument={docs?.find(
+                                        (doc) =>
+                                          doc.document_id ===
+                                            `FILE_CONNECTOR__${file.file_id}` ||
+                                          doc.document_id ===
+                                            `USER_FILE_CONNECTOR__${file.file_id}`
+                                      )}
                                       key={ind}
+                                      document={file}
                                       setPresentingDocument={() =>
                                         setPresentingDocument({
-                                          document_id: doc.document_id,
-                                          semantic_identifier: doc.document_id,
+                                          document_id: file.document_id,
+                                          semantic_identifier: file.name,
                                         })
                                       }
                                     />
                                   ))}
-                              <SeeMoreBlock
-                                toggled={documentSidebarVisible!}
-                                toggleDocumentSelection={
-                                  toggleDocumentSelection!
-                                }
-                                docs={docs}
-                                webSourceDomains={webSourceDomains}
-                              />
+
+                              {userKnowledgeFiles.length > 2 && (
+                                <FilesSeeMoreBlock
+                                  key={10}
+                                  toggled={documentSidebarVisible!}
+                                  toggleDocumentSelection={
+                                    toggleDocumentSelection!
+                                  }
+                                  files={userKnowledgeFiles}
+                                />
+                              )}
                             </div>
                           </div>
                         </div>
                       )}
 
-                    {userKnowledgeFiles && userKnowledgeFiles.length > 0 && (
-                      <div
-                        key={10}
-                        className={`mobile:hidden ${
-                          (query ||
-                            toolCall?.tool_name ===
-                              INTERNET_SEARCH_TOOL_NAME) &&
-                          "mt-2"
-                        }  -mx-8 w-full mb-4 flex relative`}
-                      >
-                        <div className="w-full">
-                          <div className="px-8 flex gap-x-2">
-                            {!settings?.isMobile &&
-                              userKnowledgeFiles.length > 0 &&
-                              userKnowledgeFiles
-                                .slice(0, 2)
-                                .map((file: FileResponse, ind: number) => (
-                                  <FileSourceCard
-                                    relevantDocument={docs?.find(
-                                      (doc) =>
-                                        doc.document_id ===
-                                          `FILE_CONNECTOR__${file.file_id}` ||
-                                        doc.document_id ===
-                                          `USER_FILE_CONNECTOR__${file.file_id}`
-                                    )}
-                                    key={ind}
-                                    document={file}
-                                    setPresentingDocument={() =>
-                                      setPresentingDocument({
-                                        document_id: file.document_id,
-                                        semantic_identifier: file.name,
-                                      })
-                                    }
-                                  />
-                                ))}
-
-                            {userKnowledgeFiles.length > 2 && (
-                              <FilesSeeMoreBlock
-                                key={10}
-                                toggled={documentSidebarVisible!}
-                                toggleDocumentSelection={
-                                  toggleDocumentSelection!
-                                }
-                                files={userKnowledgeFiles}
-                              />
-                            )}
-                          </div>
+                      {hasThinkingTokens && thinkingContent && (
+                        <div className="mb-2">
+                          <ThinkingBox
+                            content={thinkingContent}
+                            isComplete={isComplete || false}
+                            isStreaming={!isThinkingTokenComplete || !isComplete}
+                          />
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Render thinking box if thinking tokens exist */}
-                    {hasThinkingTokens && thinkingContent && (
-                      <div className="mb-2">
-                        <ThinkingBox
-                          content={thinkingContent}
-                          isComplete={isComplete || false}
-                          isStreaming={!isThinkingTokenComplete || !isComplete}
-                        />
-                      </div>
-                    )}
-
-                    {/* Only show the message content once thinking is complete or if there's no thinking */}
-                    {shouldShowContent && (content || files) ? (
-                      <>
-                        <FileDisplay
-                          setPresentingDocument={setPresentingDocument}
-                          files={files || []}
-                        />
-                        {typeof content === "string" ? (
-                          <div className="overflow-x-visible max-w-content-max">
-                            <div
-                              ref={markdownRef}
-                              className="focus:outline-none cursor-text select-text"
-                              onCopy={(e) => handleCopy(e, markdownRef)}
-                            >
-                              {renderedMarkdown}
+                      {shouldShowContent && (content || files) ? (
+                        <>
+                          <FileDisplay
+                            setPresentingDocument={setPresentingDocument}
+                            files={files || []}
+                          />
+                          {typeof content === "string" ? (
+                            <div className="overflow-x-visible max-w-content-max">
+                              <div
+                                ref={markdownRef}
+                                className="focus:outline-none cursor-text select-text"
+                                onCopy={(e) => handleCopy(e, markdownRef)}
+                              >
+                                {renderedMarkdown}
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          content
-                        )}
-                      </>
-                    ) : isComplete ? null : (
-                      <></>
-                    )}
+                          ) : (
+                            content
+                          )}
+                        </>
+                      ) : isComplete ? null : (
+                        <></>
+                      )}
+                    </div>
+
+                    {!removePadding &&
+                      handleFeedback &&
+                      (isActive ? (
+                        <div
+                          className={`
+                            flex md:flex-row gap-x-0.5 mt-1
+                            transition-transform duration-300 ease-in-out
+                            transform opacity-100 "
+                      `}
+                        >
+                          <TooltipGroup>
+                            <div className="flex justify-start w-full gap-x-0.5">
+                              {includeMessageSwitcher && (
+                                <div className="-mx-1 mr-auto">
+                                  <MessageSwitcher
+                                    currentPage={currentMessageInd! + 1}
+                                    totalPages={otherMessagesCanSwitchTo!.length}
+                                    handlePrevious={() => {
+                                      onMessageSelection!(
+                                        otherMessagesCanSwitchTo![
+                                          currentMessageInd! - 1
+                                        ]
+                                      );
+                                    }}
+                                    handleNext={() => {
+                                      onMessageSelection!(
+                                        otherMessagesCanSwitchTo![
+                                          currentMessageInd! + 1
+                                        ]
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <CustomTooltip showTick line content="Copy">
+                              <CopyButton
+                                copyAllFn={() =>
+                                  copyAll(
+                                    finalContentProcessed as string,
+                                    markdownRef
+                                  )
+                                }
+                              />
+                            </CustomTooltip>
+                            <CustomTooltip showTick line content="Good response">
+                              <HoverableIcon
+                                icon={<LikeFeedback />}
+                                onClick={() => handleFeedback("like")}
+                              />
+                            </CustomTooltip>
+                            <CustomTooltip showTick line content="Bad response">
+                              <HoverableIcon
+                                icon={<DislikeFeedback size={16} />}
+                                onClick={() => handleFeedback("dislike")}
+                              />
+                            </CustomTooltip>
+
+                            {regenerate && (
+                              <CustomTooltip
+                                disabled={isRegenerateDropdownVisible}
+                                showTick
+                                line
+                                content="Regenerate"
+                              >
+                                <RegenerateOption
+                                  onDropdownVisibleChange={
+                                    setIsRegenerateDropdownVisible
+                                  }
+                                  selectedAssistant={currentPersona!}
+                                  regenerate={regenerate}
+                                  overriddenModel={overriddenModel}
+                                />
+                              </CustomTooltip>
+                            )}
+                             <button
+                               onClick={handleAddToProjects}
+                               title="Add to projects" // Tooltip via title attribute
+                               className="p-1.5 rounded-lg hover:bg-background-strong cursor-pointer" // Basic styling to somewhat match others
+                               style={{ // More explicit styling if needed
+                                 marginLeft: '4px', // Adjust spacing as needed
+                                 padding: '6px 8px',
+                                 fontSize: '12px',
+                                 border: '1px solid #ccc', // Example border
+                                 borderRadius: '4px',
+                               }}
+                             >
+                               Add to projects
+                             </button>
+                            {/* New "Make into Product" button */}
+                            <CustomTooltip showTick line content="Make into Product">
+                              <HoverableIcon
+                                icon={<FiShuffle />} 
+                                onClick={handleOpenMakeIntoProductModal}
+                              />
+                            </CustomTooltip>
+                          </TooltipGroup>
+                        </div>
+                      ) : (
+                        <div
+                          ref={hoverElementRef}
+                          className={`
+                            absolute -bottom-5
+                            z-10
+                            invisible ${
+                              (isHovering || settings?.isMobile) && "!visible"
+                            }
+                            opacity-0 ${
+                              (isHovering || settings?.isMobile) && "!opacity-100"
+                            }
+                            flex md:flex-row gap-x-0.5 bg-background-125/40 -mx-1.5 p-1.5 rounded-lg
+                            `}
+                        >
+                          <TooltipGroup>
+                            <div className="flex justify-start w-full gap-x-0.5">
+                              {includeMessageSwitcher && (
+                                <div className="-mx-1 mr-auto">
+                                  <MessageSwitcher
+                                    currentPage={currentMessageInd! + 1}
+                                    totalPages={otherMessagesCanSwitchTo!.length}
+                                    handlePrevious={() => {
+                                      onMessageSelection!(
+                                        otherMessagesCanSwitchTo![
+                                          currentMessageInd! - 1
+                                        ]
+                                      );
+                                    }}
+                                    handleNext={() => {
+                                      onMessageSelection!(
+                                        otherMessagesCanSwitchTo![
+                                          currentMessageInd! + 1
+                                        ]
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <CustomTooltip showTick line content="Copy">
+                              <CopyButton
+                                copyAllFn={() =>
+                                  copyAll(
+                                    finalContentProcessed as string,
+                                    markdownRef
+                                  )
+                                }
+                              />
+                            </CustomTooltip>
+
+                            <CustomTooltip showTick line content="Good response">
+                              <HoverableIcon
+                                icon={<LikeFeedback />}
+                                onClick={() => handleFeedback("like")}
+                              />
+                            </CustomTooltip>
+
+                            <CustomTooltip showTick line content="Bad response">
+                              <HoverableIcon
+                                icon={<DislikeFeedback size={16} />}
+                                onClick={() => handleFeedback("dislike")}
+                              />
+                            </CustomTooltip>
+                            {regenerate && (
+                              <CustomTooltip
+                                disabled={isRegenerateDropdownVisible}
+                                showTick
+                                line
+                                content="Regenerate"
+                              >
+                                <RegenerateOption
+                                  selectedAssistant={currentPersona!}
+                                  onDropdownVisibleChange={
+                                    setIsRegenerateDropdownVisible
+                                  }
+                                  regenerate={regenerate}
+                                  overriddenModel={overriddenModel}
+                                />
+                              </CustomTooltip>
+                            )}
+                             {/* New "Make into Product" button - also for hover state if desired */}
+                             <CustomTooltip showTick line content="Make into Product">
+                              <HoverableIcon
+                                icon={<FiShuffle />}
+                                onClick={handleOpenMakeIntoProductModal}
+                              />
+                            </CustomTooltip>
+                          </TooltipGroup>
+                        </div>
+                      ))}
                   </div>
-
-                  {!removePadding &&
-                    handleFeedback &&
-                    (isActive ? (
-                      <div
-                        className={`
-                        flex md:flex-row gap-x-0.5 mt-1
-                        transition-transform duration-300 ease-in-out
-                        transform opacity-100 "
-                  `}
-                      >
-                        <TooltipGroup>
-                          <div className="flex justify-start w-full gap-x-0.5">
-                            {includeMessageSwitcher && (
-                              <div className="-mx-1 mr-auto">
-                                <MessageSwitcher
-                                  currentPage={currentMessageInd + 1}
-                                  totalPages={otherMessagesCanSwitchTo.length}
-                                  handlePrevious={() => {
-                                    onMessageSelection(
-                                      otherMessagesCanSwitchTo[
-                                        currentMessageInd - 1
-                                      ]
-                                    );
-                                  }}
-                                  handleNext={() => {
-                                    onMessageSelection(
-                                      otherMessagesCanSwitchTo[
-                                        currentMessageInd + 1
-                                      ]
-                                    );
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                          <CustomTooltip showTick line content="Copy">
-                            <CopyButton
-                              copyAllFn={() =>
-                                copyAll(
-                                  finalContentProcessed as string,
-                                  markdownRef
-                                )
-                              }
-                            />
-                          </CustomTooltip>
-                          <CustomTooltip showTick line content="Good response">
-                            <HoverableIcon
-                              icon={<LikeFeedback />}
-                              onClick={() => handleFeedback("like")}
-                            />
-                          </CustomTooltip>
-                          <CustomTooltip showTick line content="Bad response">
-                            <HoverableIcon
-                              icon={<DislikeFeedback size={16} />}
-                              onClick={() => handleFeedback("dislike")}
-                            />
-                          </CustomTooltip>
-
-                          {regenerate && (
-                            <CustomTooltip
-                              disabled={isRegenerateDropdownVisible}
-                              showTick
-                              line
-                              content="Regenerate"
-                            >
-                              <RegenerateOption
-                                onDropdownVisibleChange={
-                                  setIsRegenerateDropdownVisible
-                                }
-                                selectedAssistant={currentPersona!}
-                                regenerate={regenerate}
-                                overriddenModel={overriddenModel}
-                              />
-                            </CustomTooltip>
-                          )}
-			  <button
-    			    onClick={handleAddToProjects}
-			    title="Add to projects" // Tooltip via title attribute
-			    className="p-1.5 rounded-lg hover:bg-background-strong cursor-pointer" // Basic styling to somewhat match others
-			    style={{ // More explicit styling if needed
-		  	      marginLeft: '4px', // Adjust spacing as needed
-		  	      padding: '6px 8px',
-			      fontSize: '12px',
-		  	      border: '1px solid #ccc', // Example border
-			      borderRadius: '4px',
-			    }}
-			  >
-			    Add to projects
-			  </button>
-                        </TooltipGroup>
-                      </div>
-                    ) : (
-                      <div
-                        ref={hoverElementRef}
-                        className={`
-                        absolute -bottom-5
-                        z-10
-                        invisible ${
-                          (isHovering || settings?.isMobile) && "!visible"
-                        }
-                        opacity-0 ${
-                          (isHovering || settings?.isMobile) && "!opacity-100"
-                        }
-                        flex md:flex-row gap-x-0.5 bg-background-125/40 -mx-1.5 p-1.5 rounded-lg
-                        `}
-                      >
-                        <TooltipGroup>
-                          <div className="flex justify-start w-full gap-x-0.5">
-                            {includeMessageSwitcher && (
-                              <div className="-mx-1 mr-auto">
-                                <MessageSwitcher
-                                  currentPage={currentMessageInd + 1}
-                                  totalPages={otherMessagesCanSwitchTo.length}
-                                  handlePrevious={() => {
-                                    onMessageSelection(
-                                      otherMessagesCanSwitchTo[
-                                        currentMessageInd - 1
-                                      ]
-                                    );
-                                  }}
-                                  handleNext={() => {
-                                    onMessageSelection(
-                                      otherMessagesCanSwitchTo[
-                                        currentMessageInd + 1
-                                      ]
-                                    );
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                          <CustomTooltip showTick line content="Copy">
-                            <CopyButton
-                              copyAllFn={() =>
-                                copyAll(
-                                  finalContentProcessed as string,
-                                  markdownRef
-                                )
-                              }
-                            />
-                          </CustomTooltip>
-
-                          <CustomTooltip showTick line content="Good response">
-                            <HoverableIcon
-                              icon={<LikeFeedback />}
-                              onClick={() => handleFeedback("like")}
-                            />
-                          </CustomTooltip>
-
-                          <CustomTooltip showTick line content="Bad response">
-                            <HoverableIcon
-                              icon={<DislikeFeedback size={16} />}
-                              onClick={() => handleFeedback("dislike")}
-                            />
-                          </CustomTooltip>
-                          {regenerate && (
-                            <CustomTooltip
-                              disabled={isRegenerateDropdownVisible}
-                              showTick
-                              line
-                              content="Regenerate"
-                            >
-                              <RegenerateOption
-                                selectedAssistant={currentPersona!}
-                                onDropdownVisibleChange={
-                                  setIsRegenerateDropdownVisible
-                                }
-                                regenerate={regenerate}
-                                overriddenModel={overriddenModel}
-                              />
-                            </CustomTooltip>
-                          )}
-                        </TooltipGroup>
-                      </div>
-                    ))}
                 </div>
               </div>
             </div>
           </div>
+          {(!toolCall || toolCall.tool_name === SEARCH_TOOL_NAME) &&
+            !query &&
+            continueGenerating && (
+              <ContinueGenerating handleContinueGenerating={continueGenerating} />
+            )}
         </div>
-        {(!toolCall || toolCall.tool_name === SEARCH_TOOL_NAME) &&
-          !query &&
-          continueGenerating && (
-            <ContinueGenerating handleContinueGenerating={continueGenerating} />
-          )}
       </div>
-    </div>
+      {/* Modal Render */}
+      {makeIntoProductModalOpen && (
+        <MakeIntoProductModal
+          isOpen={makeIntoProductModalOpen}
+          onClose={() => setMakeIntoProductModalOpen(false)}
+          onApply={(discoveryPrompts) => {
+            if (onApplyProductPrompts) {
+              onApplyProductPrompts(discoveryPrompts);
+            } else {
+              console.warn(
+                "onApplyProductPrompts handler is not defined in AIMessage props."
+              );
+            }
+            setMakeIntoProductModalOpen(false);
+          }}
+        />
+      )}
+    </>
   );
 };
 
@@ -976,8 +994,8 @@ function MessageSwitcher({
                   disableForStreaming
                     ? () => null
                     : currentPage === 1
-                      ? undefined
-                      : handlePrevious
+                    ? undefined
+                    : handlePrevious
                 }
               />
             </div>
@@ -1004,8 +1022,8 @@ function MessageSwitcher({
                   disableForStreaming
                     ? () => null
                     : currentPage === totalPages
-                      ? undefined
-                      : handleNext
+                    ? undefined
+                    : handleNext
                 }
               />
             </div>
@@ -1058,9 +1076,7 @@ export const HumanMessage = ({
 
   useEffect(() => {
     if (textareaRef.current) {
-      // Focus the textarea
       textareaRef.current.focus();
-      // Move the cursor to the end of the text
       textareaRef.current.selectionStart = textareaRef.current.value.length;
       textareaRef.current.selectionEnd = textareaRef.current.value.length;
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
@@ -1151,7 +1167,6 @@ export const HumanMessage = ({
                             setEditedContent(content);
                             setIsEditing(false);
                           }
-                          // Submit edit if "Command Enter" is pressed, like in ChatGPT
                           if (e.key === "Enter" && e.metaKey) {
                             handleEditSubmit();
                           }
@@ -1268,33 +1283,33 @@ export const HumanMessage = ({
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-col md:flex-row gap-x-0.5 mt-1">
-            {currentMessageInd !== undefined &&
-              onMessageSelection &&
-              otherMessagesCanSwitchTo &&
-              otherMessagesCanSwitchTo.length > 1 && (
-                <div className="ml-auto mr-3">
-                  <MessageSwitcher
-                    disableForStreaming={disableSwitchingForStreaming}
-                    currentPage={currentMessageInd + 1}
-                    totalPages={otherMessagesCanSwitchTo.length}
-                    handlePrevious={() => {
-                      stopGenerating();
-                      onMessageSelection(
-                        otherMessagesCanSwitchTo[currentMessageInd - 1]
-                      );
-                    }}
-                    handleNext={() => {
-                      stopGenerating();
-                      onMessageSelection(
-                        otherMessagesCanSwitchTo[currentMessageInd + 1]
-                      );
-                    }}
-                  />
-                </div>
-              )}
-          </div>
+        <div className="flex flex-col md:flex-row gap-x-0.5 mt-1">
+          {currentMessageInd !== undefined &&
+            onMessageSelection &&
+            otherMessagesCanSwitchTo &&
+            otherMessagesCanSwitchTo.length > 1 && (
+              <div className="ml-auto mr-3">
+                <MessageSwitcher
+                  disableForStreaming={disableSwitchingForStreaming}
+                  currentPage={currentMessageInd + 1}
+                  totalPages={otherMessagesCanSwitchTo.length}
+                  handlePrevious={() => {
+                    stopGenerating();
+                    onMessageSelection(
+                      otherMessagesCanSwitchTo[currentMessageInd - 1]
+                    );
+                  }}
+                  handleNext={() => {
+                    stopGenerating();
+                    onMessageSelection(
+                      otherMessagesCanSwitchTo[currentMessageInd + 1]
+                    );
+                  }}
+                />
+              </div>
+            )}
         </div>
       </div>
     </div>

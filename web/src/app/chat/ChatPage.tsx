@@ -1,5 +1,15 @@
 "use client";
 
+import React, {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   redirect,
   usePathname,
@@ -52,16 +62,6 @@ import {
   uploadFilesForChat,
   useScrollonStream,
 } from "./lib";
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
 import { usePopup } from "@/components/admin/connectors/Popup";
 import { SEARCH_PARAM_NAMES, shouldSubmitOnLoad } from "./searchParams";
 import { LlmDescriptor, useFilters, useLlmManager } from "@/lib/hooks";
@@ -121,7 +121,7 @@ import {
 
 import { getSourceMetadata } from "@/lib/sources";
 import { UserSettingsModal } from "./modal/UserSettingsModal";
-import { AgenticMessage } from "./message/AgenticMessage";
+import { AgenticMessage } from "./message/AgenticMessage"; // Assuming AgenticMessage is imported
 import AssistantModal from "../assistants/mine/AssistantModal";
 import { useSidebarShortcut } from "@/lib/browserUtilities";
 import { FilePickerModal } from "./my-documents/components/FilePicker";
@@ -142,8 +142,8 @@ const TEMP_ASSISTANT_MESSAGE_ID = -2;
 const SYSTEM_MESSAGE_ID = -3;
 
 export enum UploadIntent {
-  ATTACH_TO_MESSAGE, // For files uploaded via ChatInputBar (paste, drag/drop)
-  ADD_TO_DOCUMENTS, // For files uploaded via FilePickerModal or similar (just add to repo)
+  ATTACH_TO_MESSAGE,
+  ADD_TO_DOCUMENTS,
 }
 
 export function ChatPage({
@@ -196,7 +196,6 @@ export function ChatPage({
     ? parseInt(defaultAssistantIdRaw)
     : undefined;
 
-  // Function declarations need to be outside of blocks in strict mode
   function useScreenSize() {
     const [screenSize, setScreenSize] = useState({
       width: typeof window !== "undefined" ? window.innerWidth : 0,
@@ -218,10 +217,6 @@ export function ChatPage({
     return screenSize;
   }
 
-  // handle redirect if chat page is disabled
-  // NOTE: this must be done here, in a client component since
-  // settings are passed in via Context and therefore aren't
-  // available in server-side components
   const settings = useContext(SettingsContext);
   const enterpriseSettings = settings?.enterpriseSettings;
 
@@ -287,7 +282,6 @@ export function ChatPage({
 
     router.replace(`?${newSearchParams.toString()}`, { scroll: false });
 
-    // If there's a message, submit it
     if (message) {
       setSubmittedMessage(message);
       onSubmit({ messageOverride: message, overrideFileDescriptors });
@@ -295,37 +289,27 @@ export function ChatPage({
   };
 
   const chatSessionIdRef = useRef<string | null>(existingChatSessionId);
-
-  // Only updates on session load (ie. rename / switching chat session)
-  // Useful for determining which session has been loaded (i.e. still on `new, empty session` or `previous session`)
   const loadedIdSessionRef = useRef<string | null>(existingChatSessionId);
 
   const existingChatSessionAssistantId = selectedChatSession?.persona_id;
   const [selectedAssistant, setSelectedAssistant] = useState<
     Persona | undefined
   >(
-    // NOTE: look through available assistants here, so that even if the user
-    // has hidden this assistant it still shows the correct assistant when
-    // going back to an old chat session
     existingChatSessionAssistantId !== undefined
       ? availableAssistants.find(
-          (assistant) => assistant.id === existingChatSessionAssistantId
-        )
+        (assistant) => assistant.id === existingChatSessionAssistantId
+      )
       : defaultAssistantId !== undefined
         ? availableAssistants.find(
-            (assistant) => assistant.id === defaultAssistantId
-          )
+          (assistant) => assistant.id === defaultAssistantId
+        )
         : undefined
   );
-  // Gather default temperature settings
   const search_param_temperature = searchParams?.get(
     SEARCH_PARAM_NAMES.TEMPERATURE
   );
 
   const setSelectedAssistantFromId = (assistantId: number) => {
-    // NOTE: also intentionally look through available assistants here, so that
-    // even if the user has hidden an assistant they can still go back to it
-    // for old chats
     setSelectedAssistant(
       availableAssistants.find((assistant) => assistant.id === assistantId)
     );
@@ -337,12 +321,6 @@ export function ChatPage({
   const [presentingDocument, setPresentingDocument] =
     useState<MinimalOnyxDocument | null>(null);
 
-  // Current assistant is decided based on this ordering
-  // 1. Alternative assistant (assistant selected explicitly by user)
-  // 2. Selected assistant (assistnat default in this chat session)
-  // 3. First pinned assistants (ordered list of pinned assistants)
-  // 4. Available assistants (ordered list of available assistants)
-  // Relevant test: `live_assistant.spec.ts`
   const liveAssistant: Persona | undefined = useMemo(
     () =>
       alternativeAssistant ||
@@ -404,25 +382,13 @@ export function ChatPage({
     updateChatState("input", currentSession);
   };
 
-  // this is for "@"ing assistants
-
-  // this is used to track which assistant is being used to generate the current message
-  // for example, this would come into play when:
-  // 1. default assistant is `Onyx`
-  // 2. we "@"ed the `GPT` assistant and sent a message
-  // 3. while the `GPT` assistant message is generating, we "@" the `Paraphrase` assistant
   const [alternativeGeneratingAssistant, setAlternativeGeneratingAssistant] =
     useState<Persona | null>(null);
 
-  // used to track whether or not the initial "submit on load" has been performed
-  // this only applies if `?submit-on-load=true` or `?submit-on-load=1` is in the URL
-  // NOTE: this is required due to React strict mode, where all `useEffect` hooks
-  // are run twice on initial load during development
   const submitOnLoadPerformed = useRef<boolean>(false);
 
   const { popup, setPopup } = usePopup();
 
-  // fetch messages for the chat session
   const [isFetchingChatMessages, setIsFetchingChatMessages] = useState(
     existingChatSessionId !== null
   );
@@ -442,22 +408,13 @@ export function ChatPage({
 
     textAreaRef.current?.focus();
 
-    // only clear things if we're going from one chat session to another
     const isChatSessionSwitch = existingChatSessionId !== priorChatSessionId;
     if (isChatSessionSwitch) {
-      // de-select documents
-
-      // reset all filters
       filterManager.setSelectedDocumentSets([]);
       filterManager.setSelectedSources([]);
       filterManager.setSelectedTags([]);
       filterManager.setTimeRange(null);
-
-      // remove uploaded files
       setCurrentMessageFiles([]);
-
-      // if switching from one chat to another, then need to scroll again
-      // if we're creating a brand new chat, then don't need to scroll
       if (chatSessionIdRef.current !== null) {
         clearSelectedDocuments();
         setHasPerformedInitialScroll(false);
@@ -475,7 +432,6 @@ export function ChatPage({
         updateCompleteMessageDetail(null, new Map());
         setChatSessionSharedStatus(ChatSessionSharedStatus.Private);
 
-        // if we're supposed to submit on initial load, then do that here
         if (
           shouldSubmitOnLoad(searchParams) &&
           !submitOnLoadPerformed.current
@@ -498,10 +454,6 @@ export function ChatPage({
       const newMessageMap = processRawChatHistory(chatSession.messages);
       const newMessageHistory = buildLatestMessageChain(newMessageMap);
 
-      // Update message history except for edge where where
-      // last message is an error and we're on a new chat.
-      // This corresponds to a "renaming" of chat, which occurs after first message
-      // stream
       if (
         (messageHistory[messageHistory.length - 1]?.type !== "error" ||
           loadedSessionId != null) &&
@@ -509,19 +461,13 @@ export function ChatPage({
       ) {
         const latestMessageId =
           newMessageHistory[newMessageHistory.length - 1]?.messageId;
-
         setSelectedMessageForDocDisplay(
           latestMessageId !== undefined ? latestMessageId : null
         );
-
         updateCompleteMessageDetail(chatSession.chat_session_id, newMessageMap);
       }
 
       setChatSessionSharedStatus(chatSession.shared_status);
-
-      // go to bottom. If initial load, then do a scroll,
-      // otherwise just appear at the bottom
-
       scrollInitialized.current = false;
 
       if (!hasPerformedInitialScroll) {
@@ -530,7 +476,6 @@ export function ChatPage({
           isInitialLoad.current = false;
         }
         clientScrollToBottom();
-
         setTimeout(() => {
           setHasPerformedInitialScroll(true);
         }, 100);
@@ -541,7 +486,6 @@ export function ChatPage({
 
       setIsFetchingChatMessages(false);
 
-      // if this is a seeded chat, then kick off the AI message generation
       if (
         newMessageHistory.length === 1 &&
         !submitOnLoadPerformed.current &&
@@ -553,7 +497,6 @@ export function ChatPage({
           isSeededChat: true,
           messageOverride: seededMessage,
         });
-        // force re-name if the chat session doesn't have one
         if (!chatSession.description) {
           await nameChatSession(existingChatSessionId);
           refreshChatSessions();
@@ -565,7 +508,7 @@ export function ChatPage({
     }
 
     initialSessionFetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingChatSessionId, searchParams?.get(SEARCH_PARAM_NAMES.PERSONA_ID)]);
 
   useEffect(() => {
@@ -582,21 +525,18 @@ export function ChatPage({
         addSelectedFolder(userFolder);
       }
     } else if (allMyDocuments === "true" || allMyDocuments === "1") {
-      // Clear any previously selected folders
-
       clearSelectedItems();
-
-      // Add all user folders to the current context
       userFolders.forEach((folder) => {
         addSelectedFolder(folder);
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     userFolders,
     searchParams?.get(SEARCH_PARAM_NAMES.USER_FOLDER_ID),
     searchParams?.get(SEARCH_PARAM_NAMES.ALL_MY_DOCUMENTS),
-    addSelectedFolder,
-    clearSelectedItems,
+    // addSelectedFolder, // These were causing infinite loops as they are recreated on each render
+    // clearSelectedItems, // This too
   ]);
 
   const [message, setMessage] = useState(
@@ -637,14 +577,11 @@ export function ChatPage({
     makeLatestChildMessage = false,
   }: {
     messages: Message[];
-    // if calling this function repeatedly with short delay, stay may not update in time
-    // and result in weird behavior
     completeMessageMapOverride?: Map<number, Message> | null;
     chatSessionId?: string;
     replacementsMap?: Map<number, number> | null;
     makeLatestChildMessage?: boolean;
   }) => {
-    // deep copy
     const frozenCompleteMessageMap =
       completeMessageMapOverride || currentMessageMap(completeMessageDetail);
     const newCompleteMessageMap = structuredClone(frozenCompleteMessageMap);
@@ -675,7 +612,6 @@ export function ChatPage({
         removeMessage(idToReplace, newCompleteMessageMap);
       }
 
-      // update childrenMessageIds for the parent
       if (
         !newCompleteMessageMap.has(message.messageId) &&
         message.parentMessageId !== null
@@ -684,7 +620,6 @@ export function ChatPage({
       }
       newCompleteMessageMap.set(message.messageId, message);
     });
-    // if specified, make these new message the latest of the current message chain
     if (makeLatestChildMessage) {
       const currentMessageChain = buildLatestMessageChain(
         frozenCompleteMessageMap
@@ -728,8 +663,6 @@ export function ChatPage({
     Map<string | null, AbortController>
   >(new Map());
 
-  // Updates "null" session values to new session id for
-  // regeneration, chat, and abort controller state, messagehistory
   const updateStatesWithNewSessionId = (newSessionId: string) => {
     const updateState = (
       setState: Dispatch<SetStateAction<Map<string | null, any>>>,
@@ -752,7 +685,6 @@ export function ChatPage({
     updateState(setChatState);
     updateState(setAbortControllers);
 
-    // Update completeMessageDetail
     setCompleteMessageDetail((prevState) => {
       const newState = new Map(prevState);
       const existingMessages = newState.get(null);
@@ -762,8 +694,6 @@ export function ChatPage({
       }
       return newState;
     });
-
-    // Update chatSessionIdRef
     chatSessionIdRef.current = newSessionId;
   };
 
@@ -844,16 +774,14 @@ export function ChatPage({
   const currentSessionChatState = currentChatState();
   const currentSessionRegenerationState = currentRegenerationState();
 
-  // for document display
-  // NOTE: -1 is a special designation that means the latest AI message
   const [selectedMessageForDocDisplay, setSelectedMessageForDocDisplay] =
     useState<number | null>(null);
 
   const { aiMessage, humanMessage } = selectedMessageForDocDisplay
     ? getHumanAndAIMessageFromMessageNumber(
-        messageHistory,
-        selectedMessageForDocDisplay
-      )
+      messageHistory,
+      selectedMessageForDocDisplay
+    )
     : { aiMessage: null, humanMessage: null };
 
   const [chatSessionSharedStatus, setChatSessionSharedStatus] =
@@ -861,7 +789,6 @@ export function ChatPage({
 
   useEffect(() => {
     if (messageHistory.length === 0 && chatSessionIdRef.current === null) {
-      // Select from available assistants so shared assistants appear.
       setSelectedAssistant(
         availableAssistants.find((persona) => persona.id === defaultAssistantId)
       );
@@ -880,11 +807,9 @@ export function ChatPage({
       );
     }
   }, [submittedMessage, currentSessionChatState]);
-  // just choose a conservative default, this will be updated in the
-  // background on initial load / on persona change
+
   const [maxTokens, setMaxTokens] = useState<number>(4096);
 
-  // fetch # of allowed document tokens for the selected Persona
   useEffect(() => {
     async function fetchMaxTokens() {
       const response = await fetch(
@@ -959,55 +884,41 @@ export function ChatPage({
 
   const clientScrollToBottom = (fast?: boolean) => {
     waitForScrollRef.current = true;
-
     setTimeout(() => {
       if (!endDivRef.current || !scrollableDivRef.current) {
         console.error("endDivRef or scrollableDivRef not found");
         return;
       }
-
       const rect = endDivRef.current.getBoundingClientRect();
       const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
-
       if (isVisible) return;
-
-      // Check if all messages are currently rendered
-      // If all messages are already rendered, scroll immediately
       endDivRef.current.scrollIntoView({
         behavior: fast ? "auto" : "smooth",
       });
-
       setHasPerformedInitialScroll(true);
     }, 50);
-
-    // Reset waitForScrollRef after 1.5 seconds
     setTimeout(() => {
       waitForScrollRef.current = false;
     }, 1500);
   };
 
-  const debounceNumber = 100; // time for debouncing
+  const debounceNumber = 100;
 
   const [hasPerformedInitialScroll, setHasPerformedInitialScroll] = useState(
     existingChatSessionId === null
   );
 
-  // handle re-sizing of the text area
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     handleInputResize();
   }, [message]);
 
-  // used for resizing of the document sidebar
   const masterFlexboxRef = useRef<HTMLDivElement>(null);
   const [maxDocumentSidebarWidth, setMaxDocumentSidebarWidth] = useState<
     number | null
   >(null);
   const adjustDocumentSidebarWidth = () => {
     if (masterFlexboxRef.current && document.documentElement.clientWidth) {
-      // numbers below are based on the actual width the center section for different
-      // screen sizes. `1700` corresponds to the custom "3xl" tailwind breakpoint
-      // NOTE: some buffer is needed to account for scroll bars
       if (document.documentElement.clientWidth > 1700) {
         setMaxDocumentSidebarWidth(masterFlexboxRef.current.clientWidth - 950);
       } else if (document.documentElement.clientWidth > 1420) {
@@ -1028,6 +939,7 @@ export function ChatPage({
       setDocumentSidebarVisible(false);
     }
     clientScrollToBottom();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatSessionIdRef.current]);
 
   const loadNewPageLogic = (event: MessageEvent) => {
@@ -1041,11 +953,11 @@ export function ChatPage({
     }
   };
 
-  // Equivalent to `loadNewPageLogic`
   useEffect(() => {
     if (searchParams?.get(SEARCH_PARAM_NAMES.SEND_ON_LOAD)) {
       processSearchParamsAndSubmitMessage(searchParams.toString());
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, router]);
 
   useEffect(() => {
@@ -1057,6 +969,7 @@ export function ChatPage({
       window.removeEventListener("message", loadNewPageLogic);
       window.removeEventListener("resize", adjustDocumentSidebarWidth);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!documentSidebarInitialWidth && maxDocumentSidebarWidth) {
@@ -1136,11 +1049,9 @@ export function ChatPage({
     enableAutoScroll: autoScrollEnabled,
   });
 
-  // Track whether a message has been sent during this page load, keyed by chat session id
   const [sessionHasSentLocalUserMessage, setSessionHasSentLocalUserMessage] =
     useState<Map<string | null, boolean>>(new Map());
 
-  // Update the local state for a session once the user sends a message
   const markSessionMessageSent = (sessionId: string | null) => {
     setSessionHasSentLocalUserMessage((prev) => {
       const newMap = new Map(prev);
@@ -1179,6 +1090,38 @@ export function ChatPage({
     setLoadingError(null);
   };
 
+  // NEW CODE START: Definition of handleApplyProductPrompts
+  const handleApplyProductPrompts = async (prompts: string[]) => {
+    if (!liveAssistant) {
+      setPopup({
+        type: "error",
+        message: "No assistant selected to send prompts.",
+      });
+      return;
+    }
+  
+    const currentChatStateValue = currentChatState();
+    if (currentChatStateValue !== "input") {
+      console.log(`Current chat state is ${currentChatStateValue}, stopping generation.`);
+      stopGenerating();
+      await new Promise(resolve => setTimeout(resolve, 300)); 
+    }
+    
+    for (const promptStr of prompts) {
+      if (promptStr && promptStr.trim() !== "") {
+         console.log(`Submitting prompt via onSubmit: "${promptStr.trim()}"`);
+        await onSubmit({ 
+          messageOverride: promptStr.trim(),
+          queryOverride: undefined, 
+          forceSearch: undefined,
+          alternativeAssistantOverride: null, 
+          modelOverride: undefined, 
+         });
+      }
+    }
+  };
+  // NEW CODE END
+
   const onSubmit = async ({
     messageIdToResend,
     messageOverride,
@@ -1206,11 +1149,8 @@ export function ChatPage({
     setUncaughtError(null);
     setLoadingError(null);
 
-    // Mark that we've sent a message for this session in the current page load
     markSessionMessageSent(frozenSessionId);
 
-    // Check if the last message was an error and remove it before proceeding with a new message
-    // Ensure this isn't a regeneration or resend, as those operations should preserve the history leading up to the point of regeneration/resend.
     let currentMap = currentMessageMap(completeMessageDetail);
     let currentHistory = buildLatestMessageChain(currentMap);
     let lastMessage = currentHistory[currentHistory.length - 1];
@@ -1224,11 +1164,8 @@ export function ChatPage({
       const newMap = new Map(currentMap);
       const parentId = lastMessage.parentMessageId;
 
-      // Remove the error message itself
       newMap.delete(lastMessage.messageId);
 
-      // Remove the parent message + update the parent of the parent to no longer
-      // link to the parent
       if (parentId !== null && parentId !== undefined) {
         const parentOfError = newMap.get(parentId);
         if (parentOfError) {
@@ -1236,7 +1173,6 @@ export function ChatPage({
           if (grandparentId !== null && grandparentId !== undefined) {
             const grandparent = newMap.get(grandparentId);
             if (grandparent) {
-              // Update grandparent to no longer link to parent
               const updatedGrandparent = {
                 ...grandparent,
                 childrenMessageIds: (
@@ -1250,15 +1186,11 @@ export function ChatPage({
               newMap.set(grandparentId, updatedGrandparent);
             }
           }
-          // Remove the parent message
           newMap.delete(parentId);
         }
       }
-      // Update the state immediately so subsequent logic uses the cleaned map
       updateCompleteMessageDetail(frozenSessionId, newMap);
       console.log("Removed previous error message ID:", lastMessage.messageId);
-
-      // update state for the new world (with the error message removed)
       currentHistory = buildLatestMessageChain(newMap);
       currentMap = newMap;
       lastMessage = currentHistory[currentHistory.length - 1];
@@ -1276,17 +1208,14 @@ export function ChatPage({
           type: "error",
         });
       }
-
       return;
     }
 
     setAlternativeGeneratingAssistant(alternativeAssistantOverride);
-
     clientScrollToBottom();
 
     let currChatSessionId: string;
     const isNewSession = chatSessionIdRef.current === null;
-
     const searchParamBasedChatSessionName =
       searchParams?.get(SEARCH_PARAM_NAMES.TITLE) || null;
 
@@ -1299,13 +1228,6 @@ export function ChatPage({
       currChatSessionId = chatSessionIdRef.current as string;
     }
     frozenSessionId = currChatSessionId;
-    // update the selected model for the chat session if one is specified so that
-    // it persists across page reloads. Do not `await` here so that the message
-    // request can continue and this will just happen in the background.
-    // NOTE: only set the model override for the chat session once we send a
-    // message with it. If the user switches models and then starts a new
-    // chat session, it is unexpected for that model to be used when they
-    // return to this session the next day.
     let finalLLM = modelOverride || llmManager.currentLlm;
     updateLlmOverrideForChatSession(
       currChatSessionId,
@@ -1317,9 +1239,7 @@ export function ChatPage({
     );
 
     updateStatesWithNewSessionId(currChatSessionId);
-
     const controller = new AbortController();
-
     setAbortControllers((prev) =>
       new Map(prev).set(currChatSessionId, controller)
     );
@@ -1335,7 +1255,7 @@ export function ChatPage({
     }
     const messageToResendParent =
       messageToResend?.parentMessageId !== null &&
-      messageToResend?.parentMessageId !== undefined
+        messageToResend?.parentMessageId !== undefined
         ? currentMap.get(messageToResend.parentMessageId)
         : null;
     const messageToResendIndex = messageToResend
@@ -1358,7 +1278,6 @@ export function ChatPage({
     }
 
     setSubmittedMessage(currMessage);
-
     updateChatState("loading");
 
     const currMessageHistory =
@@ -1384,10 +1303,8 @@ export function ChatPage({
 
     resetInputBar();
     let messageUpdates: Message[] | null = null;
-
     let answer = "";
     let second_level_answer = "";
-
     const stopReason: StreamStopReason | null = null;
     let query: string | null = null;
     let retrievalType: RetrievalType =
@@ -1399,7 +1316,6 @@ export function ChatPage({
     let agenticDocs: OnyxDocument[] | null = null;
     let error: string | null = null;
     let stackTrace: string | null = null;
-
     let sub_questions: SubQuestionDetail[] = [];
     let is_generating: boolean = false;
     let second_level_generating: boolean = false;
@@ -1411,7 +1327,6 @@ export function ChatPage({
     let secondLevelMessageId: number | null = null;
     let isAgentic: boolean = false;
     let files: FileDescriptor[] = [];
-
     let initialFetchDetails: null | {
       user_message_id: number;
       assistant_message_id: number;
@@ -1421,9 +1336,7 @@ export function ChatPage({
       const mapKeys = Array.from(currentMap.keys());
       const lastSuccessfulMessageId =
         getLastSuccessfulMessageId(currMessageHistory);
-
       const stack = new CurrentMessageFIFO();
-
       updateCurrentMessageFIFO(stack, {
         signal: controller.signal,
         message: currMessage,
@@ -1453,7 +1366,6 @@ export function ChatPage({
         userFileIds: selectedFiles
           .filter((file) => file.id !== undefined && file.id !== null)
           .map((file) => file.id),
-
         regenerate: regenerationRequest !== undefined,
         modelProvider:
           modelOverride?.name || llmManager.currentLlm.name || undefined,
@@ -1504,12 +1416,10 @@ export function ChatPage({
             }
 
             const messageResponseIDInfo = packet as MessageResponseIDInfo;
-
             const user_message_id = messageResponseIDInfo.user_message_id!;
             const assistant_message_id =
               messageResponseIDInfo.reserved_assistant_message_id;
 
-            // we will use tempMessages until the regenerated message is complete
             messageUpdates = [
               {
                 messageId: regenerationRequest
@@ -1517,7 +1427,7 @@ export function ChatPage({
                   : user_message_id,
                 message: currMessage,
                 type: "user",
-                files: files,
+                files: files, 
                 toolCall: null,
                 parentMessageId: parentMessage?.messageId || SYSTEM_MESSAGE_ID,
               },
@@ -1546,7 +1456,6 @@ export function ChatPage({
               assistant_message_id,
               user_message_id,
             };
-
             resetRegenerationState();
           } else {
             const { user_message_id, frozenMessageMap } = initialFetchDetails;
@@ -1578,9 +1487,8 @@ export function ChatPage({
               }
             }
             if (Object.hasOwn(packet, "user_files")) {
-              const userFiles = (packet as UserKnowledgeFilePacket).user_files;
-              // Ensure files are unique by id
-              const newUserFiles = userFiles.filter(
+              const userFilesPacket = (packet as UserKnowledgeFilePacket).user_files;
+              const newUserFiles = userFilesPacket.filter(
                 (newFile) =>
                   !files.some((existingFile) => existingFile.id === newFile.id)
               );
@@ -1602,7 +1510,6 @@ export function ChatPage({
               }
             }
 
-            // // Continuously refine the sub_questions based on the packets that we receive
             if (
               Object.hasOwn(packet, "stop_reason") &&
               Object.hasOwn(packet, "level_question_num")
@@ -1644,7 +1551,6 @@ export function ChatPage({
                 packet as AgentAnswerPiece
               );
             } else if (Object.hasOwn(packet, "answer_piece")) {
-              // Mark every sub_question's is_generating as false
               sub_questions = sub_questions.map((subQ) => ({
                 ...subQ,
                 is_generating: false,
@@ -1686,12 +1592,9 @@ export function ChatPage({
               retrievalType = RetrievalType.Search;
 
               if (documents && documents.length > 0) {
-                // point to the latest message (we don't know the messageId yet, which is why
-                // we have to use -1)
                 setSelectedMessageForDocDisplay(user_message_id);
               }
             } else if (Object.hasOwn(packet, "tool_name")) {
-              // Will only ever be one tool call per message
               toolCall = {
                 tool_name: (packet as ToolCallMetadata).tool_name,
                 tool_args: (packet as ToolCallMetadata).tool_args,
@@ -1707,9 +1610,6 @@ export function ChatPage({
                 } else {
                   updateChatState("streaming", frozenSessionId);
                 }
-
-                // This will be consolidated in upcoming tool calls udpate,
-                // but for now, we need to set query as early as possible
                 if (toolCall.tool_name == SEARCH_TOOL_NAME) {
                   query = toolCall.tool_args["query"];
                 }
@@ -1740,7 +1640,6 @@ export function ChatPage({
                 setAgenticGenerating(false);
                 setAlternativeGeneratingAssistant(null);
                 setSubmittedMessage("");
-
                 throw new Error((packet as StreamingError).error);
               } else {
                 error = (packet as StreamingError).error;
@@ -1755,29 +1654,26 @@ export function ChatPage({
               }
             }
 
-            // on initial message send, we insert a dummy system message
-            // set this as the parent here if no parent is set
             parentMessage =
               parentMessage || frozenMessageMap?.get(SYSTEM_MESSAGE_ID)!;
 
             const updateFn = (messages: Message[]) => {
               const replacementsMap = regenerationRequest
                 ? new Map([
-                    [
-                      regenerationRequest?.parentMessage?.messageId,
-                      regenerationRequest?.parentMessage?.messageId,
-                    ],
-                    [
-                      regenerationRequest?.messageId,
-                      initialFetchDetails?.assistant_message_id,
-                    ],
-                  ] as [number, number][])
+                  [
+                    regenerationRequest?.parentMessage?.messageId,
+                    regenerationRequest?.parentMessage?.messageId,
+                  ],
+                  [
+                    regenerationRequest?.messageId,
+                    initialFetchDetails?.assistant_message_id,
+                  ],
+                ] as [number, number][])
                 : null;
 
               const newMessageDetails = upsertToCompleteMessageMap({
                 messages: messages,
                 replacementsMap: replacementsMap,
-                // Pass the latest map state
                 completeMessageMapOverride: currentMap,
                 chatSessionId: frozenSessionId!,
               });
@@ -1793,9 +1689,8 @@ export function ChatPage({
                   : initialFetchDetails.user_message_id!,
                 message: currMessage,
                 type: "user",
-                files: files,
+                files: files, 
                 toolCall: null,
-                // in the frontend, every message should have a parent ID
                 parentMessageId: lastSuccessfulMessageId ?? systemMessageId,
                 childrenMessageIds: [
                   ...(regenerationRequest?.parentMessage?.childrenMessageIds ||
@@ -1832,16 +1727,16 @@ export function ChatPage({
               },
               ...(includeAgentic
                 ? [
-                    {
-                      messageId: secondLevelMessageId!,
-                      message: second_level_answer,
-                      type: "assistant" as const,
-                      files: [],
-                      toolCall: null,
-                      parentMessageId:
-                        initialFetchDetails.assistant_message_id!,
-                    },
-                  ]
+                  {
+                    messageId: secondLevelMessageId!,
+                    message: second_level_answer,
+                    type: "assistant" as const,
+                    files: [],
+                    toolCall: null,
+                    parentMessageId:
+                      initialFetchDetails.assistant_message_id!,
+                  },
+                ]
                 : []),
             ]);
           }
@@ -1857,7 +1752,7 @@ export function ChatPage({
               initialFetchDetails?.user_message_id || TEMP_USER_MESSAGE_ID,
             message: currMessage,
             type: "user",
-            files: currentMessageFiles,
+            files: files, // Use accumulated files here as well
             toolCall: null,
             parentMessageId: parentMessage?.messageId || SYSTEM_MESSAGE_ID,
           },
@@ -1894,15 +1789,11 @@ export function ChatPage({
         refreshChatSessions();
       }
 
-      // NOTE: don't switch pages if the user has navigated away from the chat
       if (
         currChatSessionId === chatSessionIdRef.current ||
         chatSessionIdRef.current === null
       ) {
         const newUrl = buildChatUrl(searchParams, currChatSessionId, null);
-        // newUrl is like /chat?chatId=10
-        // current page is like /chat
-
         if (pathname == "/chat" && !navigatingAway.current) {
           router.push(newUrl, { scroll: false });
         }
@@ -1977,7 +1868,6 @@ export function ChatPage({
 
     updateChatState("uploading", currentSessionId());
 
-    const newlyUploadedFileDescriptors: FileDescriptor[] = [];
 
     for (let file of acceptedFiles) {
       const formData = new FormData();
@@ -1991,8 +1881,6 @@ export function ChatPage({
           addSelectedFile(uploadedFile);
         } else {
           const newFileDescriptor: FileDescriptor = {
-            // Use file_id (storage ID) if available, otherwise fallback to DB id
-            // Ensure it's a string as FileDescriptor expects
             id: uploadedFile.file_id
               ? String(uploadedFile.file_id)
               : String(uploadedFile.id),
@@ -2000,9 +1888,8 @@ export function ChatPage({
               ? uploadedFile.chat_file_type
               : ChatFileType.PLAIN_TEXT,
             name: uploadedFile.name,
-            isUploading: false, // Mark as successfully uploaded
+            isUploading: false,
           };
-
           setCurrentMessageFiles((prev) => [...prev, newFileDescriptor]);
         }
       } else {
@@ -2016,13 +1903,11 @@ export function ChatPage({
     updateChatState("input", currentSessionId());
   };
 
-  // Used to maintain a "time out" for history sidebar so our existing refs can have time to process change
   const [untoggled, setUntoggled] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
   const explicitlyUntoggle = () => {
     setShowHistorySidebar(false);
-
     setUntoggled(true);
     setTimeout(() => {
       setUntoggled(false);
@@ -2036,10 +1921,9 @@ export function ChatPage({
       SIDEBAR_TOGGLED_COOKIE_NAME,
       String(!sidebarVisible).toLocaleLowerCase()
     ),
-      {
-        path: "/",
-      };
-
+    {
+      path: "/",
+    };
     toggle();
   };
   const removeToggle = () => {
@@ -2060,7 +1944,6 @@ export function ChatPage({
     isAnonymousUser: user?.is_anonymous_user,
   });
 
-  // Virtualization + Scrolling related effects and functions
   const scrollInitialized = useRef(false);
 
   const imageFileInMessageHistory = useMemo(() => {
@@ -2132,10 +2015,7 @@ export function ChatPage({
   useEffect(() => {
     const handleSlackChatRedirect = async () => {
       if (!slackChatId) return;
-
-      // Set isReady to false before starting retrieval to display loading text
       setIsReady(false);
-
       try {
         const response = await fetch("/api/chat/seed-chat-session-from-slack", {
           method: "POST",
@@ -2146,13 +2026,10 @@ export function ChatPage({
             chat_session_id: slackChatId,
           }),
         });
-
         if (!response.ok) {
           throw new Error("Failed to seed chat from Slack");
         }
-
         const data = await response.json();
-
         router.push(data.redirect_url);
       } catch (error) {
         console.error("Error seeding chat from Slack:", error);
@@ -2162,19 +2039,18 @@ export function ChatPage({
         });
       }
     };
-
     handleSlackChatRedirect();
-  }, [searchParams, router]);
+  }, [searchParams, router, setPopup ]); // Added setPopup to dependency array
 
   useEffect(() => {
     llmManager.updateImageFilesPresent(imageFileInMessageHistory);
-  }, [imageFileInMessageHistory]);
+  }, [imageFileInMessageHistory, llmManager]); // Added llmManager
 
   const pathname = usePathname();
   useEffect(() => {
     return () => {
-      // Cleanup which only runs when the component unmounts (i.e. when you navigate away).
       const currentSession = currentSessionId();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       const controller = abortControllersRef.current.get(currentSession);
       if (controller) {
         controller.abort();
@@ -2186,10 +2062,10 @@ export function ChatPage({
         });
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   const navigatingAway = useRef(false);
-  // Keep a ref to abortControllers to ensure we always have the latest value
   const abortControllersRef = useRef(abortControllers);
   useEffect(() => {
     abortControllersRef.current = abortControllers;
@@ -2198,13 +2074,10 @@ export function ChatPage({
     const calculateTokensAndUpdateSearchMode = async () => {
       if (selectedFiles.length > 0 || selectedFolders.length > 0) {
         try {
-          // Prepare the query parameters for the API call
           const fileIds = selectedFiles.map((file: FileResponse) => file.id);
           const folderIds = selectedFolders.map(
             (folder: FolderResponse) => folder.id
           );
-
-          // Build the query string
           const queryParams = new URLSearchParams();
           fileIds.forEach((id) =>
             queryParams.append("file_ids", id.toString())
@@ -2212,12 +2085,9 @@ export function ChatPage({
           folderIds.forEach((id) =>
             queryParams.append("folder_ids", id.toString())
           );
-
-          // Make the API call to get token estimate
           const response = await fetch(
             `/api/user/file/token-estimate?${queryParams.toString()}`
           );
-
           if (!response.ok) {
             console.error("Failed to fetch token estimate");
             return;
@@ -2227,7 +2097,6 @@ export function ChatPage({
         }
       }
     };
-
     calculateTokensAndUpdateSearchMode();
   }, [selectedFiles, selectedFolders, llmManager.currentLlm]);
 
@@ -2237,7 +2106,6 @@ export function ChatPage({
     useState<ChatSession | null>();
 
   const handleResubmitLastMessage = () => {
-    // Grab the last user-type message
     const lastUserMsg = messageHistory
       .slice()
       .reverse()
@@ -2249,8 +2117,6 @@ export function ChatPage({
       });
       return;
     }
-
-    // We call onSubmit, passing a `messageOverride`
     onSubmit({
       messageIdToResend: lastUserMsg.messageId,
       messageOverride: lastUserMsg.message,
@@ -2277,7 +2143,6 @@ export function ChatPage({
   }
 
   function createRegenerator(regenerationRequest: RegenerationRequest) {
-    // Returns new function that only needs `modelOverRide` to be specified when called
     return async function (modelOverride: LlmDescriptor) {
       return await onSubmit({
         modelOverride,
@@ -2324,10 +2189,7 @@ export function ChatPage({
         />
       )}
 
-      {/* ChatPopup is a custom popup that displays a admin-specified message on initial user visit. 
-      Only used in the EE version of the app. */}
       {popup}
-
       <ChatPopup />
 
       {currentFeedback && (
@@ -2527,24 +2389,24 @@ export function ChatPage({
           <div
             style={{ transition: "width 0.30s ease-out" }}
             className={`
-                flex-none 
-                fixed
-                right-0
-                z-[1000]
-                h-screen
-                transition-all
-                duration-300
-                ease-in-out
-                bg-transparent
-                transition-all
-                duration-300
-                ease-in-out
-                h-full
-                ${
-                  documentSidebarVisible && !settings?.isMobile
-                    ? "w-[400px]"
-                    : "w-[0px]"
-                }
+              flex-none 
+              fixed
+              right-0
+              z-[1000]
+              h-screen
+              transition-all
+              duration-300
+              ease-in-out
+              bg-transparent
+              transition-all
+              duration-300
+              ease-in-out
+              h-full
+              ${
+                documentSidebarVisible && !settings?.isMobile
+                  ? "w-[400px]"
+                  : "w-[0px]"
+              }
             `}
           >
             <DocumentResults
@@ -2633,7 +2495,7 @@ export function ChatPage({
                           ease-in-out
                           h-full
                           ${sidebarVisible ? "w-[200px]" : "w-[0px]"}
-                      `}
+                        `}
                         ></div>
                       )}
 
@@ -2660,13 +2522,11 @@ export function ChatPage({
                                   ease-in-out
                                   h-full
                                   ${sidebarVisible ? "w-[200px]" : "w-[0px]"}
-                              `}
+                                `}
                                 />
                               )}
                             </div>
                           )}
-                          {/* ChatBanner is a custom banner that displays a admin-specified message at 
-                      the top of the chat page. Oly used in the EE version of the app. */}
                           {messageHistory.length === 0 &&
                             !isFetchingChatMessages &&
                             currentSessionChatState == "input" &&
@@ -2674,7 +2534,6 @@ export function ChatPage({
                             !submittedMessage && (
                               <div className="h-full  w-[95%] mx-auto flex flex-col justify-center items-center">
                                 <ChatIntro selectedPersona={liveAssistant} />
-
                                 <StarterMessages
                                   currentPersona={currentPersona}
                                   onSubmit={(messageOverride) =>
@@ -2697,8 +2556,6 @@ export function ChatPage({
                                 ? "pt-20 "
                                 : "pt-4 ")
                             }
-                            // NOTE: temporarily removing this to fix the scroll bug
-                            // (hasPerformedInitialScroll ? "" : "invisible")
                           >
                             {messageHistory.map((message, i) => {
                               const messageMap = currentMessageMap(
@@ -2708,9 +2565,9 @@ export function ChatPage({
                               if (
                                 currentRegenerationState()?.finalMessageIndex &&
                                 currentRegenerationState()?.finalMessageIndex! <
-                                  message.messageId
+                                message.messageId
                               ) {
-                                return <></>;
+                                return <React.Fragment key={`${i}-empty`}></React.Fragment>;
                               }
 
                               const messageReactComponentKey = `${i}-${currentSessionId()}`;
@@ -2723,9 +2580,9 @@ export function ChatPage({
                                     i == messageHistory.length - 1) ||
                                   (currentSessionRegenerationState?.regenerating &&
                                     message.messageId >=
-                                      currentSessionRegenerationState?.finalMessageIndex!)
+                                    currentSessionRegenerationState?.finalMessageIndex!)
                                 ) {
-                                  return <></>;
+                                  return <React.Fragment key={`${i}-empty-user`}></React.Fragment>;
                                 }
                                 const nextMessage =
                                   messageHistory.length > i + 1
@@ -2785,8 +2642,6 @@ export function ChatPage({
                                         setSelectedMessageForDocDisplay(
                                           messageId
                                         );
-                                        // set message as latest so we can edit this message
-                                        // and so it sticks around on page reload
                                         setMessageAsLatest(messageId);
                                       }}
                                     />
@@ -2795,14 +2650,13 @@ export function ChatPage({
                               } else if (message.type === "assistant") {
                                 const previousMessage =
                                   i !== 0 ? messageHistory[i - 1] : null;
-
                                 const currentAlternativeAssistant =
                                   message.alternateAssistantID != null
                                     ? availableAssistants.find(
-                                        (persona) =>
-                                          persona.id ==
-                                          message.alternateAssistantID
-                                      )
+                                      (persona) =>
+                                        persona.id ==
+                                        message.alternateAssistantID
+                                    )
                                     : null;
 
                                 if (
@@ -2810,33 +2664,29 @@ export function ChatPage({
                                     i > messageHistory.length - 1) ||
                                   (currentSessionRegenerationState?.regenerating &&
                                     message.messageId >
-                                      currentSessionRegenerationState?.finalMessageIndex!)
+                                    currentSessionRegenerationState?.finalMessageIndex!)
                                 ) {
-                                  return <></>;
+                                  return <React.Fragment key={`${i}-empty-assistant`}></React.Fragment>;
                                 }
                                 if (parentMessage?.type == "assistant") {
-                                  return <></>;
+                                  return <React.Fragment key={`${i}-empty-parent-assistant`}></React.Fragment>;
                                 }
                                 const secondLevelMessage =
                                   messageHistory[i + 1]?.type === "assistant"
                                     ? messageHistory[i + 1]
                                     : undefined;
-
                                 const secondLevelAssistantMessage =
                                   messageHistory[i + 1]?.type === "assistant"
                                     ? messageHistory[i + 1]?.message
                                     : undefined;
-
                                 const agenticDocs =
                                   messageHistory[i + 1]?.type === "assistant"
                                     ? messageHistory[i + 1]?.documents
                                     : undefined;
-
                                 const nextMessage =
                                   messageHistory[i + 1]?.type === "assistant"
                                     ? messageHistory[i + 1]
                                     : undefined;
-
                                 const attachedFileDescriptors =
                                   previousMessage?.files.filter(
                                     (file) =>
@@ -2849,19 +2699,22 @@ export function ChatPage({
                                   )
                                 );
 
-                                return (
-                                  <div
-                                    className="text-text"
-                                    id={`message-${message.messageId}`}
-                                    key={messageReactComponentKey}
-                                    ref={
-                                      i == messageHistory.length - 1
-                                        ? lastMessageRef
-                                        : null
-                                    }
-                                  >
-                                    {message.is_agentic ? (
+                                if (message.is_agentic) { // Render AgenticMessage
+                                  return (
+                                    <div
+                                      className="text-text"
+                                      id={`message-${message.messageId}`}
+                                      key={messageReactComponentKey}
+                                      ref={
+                                        i == messageHistory.length - 1
+                                          ? lastMessageRef
+                                          : null
+                                      }
+                                    >
                                       <AgenticMessage
+                                        // NOTE: onApplyProductPrompts is NOT passed here,
+                                        // as AgenticMessage props don't include it.
+                                        // If this button is needed on AgenticMessage, its props interface must be updated.
                                         resubmit={handleResubmitLastMessage}
                                         error={uncaughtError}
                                         isStreamingQuestions={
@@ -2875,7 +2728,7 @@ export function ChatPage({
                                           (selectedMessageForDocDisplay ==
                                             message.messageId ||
                                             selectedMessageForDocDisplay ==
-                                              secondLevelMessage?.messageId)
+                                            secondLevelMessage?.messageId)
                                         }
                                         isImprovement={
                                           message.isImprovement ||
@@ -2884,7 +2737,7 @@ export function ChatPage({
                                         secondLevelGenerating={
                                           (message.second_level_generating &&
                                             currentSessionChatState !==
-                                              "input") ||
+                                            "input") ||
                                           false
                                         }
                                         secondLevelSubquestions={message.sub_questions?.filter(
@@ -2893,7 +2746,7 @@ export function ChatPage({
                                         )}
                                         secondLevelAssistantMessage={
                                           (message.second_level_message &&
-                                          message.second_level_message.length >
+                                            message.second_level_message.length >
                                             0
                                             ? message.second_level_message
                                             : secondLevelAssistantMessage) ||
@@ -2925,7 +2778,7 @@ export function ChatPage({
                                         }}
                                         docs={
                                           message?.documents &&
-                                          message?.documents.length > 0
+                                            message?.documents.length > 0
                                             ? message?.documents
                                             : parentMessage?.documents
                                         }
@@ -2934,7 +2787,7 @@ export function ChatPage({
                                         }
                                         continueGenerating={
                                           i == messageHistory.length - 1 &&
-                                          currentCanContinue()
+                                            currentCanContinue()
                                             ? continueGenerating
                                             : undefined
                                         }
@@ -2956,17 +2809,13 @@ export function ChatPage({
                                           newCompleteMessageMap.get(
                                             message.parentMessageId!
                                           )!.latestChildMessageId = messageId;
-
                                           updateCompleteMessageDetail(
                                             currentSessionId(),
                                             newCompleteMessageMap
                                           );
-
                                           setSelectedMessageForDocDisplay(
                                             messageId
                                           );
-                                          // set message as latest so we can edit this message
-                                          // and so it sticks around on page reload
                                           setMessageAsLatest(messageId);
                                         }}
                                         isActive={
@@ -2982,7 +2831,7 @@ export function ChatPage({
                                               !documentSidebarVisible) ||
                                             (documentSidebarVisible &&
                                               selectedMessageForDocDisplay ===
-                                                message.messageId)
+                                              message.messageId)
                                           ) {
                                             toggleDocumentSidebar();
                                           }
@@ -2991,15 +2840,14 @@ export function ChatPage({
                                               !documentSidebarVisible) ||
                                             (documentSidebarVisible &&
                                               selectedMessageForDocDisplay ===
-                                                secondLevelMessage?.messageId)
+                                              secondLevelMessage?.messageId)
                                           ) {
                                             toggleDocumentSidebar();
                                           }
-
                                           setSelectedMessageForDocDisplay(
                                             second
                                               ? secondLevelMessage?.messageId ||
-                                                  null
+                                              null
                                               : message.messageId
                                           );
                                         }}
@@ -3022,25 +2870,41 @@ export function ChatPage({
                                           (currentSessionChatState !=
                                             "streaming" &&
                                             currentSessionChatState !=
-                                              "toolBuilding")
+                                            "toolBuilding")
                                         }
+                                        // `hasDocs` is not a prop of AgenticMessage based on the error, so it's removed.
                                         handleFeedback={
                                           i === messageHistory.length - 1 &&
-                                          currentSessionChatState != "input"
+                                            currentSessionChatState != "input"
                                             ? undefined
-                                            : (feedbackType: FeedbackType) =>
-                                                setCurrentFeedback([
-                                                  feedbackType,
-                                                  message.messageId as number,
-                                                ])
+                                            : (feedbackType) =>
+                                              setCurrentFeedback([
+                                                feedbackType,
+                                                message.messageId as number,
+                                              ])
                                         }
                                       />
-                                    ) : (
+                                    </div>
+                                  );
+                                } else {
+                                  // Regular AIMessage (not agentic)
+                                  return (
+                                    <div
+                                      className="text-text"
+                                      id={`message-${message.messageId}`}
+                                      key={messageReactComponentKey}
+                                      ref={
+                                        i == messageHistory.length - 1
+                                          ? lastMessageRef
+                                          : null
+                                      }
+                                    >
                                       <AIMessage
+                                        onApplyProductPrompts={handleApplyProductPrompts} // Pass prop here
                                         userKnowledgeFiles={userFiles}
                                         docs={
                                           message?.documents &&
-                                          message?.documents.length > 0
+                                            message?.documents.length > 0
                                             ? message?.documents
                                             : parentMessage?.documents
                                         }
@@ -3050,7 +2914,7 @@ export function ChatPage({
                                         index={i}
                                         continueGenerating={
                                           i == messageHistory.length - 1 &&
-                                          currentCanContinue()
+                                            currentCanContinue()
                                             ? continueGenerating
                                             : undefined
                                         }
@@ -3072,33 +2936,28 @@ export function ChatPage({
                                           newCompleteMessageMap.get(
                                             message.parentMessageId!
                                           )!.latestChildMessageId = messageId;
-
                                           updateCompleteMessageDetail(
                                             currentSessionId(),
                                             newCompleteMessageMap
                                           );
-
                                           setSelectedMessageForDocDisplay(
                                             messageId
                                           );
-                                          // set message as latest so we can edit this message
-                                          // and so it sticks around on page reload
                                           setMessageAsLatest(messageId);
                                         }}
                                         isActive={
                                           messageHistory.length - 1 == i
                                         }
                                         selectedDocuments={selectedDocuments}
-                                        toggleDocumentSelection={() => {
+                                        toggleDocumentSelection={() => { 
                                           if (
                                             !documentSidebarVisible ||
                                             (documentSidebarVisible &&
                                               selectedMessageForDocDisplay ===
-                                                message.messageId)
+                                              message.messageId)
                                           ) {
                                             toggleDocumentSidebar();
                                           }
-
                                           setSelectedMessageForDocDisplay(
                                             message.messageId
                                           );
@@ -3122,54 +2981,54 @@ export function ChatPage({
                                           (currentSessionChatState !=
                                             "streaming" &&
                                             currentSessionChatState !=
-                                              "toolBuilding")
+                                            "toolBuilding")
                                         }
-                                        hasDocs={
+                                        hasDocs={ // This prop is valid for AIMessage
                                           (message.documents &&
                                             message.documents.length > 0) ===
                                           true
                                         }
                                         handleFeedback={
                                           i === messageHistory.length - 1 &&
-                                          currentSessionChatState != "input"
+                                            currentSessionChatState != "input"
                                             ? undefined
                                             : (feedbackType) =>
-                                                setCurrentFeedback([
-                                                  feedbackType,
-                                                  message.messageId as number,
-                                                ])
+                                              setCurrentFeedback([
+                                                feedbackType,
+                                                message.messageId as number,
+                                              ])
                                         }
                                         handleSearchQueryEdit={
                                           i === messageHistory.length - 1 &&
-                                          currentSessionChatState == "input"
+                                            currentSessionChatState == "input"
                                             ? (newQuery) => {
-                                                if (!previousMessage) {
-                                                  setPopup({
-                                                    type: "error",
-                                                    message:
-                                                      "Cannot edit query of first message - please refresh the page and try again.",
-                                                  });
-                                                  return;
-                                                }
-                                                if (
-                                                  previousMessage.messageId ===
-                                                  null
-                                                ) {
-                                                  setPopup({
-                                                    type: "error",
-                                                    message:
-                                                      "Cannot edit query of a pending message - please wait a few seconds and try again.",
-                                                  });
-                                                  return;
-                                                }
-                                                onSubmit({
-                                                  messageIdToResend:
-                                                    previousMessage.messageId,
-                                                  queryOverride: newQuery,
-                                                  alternativeAssistantOverride:
-                                                    currentAlternativeAssistant,
+                                              if (!previousMessage) {
+                                                setPopup({
+                                                  type: "error",
+                                                  message:
+                                                    "Cannot edit query of first message - please refresh the page and try again.",
                                                 });
+                                                return;
                                               }
+                                              if (
+                                                previousMessage.messageId ===
+                                                null
+                                              ) {
+                                                setPopup({
+                                                  type: "error",
+                                                  message:
+                                                    "Cannot edit query of a pending message - please wait a few seconds and try again.",
+                                                });
+                                                return;
+                                              }
+                                              onSubmit({
+                                                messageIdToResend:
+                                                  previousMessage.messageId,
+                                                queryOverride: newQuery,
+                                                alternativeAssistantOverride:
+                                                  currentAlternativeAssistant,
+                                              });
+                                            }
                                             : undefined
                                         }
                                         handleForceSearch={() => {
@@ -3193,18 +3052,20 @@ export function ChatPage({
                                         retrievalDisabled={
                                           currentAlternativeAssistant
                                             ? !personaIncludesRetrieval(
-                                                currentAlternativeAssistant!
-                                              )
+                                              currentAlternativeAssistant!
+                                            )
                                             : !retrievalEnabled
                                         }
                                       />
-                                    )}
-                                  </div>
-                                );
-                              } else {
+                                    </div>
+                                  );
+                                }
+
+                              } else { // Error message type
                                 return (
                                   <div key={messageReactComponentKey}>
                                     <AIMessage
+                                      onApplyProductPrompts={handleApplyProductPrompts} // Pass prop here for consistency if AIMessage handles errors
                                       setPresentingDocument={
                                         setPresentingDocument
                                       }
@@ -3217,9 +3078,9 @@ export function ChatPage({
                                           showStackTrace={
                                             message.stackTrace
                                               ? () =>
-                                                  setStackTraceModalContent(
-                                                    message.stackTrace!
-                                                  )
+                                                setStackTraceModalContent(
+                                                  message.stackTrace!
+                                                )
                                               : undefined
                                           }
                                         />
@@ -3235,19 +3096,20 @@ export function ChatPage({
                                 !currentSessionRegenerationState?.regenerating &&
                                 messageHistory[messageHistory.length - 1]
                                   ?.type != "user")) && (
-                              <HumanMessage
-                                setPresentingDocument={setPresentingDocument}
-                                key={-2}
-                                messageId={-1}
-                                content={submittedMessage}
-                              />
-                            )}
+                                <HumanMessage
+                                  setPresentingDocument={setPresentingDocument}
+                                  key={-2}
+                                  messageId={-1}
+                                  content={submittedMessage}
+                                />
+                              )}
 
                             {currentSessionChatState == "loading" && (
                               <div
                                 key={`${messageHistory.length}-${chatSessionIdRef.current}`}
                               >
                                 <AIMessage
+                                  onApplyProductPrompts={handleApplyProductPrompts} // Pass prop here for consistency
                                   setPresentingDocument={setPresentingDocument}
                                   key={-3}
                                   currentPersona={liveAssistant}
@@ -3273,6 +3135,7 @@ export function ChatPage({
                             {loadingError && (
                               <div key={-1}>
                                 <AIMessage
+                                  onApplyProductPrompts={handleApplyProductPrompts} // Pass prop here for consistency
                                   setPresentingDocument={setPresentingDocument}
                                   currentPersona={liveAssistant}
                                   messageId={-1}
@@ -3294,9 +3157,7 @@ export function ChatPage({
                               />
                             )}
 
-                            {/* Some padding at the bottom so the search bar has space at the bottom to not cover the last message*/}
                             <div ref={endPaddingRef} className="h-[95px]" />
-
                             <div ref={endDivRef} />
                           </div>
                         </div>
@@ -3376,7 +3237,6 @@ export function ChatPage({
                           </div>
                         </div>
                       </div>
-
                       <div
                         style={{ transition: "width 0.30s ease-out" }}
                         className={`
@@ -3392,7 +3252,7 @@ export function ChatPage({
                               ? "w-[350px]"
                               : "w-[0px]"
                           }
-                      `}
+                        `}
                       />
                     </div>
                   )}
@@ -3402,11 +3262,11 @@ export function ChatPage({
                   <div
                     style={{ transition: "width 0.30s ease-out" }}
                     className={`flex-none bg-transparent transition-all bg-opacity-80 duration-300 ease-in-out h-full
-                        ${
-                          sidebarVisible && !settings?.isMobile
-                            ? "w-[250px] "
-                            : "w-[0px]"
-                        }`}
+                            ${
+                              sidebarVisible && !settings?.isMobile
+                                ? "w-[250px] "
+                                : "w-[0px]"
+                            }`}
                   />
                   <div className="my-auto">
                     <OnyxInitializingLoader />

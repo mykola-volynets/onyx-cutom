@@ -831,18 +831,32 @@ async def add_pipeline(pipeline_data: MicroproductPipelineCreateRequest, pool: a
         return MicroproductPipelineDBResponse(**response_data)
     except Exception as e: print(f"Error inserting pipeline: {e}"); traceback.print_exc(); raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on pipeline insert: {str(e)}")
 
-@app.get("/api/custom/pipelines", response_model=List[MicroproductPipelineDBResponse])
+@app.get("/api/custom/pipelines", response_model=List[MicroproductPipelineGetResponse]) # Changed response_model
 async def get_pipelines(pool: asyncpg.Pool = Depends(get_db_pool)):
     query = "SELECT id, pipeline_name, pipeline_description, is_prompts_data_collection, is_prompts_data_formating, prompts_data_collection, prompts_data_formating, created_at FROM microproduct_pipelines ORDER BY created_at DESC;"
     try:
         async with pool.acquire() as conn: rows = await conn.fetch(query)
         pipelines_list = []
         for row in rows:
-            mapped_data = {"id": row["id"], "pipeline_name": row["pipeline_name"], "pipeline_description": row["pipeline_description"], "is_discovery_prompts": row["is_prompts_data_collection"], "is_structuring_prompts": row["is_prompts_data_formating"], "discovery_prompts": row["prompts_data_collection"], "structuring_prompts": row["prompts_data_formating"], "created_at": row["created_at"]}
-            pipelines_list.append(MicroproductPipelineDBResponse(**mapped_data))
+            # Convert to DBResponse first to prepare for from_db_model
+            db_model_data = {
+                "id": row["id"],
+                "pipeline_name": row["pipeline_name"],
+                "pipeline_description": row["pipeline_description"],
+                "is_discovery_prompts": row["is_prompts_data_collection"], # Correct mapping
+                "is_structuring_prompts": row["is_prompts_data_formating"], # Correct mapping
+                "discovery_prompts": row["prompts_data_collection"],
+                "structuring_prompts": row["prompts_data_formating"],
+                "created_at": row["created_at"]
+            }
+            db_model_instance = MicroproductPipelineDBResponse(**db_model_data)
+            # Now use from_db_model to get the GetResponse version with the list
+            pipelines_list.append(MicroproductPipelineGetResponse.from_db_model(db_model_instance))
         return pipelines_list
-    except Exception as e: print(f"Error fetching pipelines: {e}"); traceback.print_exc(); raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching pipelines: {str(e)}")
-
+    except Exception as e:
+        print(f"Error fetching pipelines: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error fetching pipelines: {str(e)}")
 @app.get("/api/custom/pipelines/{pipeline_id}", response_model=MicroproductPipelineGetResponse)
 async def get_pipeline(pipeline_id: int, pool: asyncpg.Pool = Depends(get_db_pool)):
     query = "SELECT id, pipeline_name, pipeline_description, is_prompts_data_collection, is_prompts_data_formating, prompts_data_collection, prompts_data_formating, created_at FROM microproduct_pipelines WHERE id = $1;"
