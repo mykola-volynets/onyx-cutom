@@ -1,7 +1,7 @@
 // custom_extensions/frontend/src/types/projectSpecificTypes.ts
 import { 
   PdfLessonData as PdfLessonDataType, // Import with an alias if needed to avoid naming conflicts before re-export
-  type ContentBlock as ContentBlockType,
+  type AnyContentBlock as ContentBlockType,
   type HeadlineBlock as HeadlineBlockType,
   type ParagraphBlock as ParagraphBlockType,
   type BulletListBlock as BulletListBlockType,

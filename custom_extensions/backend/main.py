@@ -4,8 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
-from typing import List, Optional, Dict, Any, Union, Type # MODIFIED: Added Union, Type
-from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, Union, Type, ForwardRef
+from pydantic import BaseModel, Field, RootModel
 import re
 import os
 import asyncpg
@@ -57,10 +57,56 @@ DEFAULT_TRAINING_PLAN_JSON_EXAMPLE_FOR_LLM = """
 
 DEFAULT_PDF_LESSON_JSON_EXAMPLE_FOR_LLM = """
 {
-  "lessonTitle": "Example PDF Lesson",
+  "lessonTitle": "Example PDF Lesson with Nested Lists",
   "contentBlocks": [
     { "type": "headline", "level": 1, "text": "Main Title of the Lesson" },
-    { "type": "paragraph", "text": "This is an introductory paragraph." }
+    { "type": "paragraph", "text": "This is an introductory paragraph explaining the main concepts." },
+    {
+      "type": "bullet_list",
+      "items": [
+        "Top level item 1, demonstrating a simple string item.",
+        {
+          "type": "bullet_list",
+          "iconName": "chevronRight",
+          "items": [
+            "Nested item A: This is a sub-item.",
+            "Nested item B: Another sub-item to show structure.",
+            {
+              "type": "numbered_list",
+              "items": [
+                "Further nested numbered item 1.",
+                "Further nested numbered item 2."
+              ]
+            }
+          ]
+        },
+        "Top level item 2, followed by a nested numbered list.",
+        {
+          "type": "numbered_list",
+          "items": [
+            "Nested numbered 1: First point in nested ordered list.",
+            "Nested numbered 2: Second point."
+          ]
+        },
+        "Top level item 3."
+      ]
+    },
+    { "type": "alert", "alertType": "info", "title": "Important Note", "text": "Alerts can provide contextual information or warnings." },
+    {
+      "type": "numbered_list",
+      "items": [
+        "Main numbered point 1.",
+        {
+          "type": "bullet_list",
+          "items": [
+            "Sub-bullet C under numbered list.",
+            "Sub-bullet D, also useful for breaking down complex points."
+          ]
+        },
+        "Main numbered point 2."
+      ]
+    },
+    { "type": "section_break", "style": "dashed" }
   ],
   "detectedLanguage": "en"
 }
@@ -156,10 +202,10 @@ async def startup_event():
                 CREATE TABLE IF NOT EXISTS design_templates (
                     id SERIAL PRIMARY KEY,
                     template_name TEXT NOT NULL UNIQUE,
-                    template_structuring_prompt TEXT NOT NULL, -- This will hold the JSON example and specific rules
+                    template_structuring_prompt TEXT NOT NULL,
                     design_image_path TEXT,
                     microproduct_type TEXT,
-                    component_name TEXT NOT NULL, -- e.g., "TrainingPlanTable" or "PdfLessonDisplay"
+                    component_name TEXT NOT NULL, 
                     date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 );
             """)
@@ -224,9 +270,13 @@ class TrainingPlanDetails(BaseModel):
     detectedLanguage: Optional[str] = None
     model_config = {"from_attributes": True}
 
-# --- PdfLesson Pydantic Models ---
+# --- PdfLesson Pydantic Models (MODIFIED for nested lists) ---
+# Forward references using strings for Pydantic v2 model_rebuild to handle
+ListItem = Union[str, 'HeadlineBlock', 'ParagraphBlock', 'BulletListBlock', 'NumberedListBlock', 'AlertBlock', 'SectionBreakBlock']
+
 class BaseContentBlock(BaseModel):
     type: str
+    model_config = {"from_attributes": True}
 
 class HeadlineBlock(BaseContentBlock):
     type: str = "headline"
@@ -242,14 +292,15 @@ class ParagraphBlock(BaseContentBlock):
 
 class BulletListBlock(BaseContentBlock):
     type: str = "bullet_list"
-    items: List[str]
+    items: List[ListItem] = Field(default_factory=list) # ListItem is now more permissive
     iconName: Optional[str] = None
 
 class NumberedListBlock(BaseContentBlock):
     type: str = "numbered_list"
-    items: List[str]
+    items: List[ListItem] = Field(default_factory=list) # ListItem is now more permissive
 
 class AlertBlock(BaseContentBlock):
+    # ... (definition remains the same)
     type: str = "alert"
     title: Optional[str] = None
     text: str
@@ -261,16 +312,18 @@ class AlertBlock(BaseContentBlock):
     iconColor: Optional[str] = None
 
 class SectionBreakBlock(BaseContentBlock):
+    # ... (definition remains the same)
     type: str = "section_break"
     style: Optional[str] = "solid"
 
-AnyContentBlock = Union[
+# AnyContentBlockValue is the union of all possible top-level blocks
+AnyContentBlockValue = Union[
     HeadlineBlock, ParagraphBlock, BulletListBlock, NumberedListBlock, AlertBlock, SectionBreakBlock
 ]
 
 class PdfLessonDetails(BaseModel):
     lessonTitle: str
-    contentBlocks: List[AnyContentBlock] = Field(default_factory=list)
+    contentBlocks: List[AnyContentBlockValue] = Field(default_factory=list)
     detectedLanguage: Optional[str] = None
     model_config = {"from_attributes": True}
 
@@ -279,9 +332,10 @@ MicroProductContentType = Union[TrainingPlanDetails, PdfLessonDetails, None]
 
 class DesignTemplateBase(BaseModel):
     template_name: str
-    template_structuring_prompt: str # Holds the JSON example and specific rules
+    template_structuring_prompt: str
     microproduct_type: str
     component_name: str
+    model_config = {"from_attributes": True}
 
 class DesignTemplateCreate(DesignTemplateBase):
     design_image_path: Optional[str] = None
@@ -292,18 +346,19 @@ class DesignTemplateUpdate(BaseModel):
     microproduct_type: Optional[str] = None
     component_name: Optional[str] = None
     design_image_path: Optional[str] = None
+    model_config = {"from_attributes": True}
 
 class DesignTemplateResponse(DesignTemplateBase):
     id: int
     design_image_path: Optional[str] = None
     date_created: datetime
-    model_config = {"from_attributes": True}
 
 class ProjectCreateRequest(BaseModel):
     projectName: str
     design_template_id: int
     microProductName: Optional[str] = None
     aiResponse: str
+    model_config = {"from_attributes": True}
 
 class ProjectDB(BaseModel):
     id: int
@@ -312,7 +367,7 @@ class ProjectDB(BaseModel):
     product_type: Optional[str] = None
     microproduct_type: Optional[str] = None
     microproduct_name: Optional[str] = None
-    microproduct_content: MicroProductContentType = None # MODIFIED
+    microproduct_content: Optional[MicroProductContentType] = None # Made Optional for safety
     design_template_id: Optional[int] = None
     created_at: datetime
     model_config = {"from_attributes": True}
@@ -325,7 +380,7 @@ class MicroProductApiResponse(BaseModel):
     component_name: str
     webLinkPath: Optional[str] = None
     pdfLinkPath: Optional[str] = None
-    details: MicroProductContentType = None # MODIFIED
+    details: Optional[MicroProductContentType] = None # Made Optional for safety
     model_config = {"from_attributes": True}
 
 class ProjectApiResponse(BaseModel):
@@ -344,7 +399,7 @@ class ProjectDetailForEditResponse(BaseModel):
     projectName: str
     microProductName: Optional[str] = None
     design_template_id: Optional[int] = None
-    microProductContent: MicroProductContentType = None # MODIFIED
+    microProductContent: Optional[MicroProductContentType] = None # Made Optional
     createdAt: Optional[datetime] = None
     design_template_name: Optional[str] = None
     design_component_name: Optional[str] = None
@@ -355,7 +410,21 @@ class ProjectUpdateRequest(BaseModel):
     projectName: Optional[str] = None
     design_template_id: Optional[int] = None
     microProductName: Optional[str] = None
-    microProductContent: MicroProductContentType = None # MODIFIED
+    microProductContent: Optional[MicroProductContentType] = None # Made Optional
+    model_config = {"from_attributes": True}
+
+
+# Rebuild models that use forward references or types containing them
+# This should be done after all model definitions that are part of the recursion.
+BulletListBlock.model_rebuild()
+NumberedListBlock.model_rebuild()
+PdfLessonDetails.model_rebuild()
+# Rebuild other models that might use MicroProductContentType if issues arise
+ProjectDB.model_rebuild()
+MicroProductApiResponse.model_rebuild()
+ProjectDetailForEditResponse.model_rebuild()
+ProjectUpdateRequest.model_rebuild()
+
 
 class ErrorDetail(BaseModel):
     detail: str
@@ -364,16 +433,15 @@ class ProjectsDeleteRequest(BaseModel):
     project_ids: List[int]
 
 class MicroproductPipelineBase(BaseModel):
-    # ... (existing MicroproductPipeline models - no changes needed here)
     pipeline_name: str
     pipeline_description: Optional[str] = None
-    is_discovery_prompts: bool = Field(False, alias="is_prompts_data_collection") # Alias for request
-    is_structuring_prompts: bool = Field(False, alias="is_prompts_data_formating") # Alias for request
+    is_discovery_prompts: bool = Field(False, alias="is_prompts_data_collection")
+    is_structuring_prompts: bool = Field(False, alias="is_prompts_data_formating")
     discovery_prompts_list: Optional[List[str]] = Field(default_factory=list)
     structuring_prompts_list: Optional[List[str]] = Field(default_factory=list)
 
-    class Config:
-        populate_by_name = True
+    model_config = {"from_attributes": True, "populate_by_name": True}
+
 
 class MicroproductPipelineCreateRequest(MicroproductPipelineBase):
     pass
@@ -381,7 +449,7 @@ class MicroproductPipelineCreateRequest(MicroproductPipelineBase):
 class MicroproductPipelineUpdateRequest(MicroproductPipelineBase):
     pass
 
-class MicroproductPipelineDBRaw(BaseModel): # Model matching DB columns for fetch
+class MicroproductPipelineDBRaw(BaseModel):
     id: int
     pipeline_name: str
     pipeline_description: Optional[str] = None
@@ -392,7 +460,7 @@ class MicroproductPipelineDBRaw(BaseModel): # Model matching DB columns for fetc
     created_at: datetime
     model_config = {"from_attributes": True}
 
-class MicroproductPipelineGetResponse(BaseModel): # Model for API GET response
+class MicroproductPipelineGetResponse(BaseModel):
     id: int
     pipeline_name: str
     pipeline_description: Optional[str] = None
@@ -421,7 +489,6 @@ class MicroproductPipelineGetResponse(BaseModel): # Model for API GET response
 
 # --- Authentication and Utility Functions ---
 async def get_current_onyx_user_id(request: Request) -> str:
-    # ... (existing implementation) ...
     session_cookie_value = request.cookies.get(ONYX_SESSION_COOKIE_NAME)
     if not session_cookie_value:
         dev_user_id = request.headers.get("X-Dev-Onyx-User-ID")
@@ -449,35 +516,25 @@ async def get_current_onyx_user_id(request: Request) -> str:
 
 def create_slug(text: Optional[str]) -> str:
     if not text: return "default-slug"
-    # ... (existing implementation) ...
     text_processed = str(text).lower()
     text_processed = re.sub(r'\s+', '-', text_processed)
     text_processed = re.sub(r'[^\wа-яёa-z0-9\-]+', '', text_processed, flags=re.UNICODE | re.IGNORECASE)
     return text_processed or "generated-slug"
 
-
-# --- Language Parsing related (keep if TrainingPlan still uses them, or for detectedLanguage) ---
-CANONICAL_ATTRIBUTE_FIELDS = { # Primarily for TrainingPlan old parser
-    "check": ["knowledge assessment", "проверка знаний", "перевірка знань", "verificación de conocimientos", "control de conocimientos"],
-    "contentAvailable": ["content availability", "наличие контента", "наявність контенту", "contenido disponible"],
-    "source": ["information source", "источник информации", "джерело інформації", "fuente de información"],
-    "hours": ["time", "время", "тривалість", "час", "duración", "tiempo"],
-}
 LANG_CONFIG = {
-    'ru': {'MODULE_KEYWORD': "Модуль", # ... other RU keys ...
-           'TIME_UNIT_SINGULAR': "час",'TIME_UNIT_DECIMAL_PLURAL': "часа",'TIME_UNIT_GENERAL_PLURAL': "часов"},
-    'en': {'MODULE_KEYWORD': "Module", # ... other EN keys ...
-           'TIME_UNIT_SINGULAR': "hour",'TIME_UNIT_DECIMAL_PLURAL': "hours",'TIME_UNIT_GENERAL_PLURAL': "hours"}
-} # Keep full LANG_CONFIG as in original
+    'ru': {'MODULE_KEYWORD': "Модуль",
+           'TIME_UNIT_SINGULAR': "час",'TIME_UNIT_DECIMAL_PLURAL': "часа",'TIME_UNIT_GENERAL_PLURAL': "часов",
+           'LESSONS_HEADER_KEYWORD': "Уроки", 'TOTAL_TIME_KEYWORD': "Общее время", 'TIME_KEYWORD': "время"},
+    'en': {'MODULE_KEYWORD': "Module",
+           'TIME_UNIT_SINGULAR': "hour",'TIME_UNIT_DECIMAL_PLURAL': "hours",'TIME_UNIT_GENERAL_PLURAL': "hours",
+           'LESSONS_HEADER_KEYWORD': "Lessons", 'TOTAL_TIME_KEYWORD': "Total time", 'TIME_KEYWORD': "time"}
+}
 
 def detect_language(text: str, configs: Dict[str, Dict[str, str]] = LANG_CONFIG) -> str:
     en_score = 0; ru_score = 0
-    # Ensure the language configurations themselves exist
     en_config = configs.get('en', {})
     ru_config = configs.get('ru', {})
 
-    # Check for primary keywords if they exist in config and text
-    # These specific keys are usually present for TrainingPlan structures
     if en_config.get('MODULE_KEYWORD') and en_config.get('LESSONS_HEADER_KEYWORD') and en_config.get('TOTAL_TIME_KEYWORD'):
         if en_config['MODULE_KEYWORD'] in text and \
            en_config['LESSONS_HEADER_KEYWORD'] in text and \
@@ -491,53 +548,35 @@ def detect_language(text: str, configs: Dict[str, Dict[str, str]] = LANG_CONFIG)
             ru_score += 3
 
     if en_score == 0 and ru_score == 0: 
-        # Check for 'MODULE_KEYWORD'
         if en_config.get('MODULE_KEYWORD') and en_config['MODULE_KEYWORD'] in text: en_score +=1
         if ru_config.get('MODULE_KEYWORD') and ru_config['MODULE_KEYWORD'] in text: ru_score +=1
         
-        # MINIMAL CHANGE: Safely check for 'TIME_KEYWORD'
-        if en_config.get('TIME_KEYWORD') and en_config['TIME_KEYWORD'] in text: en_score +=1 # Check if key exists first
-        if ru_config.get('TIME_KEYWORD') and ru_config['TIME_KEYWORD'] in text: ru_score +=1 # Check if key exists first
+        if en_config.get('TIME_KEYWORD') and en_config['TIME_KEYWORD'] in text: en_score +=1
+        if ru_config.get('TIME_KEYWORD') and ru_config['TIME_KEYWORD'] in text: ru_score +=1
         
-        # If still no score, apply a very basic heuristic as a last resort
         if en_score == 0 and ru_score == 0:
-            # Count common English vs Russian characters (very basic)
             en_chars = sum(1 for char_ in text if 'a' <= char_.lower() <= 'z')
             ru_chars = sum(1 for char_ in text if 'а' <= char_.lower() <= 'я')
-            if en_chars > ru_chars and en_chars > 10: # Add a small threshold
+            if en_chars > ru_chars and en_chars > 10:
                 en_score += 0.1 
-            elif ru_chars > en_chars and ru_chars > 10: # Add a small threshold
+            elif ru_chars > en_chars and ru_chars > 10:
                 ru_score += 0.1
 
-
-    if en_score > ru_score: return 'en' # Return 'en' if en_score is strictly greater
-    if ru_score > en_score: return 'ru' # Return 'ru' if ru_score is strictly greater
+    if en_score > ru_score: return 'en'
+    if ru_score > en_score: return 'ru'
     
-    # Default if scores are equal or both zero (e.g., very short, mixed, or non-keyworded text)
-    # Or if one has a very small heuristic score and the other has zero.
-    # If en_score > 0 (even if it's just 0.1) and ru_score is 0, it will return 'en'.
-    # If ru_score > 0 (even if it's just 0.1) and en_score is 0, it will return 'ru'.
-    # If both are 0.1 or both are 0, it defaults.
     if en_score == ru_score and en_score == 0:
-         print("Warning: detect_language could not reliably determine language based on keywords/heuristics. Defaulting to 'ru' (as per original logic for this case).")
-         return 'ru' # Original fallback if both scores were 0
-    elif en_score >= ru_score : # If en_score has any value (even heuristic) and is >= ru_score
+        print("Warning: detect_language could not reliably determine language based on keywords/heuristics. Defaulting to 'ru'.")
+        return 'ru' 
+    elif en_score >= ru_score :
         return 'en'
-    else: # ru_score must be greater
+    else: 
         return 'ru'
 
-# Old parser for TrainingPlan - keep for legacy data if needed
 def parse_training_plan_from_string(original_content_str: str, main_table_title: str) -> Optional[TrainingPlanDetails]:
-    # ... (existing implementation of the old regex-based TrainingPlan parser) ...
-    # This function remains unchanged. It's specific to TrainingPlanDetails.
-    # For brevity, I'll assume its existing implementation is correct for its purpose.
-    # If it's no longer needed (i.e., all TrainingPlans are also parsed by LLM), it could be removed.
-    # For now, keeping it as is.
     print("WARNING: Old 'parse_training_plan_from_string' called. Ensure this is intended for legacy data.")
-    # Abridged for example
     return TrainingPlanDetails(mainTitle=f"Content for {main_table_title} (Old Parser)", sections=[], detectedLanguage='ru')
 
-# --- LLM Parser ---
 async def parse_ai_response_with_llm(
     ai_response: str,
     project_name: str,
@@ -595,13 +634,16 @@ The entire output must be a single, valid JSON object and must include all relev
 
             if json_text_output is None:
                 print(f"LLM API Response for {project_name} did not contain expected text field. Response: {str(llm_api_response_data)[:500]}")
+                if hasattr(default_error_model_instance, 'detectedLanguage'): default_error_model_instance.detectedLanguage = detected_lang_by_rules
                 return default_error_model_instance
 
             json_text_output = re.sub(r"^```json\s*|\s*```$", "", json_text_output.strip(), flags=re.MULTILINE)
             try:
                 parsed_json_data = json.loads(json_text_output)
+                print(f'DEBUG: cohere reponse: {parsed_json_data}')
             except json.JSONDecodeError as json_e:
                 print(f"Failed to decode JSON from LLM for {project_name}. Error: {json_e}. Raw: '{json_text_output[:500]}...'")
+                if hasattr(default_error_model_instance, 'detectedLanguage'): default_error_model_instance.detectedLanguage = detected_lang_by_rules
                 return default_error_model_instance
             
             try:
@@ -638,8 +680,6 @@ The entire output must be a single, valid JSON object and must include all relev
 
 # --- API Endpoints ---
 
-# Microproduct Pipeline Endpoints
-# ... (Existing add_pipeline, get_pipelines, get_pipeline, update_pipeline, delete_pipeline - NO CHANGES NEEDED) ...
 @app.post("/api/custom/pipelines/add", response_model=MicroproductPipelineDBRaw, status_code=status.HTTP_201_CREATED)
 async def add_pipeline(pipeline_data: MicroproductPipelineCreateRequest, pool: asyncpg.Pool = Depends(get_db_pool)):
     discovery_prompts_json_for_db = {str(i+1): prompt for i, prompt in enumerate(pipeline_data.discovery_prompts_list) if prompt.strip()} if pipeline_data.discovery_prompts_list else None
@@ -720,9 +760,6 @@ async def delete_pipeline(pipeline_id: int, pool: asyncpg.Pool = Depends(get_db_
         print(f"Error deleting pipeline {pipeline_id}: {e}"); traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on pipeline deletion: {str(e)}")
 
-
-# Design Template Endpoints
-# ... (Existing upload_design_template_image, add_design_template, etc. - NO CHANGES NEEDED) ...
 @app.post("/api/custom/design_templates/upload_image", responses={200: {"description": "Image uploaded successfully", "content": {"application/json": {"example": {"file_path": f"/{STATIC_DESIGN_IMAGES_DIR}/your_image_name.png"}}}},400: {"description": "Invalid file type or other error", "model": ErrorDetail},413: {"description": "File too large", "model": ErrorDetail}})
 async def upload_design_template_image(file: UploadFile = File(...)):
     allowed_extensions = {".png", ".jpg", ".jpeg", ".gif", ".webp"}; max_file_size = 5 * 1024 * 1024
@@ -801,13 +838,12 @@ async def delete_design_template(template_id: int, pool: asyncpg.Pool = Depends(
     if deleted_count_status == "DELETE 0": raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Design template not found during delete, or already deleted.")
     return {"detail": f"Successfully initiated deletion for design template with ID {template_id}."}
 
-
 ALLOWED_MICROPRODUCT_TYPES_FOR_DESIGNS = [
     "Training Plan", "Course Module", "FAQ Document", "Tutorial Script",
-    "Marketing Copy", "Onboarding Material", "Sales Script", "PDF Lesson" # MODIFIED: Added "PDF Lesson"
+    "Marketing Copy", "Onboarding Material", "Sales Script", "PDF Lesson"
 ]
 COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanTable"
-COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay" # Frontend component name for PDF Lessons
+COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay"
 
 @app.get("/api/custom/microproduct_types", response_model=List[str])
 async def get_allowed_microproduct_types_list_for_design_templates():
@@ -828,7 +864,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
     target_content_model: Type[BaseModel]
     default_error_instance: BaseModel
     llm_json_example: str
-    component_specific_instructions: str = "Parse the content according to the JSON example provided." # Default instructions
+    component_specific_instructions: str = "Parse the content according to the JSON example provided."
 
     if selected_design_template.component_name == COMPONENT_NAME_PDF_LESSON:
         target_content_model = PdfLessonDetails
@@ -841,7 +877,9 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
         - Each block must have a 'type' field: 'headline', 'paragraph', 'bullet_list', 'numbered_list', 'alert', or 'section_break'.
         - 'headline' blocks need a 'level' (1-4) and 'text'. Optional: 'iconName', 'backgroundColor', 'textColor'.
         - 'paragraph' blocks need 'text'.
-        - 'bullet_list' and 'numbered_list' blocks need an 'items' array of strings. 'bullet_list' can have an optional 'iconName'.
+        - 'bullet_list' and 'numbered_list' blocks need an 'items' array. 
+          - Items in this array can be simple strings OR further 'bullet_list' or 'numbered_list' objects to represent NESTED LISTS.
+          - For 'bullet_list', an optional 'iconName' can be provided.
         - 'alert' blocks need 'text' and 'alertType' ('info', 'warning', 'success', 'danger'). Optional: 'title', 'iconName', 'backgroundColor', 'borderColor', 'textColor', 'iconColor'. Infer alertType from context (e.g. "Important:" -> "info" or "warning", "Success:" -> "success").
         - 'section_break' can have an optional 'style' ('dashed', 'solid', 'none').
         - Structure the content logically using these blocks. Use headings to create clear sections. Use alert blocks for emphasized notes, warnings, tips, or important callouts.
@@ -864,13 +902,12 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
         """
     else:
         print(f"Warning: Unknown component_name '{selected_design_template.component_name}' for DT ID {selected_design_template.id}. Defaulting to TrainingPlanDetails for parsing.")
-        target_content_model = TrainingPlanDetails
+        target_content_model = TrainingPlanDetails # Fallback
         default_error_instance = TrainingPlanDetails(mainTitle=f"LLM Config Error for {project_data.projectName}", sections=[])
         llm_json_example = DEFAULT_TRAINING_PLAN_JSON_EXAMPLE_FOR_LLM
-        # No specific instructions, relies on general prompt and example.
     
     if hasattr(default_error_instance, 'detectedLanguage'):
-         default_error_instance.detectedLanguage = detect_language(project_data.aiResponse)
+            default_error_instance.detectedLanguage = detect_language(project_data.aiResponse)
 
     parsed_content_model_instance = await parse_ai_response_with_llm(
         ai_response=project_data.aiResponse,
@@ -893,20 +930,17 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create project entry.")
         
         db_content_dict = row["microproduct_content"]
-        final_content_for_response: MicroProductContentType = None
+        final_content_for_response: Optional[MicroProductContentType] = None
         if db_content_dict and isinstance(db_content_dict, dict):
-            component_name_from_db = selected_design_template.component_name # Use component_name from the template used for creation
-            if component_name_from_db == COMPONENT_NAME_PDF_LESSON:
-                 try: final_content_for_response = PdfLessonDetails(**db_content_dict)
-                 except Exception as e: print(f"Error parsing PdfLessonDetails from DB on add: {e}")
-            elif component_name_from_db == COMPONENT_NAME_TRAINING_PLAN:
-                 try: final_content_for_response = TrainingPlanDetails(**db_content_dict)
-                 except Exception as e: print(f"Error parsing TrainingPlanDetails from DB on add: {e}")
-            else: # Fallback if component_name somehow not matching
-                try: final_content_for_response = TrainingPlanDetails(**db_content_dict)
-                except:
-                    try: final_content_for_response = PdfLessonDetails(**db_content_dict)
-                    except: print(f"Could not determine content type for project {row['id']} after insert from DB.")
+            component_name_from_db = selected_design_template.component_name
+            try:
+                if component_name_from_db == COMPONENT_NAME_PDF_LESSON:
+                    final_content_for_response = PdfLessonDetails(**db_content_dict)
+                elif component_name_from_db == COMPONENT_NAME_TRAINING_PLAN:
+                    final_content_for_response = TrainingPlanDetails(**db_content_dict)
+                else: 
+                    final_content_for_response = TrainingPlanDetails(**db_content_dict) # Fallback attempt
+            except Exception as e: print(f"Error parsing content from DB on add (proj ID {row['id']}): {e}")
 
         return ProjectDB(
             id=row["id"], onyx_user_id=row["onyx_user_id"], project_name=row["project_name"],
@@ -937,7 +971,7 @@ async def get_project_details_for_edit(project_id: int, onyx_user_id: str = Depe
 
         row_dict = dict(row)
         db_content_json = row_dict.get("microproduct_content")
-        parsed_content_for_response: MicroProductContentType = None
+        parsed_content_for_response: Optional[MicroProductContentType] = None
         component_name = row_dict.get("design_component_name")
 
         if db_content_json and isinstance(db_content_json, dict):
@@ -946,16 +980,16 @@ async def get_project_details_for_edit(project_id: int, onyx_user_id: str = Depe
                     parsed_content_for_response = PdfLessonDetails(**db_content_json)
                 elif component_name == COMPONENT_NAME_TRAINING_PLAN:
                     parsed_content_for_response = TrainingPlanDetails(**db_content_json)
-                else: # Fallback strategy
-                    print(f"Unknown component_name '{component_name}' for project {project_id}. Attempting TrainingPlan then PdfLesson.")
+                else: 
+                    print(f"Unknown component_name '{component_name}' for project {project_id}. Attempting fallbacks.")
                     try: parsed_content_for_response = TrainingPlanDetails(**db_content_json)
                     except:
                         try: parsed_content_for_response = PdfLessonDetails(**db_content_json)
                         except Exception as e_parse_fallback: print(f"Fallback parsing failed for project {project_id}: {e_parse_fallback}")
             except Exception as e_main_parse:
                 print(f"Pydantic validation error for DB JSON (project {project_id}, component {component_name}): {e_main_parse}")
-        elif isinstance(db_content_json, str) and component_name == COMPONENT_NAME_TRAINING_PLAN:
-             parsed_content_for_response = parse_training_plan_from_string(db_content_json, row_dict["project_name"])
+        elif isinstance(db_content_json, str) and component_name == COMPONENT_NAME_TRAINING_PLAN: # Legacy string content
+                parsed_content_for_response = parse_training_plan_from_string(db_content_json, row_dict["project_name"])
         
         return ProjectDetailForEditResponse(
             id=row_dict["id"], projectName=row_dict["project_name"], microProductName=row_dict.get("microproduct_name"),
@@ -972,7 +1006,7 @@ async def get_project_details_for_edit(project_id: int, onyx_user_id: str = Depe
 async def update_project_in_db(project_id: int, project_update_data: ProjectUpdateRequest, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
     db_microproduct_name_to_store = project_update_data.microProductName
     current_component_name = None
-    async with pool.acquire() as conn: # Get current component name for accurate response parsing
+    async with pool.acquire() as conn: 
         project_row = await conn.fetchrow("SELECT dt.component_name FROM projects p JOIN design_templates dt ON p.design_template_id = dt.id WHERE p.id = $1 AND p.onyx_user_id = $2", project_id, onyx_user_id)
         if not project_row: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found or not owned by user.")
         current_component_name = project_row["component_name"]
@@ -989,7 +1023,7 @@ async def update_project_in_db(project_id: int, project_update_data: ProjectUpda
         if design_template:
             derived_product_type = design_template["microproduct_type"]
             derived_microproduct_type = design_template["template_name"]
-            current_component_name = design_template["component_name"] # If template changes, new component name applies
+            current_component_name = design_template["component_name"] 
 
     update_clauses = []; update_values = []; arg_idx = 1
     if project_update_data.projectName is not None: update_clauses.append(f"project_name = ${arg_idx}"); update_values.append(project_update_data.projectName); arg_idx += 1
@@ -1007,20 +1041,16 @@ async def update_project_in_db(project_id: int, project_update_data: ProjectUpda
         if not row: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found or update failed.")
         
         db_content = row["microproduct_content"]
-        final_content_for_model: MicroProductContentType = None
+        final_content_for_model: Optional[MicroProductContentType] = None
         if db_content and isinstance(db_content, dict):
-            # Use current_component_name (which might have been updated if design_template_id changed)
-            if current_component_name == COMPONENT_NAME_PDF_LESSON:
-                try: final_content_for_model = PdfLessonDetails(**db_content)
-                except Exception as e: print(f"Error parsing updated PdfLessonDetails from DB: {e}")
-            elif current_component_name == COMPONENT_NAME_TRAINING_PLAN:
-                try: final_content_for_model = TrainingPlanDetails(**db_content)
-                except Exception as e: print(f"Error parsing updated TrainingPlanDetails from DB: {e}")
-            else: # Fallback
-                try: final_content_for_model = TrainingPlanDetails(**db_content)
-                except: 
-                    try: final_content_for_model = PdfLessonDetails(**db_content)
-                    except: print(f"Could not determine updated content type for project {row['id']}")
+            try:
+                if current_component_name == COMPONENT_NAME_PDF_LESSON:
+                    final_content_for_model = PdfLessonDetails(**db_content)
+                elif current_component_name == COMPONENT_NAME_TRAINING_PLAN:
+                    final_content_for_model = TrainingPlanDetails(**db_content)
+                else: 
+                    final_content_for_model = TrainingPlanDetails(**db_content) # Fallback
+            except Exception as e: print(f"Error parsing updated content from DB (proj ID {row['id']}): {e}")
         
         return ProjectDB(
             id=row["id"], onyx_user_id=row["onyx_user_id"], project_name=row["project_name"],
@@ -1035,7 +1065,6 @@ async def update_project_in_db(project_id: int, project_update_data: ProjectUpda
 
 @app.get("/api/custom/projects", response_model=List[ProjectApiResponse])
 async def get_user_projects_list_from_db(onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
-    # This endpoint does not return full microproduct_content, so no major change needed other than ensuring fields align.
     select_query = """
         SELECT p.id, p.project_name, p.microproduct_name, p.created_at, p.design_template_id,
                dt.template_name as design_template_name,
@@ -1054,7 +1083,7 @@ async def get_user_projects_list_from_db(onyx_user_id: str = Depends(get_current
                 id=row_dict["id"], projectName=row_dict["project_name"], projectSlug=project_slug,
                 microproduct_name=row_dict.get("microproduct_name"),
                 design_template_name=row_dict.get("design_template_name"),
-                design_microproduct_type=row_dict.get("design_microproduct_type"), # This comes from design_template.microproduct_type
+                design_microproduct_type=row_dict.get("design_microproduct_type"),
                 created_at=row_dict["created_at"], design_template_id=row_dict.get("design_template_id")
             ))
         return projects_list
@@ -1078,7 +1107,7 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
 
         row_dict = dict(row)
         project_instance_name = row_dict.get('microproduct_name') or row_dict.get('project_name')
-        details_data: MicroProductContentType = None
+        details_data: Optional[MicroProductContentType] = None
         microproduct_content_json = row_dict.get('microproduct_content')
         component_name = row_dict.get("design_component_name")
 
@@ -1088,23 +1117,22 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
                     details_data = PdfLessonDetails(**microproduct_content_json)
                 elif component_name == COMPONENT_NAME_TRAINING_PLAN:
                     details_data = TrainingPlanDetails(**microproduct_content_json)
-                else: # Fallback
+                else: 
                     print(f"Unknown component_name '{component_name}' for project {project_id} view. Trying fallbacks.")
                     try: details_data = TrainingPlanDetails(**microproduct_content_json)
                     except:
                         try: details_data = PdfLessonDetails(**microproduct_content_json)
-                        except: pass # log this
+                        except: pass 
             except Exception as pydantic_e:
                 print(f"Pydantic validation error (project ID {project_id}, component {component_name}, detail view): {pydantic_e}")
-        elif isinstance(microproduct_content_json, str) and component_name == COMPONENT_NAME_TRAINING_PLAN:
+        elif isinstance(microproduct_content_json, str) and component_name == COMPONENT_NAME_TRAINING_PLAN: # Legacy
             details_data = parse_training_plan_from_string(microproduct_content_json, project_instance_name)
         
-        # Ensure details_data is not None for the response model
-        if not details_data:
+        if not details_data: # Fallback if parsing failed or content was null
             lang_fallback = detect_language(project_instance_name)
             if component_name == COMPONENT_NAME_PDF_LESSON:
                 details_data = PdfLessonDetails(lessonTitle=f"No/Invalid content for {project_instance_name}", contentBlocks=[], detectedLanguage=lang_fallback)
-            else: # Default to TrainingPlan or a generic error structure
+            else: 
                 details_data = TrainingPlanDetails(mainTitle=f"No/Invalid content for {project_instance_name}", sections=[], detectedLanguage=lang_fallback)
 
         web_link_path = f"/projects/view/{project_id}"
@@ -1138,9 +1166,9 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
     
     content_json = target_row_dict.get('microproduct_content')
     component_name = target_row_dict.get("design_component_name")
-    parsed_content_for_pdf: MicroProductContentType = None
+    parsed_content_for_pdf: Optional[MicroProductContentType] = None
     pdf_template_file: str
-    detected_lang_for_pdf = 'ru' # Default
+    detected_lang_for_pdf = 'ru' 
 
     if content_json and isinstance(content_json, dict):
         try:
@@ -1154,34 +1182,24 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
                 pdf_template_file = "training_plan_pdf_template.html"
                 if parsed_content_for_pdf and parsed_content_for_pdf.detectedLanguage:
                     detected_lang_for_pdf = parsed_content_for_pdf.detectedLanguage
-            else:
+            else: # Fallback
                 print(f"PDF: Unknown component_name '{component_name}' for project {project_id}. Defaulting to TrainingPlan template.")
-                parsed_content_for_pdf = TrainingPlanDetails(**content_json) # Try as TrainingPlan
+                parsed_content_for_pdf = TrainingPlanDetails(**content_json) 
                 pdf_template_file = "training_plan_pdf_template.html"
-                if parsed_content_for_pdf and parsed_content_for_pdf.detectedLanguage:
-                     detected_lang_for_pdf = parsed_content_for_pdf.detectedLanguage
-
+                if parsed_content_for_pdf and hasattr(parsed_content_for_pdf, 'detectedLanguage') and parsed_content_for_pdf.detectedLanguage: # Check attr
+                        detected_lang_for_pdf = parsed_content_for_pdf.detectedLanguage
         except Exception as pydantic_e:
             print(f"Error validating content from DB JSON for PDF (project {project_id}, component {component_name}): {pydantic_e}")
-            # Fallback to an error representation within the default content type
-            if component_name == COMPONENT_NAME_PDF_LESSON:
-                parsed_content_for_pdf = PdfLessonDetails(lessonTitle=f"Content Error for '{mp_name_for_pdf_context}'", contentBlocks=[], detectedLanguage=detected_lang_for_pdf)
-                pdf_template_file = "pdf_lesson_pdf_template.html"
-            else:
-                parsed_content_for_pdf = TrainingPlanDetails(mainTitle=f"Content Error for '{mp_name_for_pdf_context}'", sections=[], detectedLanguage=detected_lang_for_pdf)
-                pdf_template_file = "training_plan_pdf_template.html"
+            # Fallback content
+            parsed_content_for_pdf = PdfLessonDetails(lessonTitle=f"Content Error: {mp_name_for_pdf_context}", contentBlocks=[], detectedLanguage=detected_lang_for_pdf) if component_name == COMPONENT_NAME_PDF_LESSON else TrainingPlanDetails(mainTitle=f"Content Error: {mp_name_for_pdf_context}", sections=[], detectedLanguage=detected_lang_for_pdf)
+            pdf_template_file = "pdf_lesson_pdf_template.html" if component_name == COMPONENT_NAME_PDF_LESSON else "training_plan_pdf_template.html"
 
     elif isinstance(content_json, str) and component_name == COMPONENT_NAME_TRAINING_PLAN: # Legacy string
-        try:
-            parsed_content_for_pdf = parse_training_plan_from_string(content_json, mp_name_for_pdf_context)
-            pdf_template_file = "training_plan_pdf_template.html"
-            if parsed_content_for_pdf and parsed_content_for_pdf.detectedLanguage:
-                detected_lang_for_pdf = parsed_content_for_pdf.detectedLanguage
-        except Exception as parse_e:
-            print(f"Could not re-parse legacy content string for PDF (project {project_id}): {parse_e}")
-            parsed_content_for_pdf = TrainingPlanDetails(mainTitle=f"Content Error for '{mp_name_for_pdf_context}'", sections=[], detectedLanguage=detected_lang_for_pdf)
-            pdf_template_file = "training_plan_pdf_template.html"
-    
+        parsed_content_for_pdf = parse_training_plan_from_string(content_json, mp_name_for_pdf_context)
+        pdf_template_file = "training_plan_pdf_template.html"
+        if parsed_content_for_pdf and parsed_content_for_pdf.detectedLanguage:
+            detected_lang_for_pdf = parsed_content_for_pdf.detectedLanguage
+            
     if not parsed_content_for_pdf: # Final fallback if still no content
         lang_fallback = detect_language(mp_name_for_pdf_context)
         if component_name == COMPONENT_NAME_PDF_LESSON:
@@ -1191,17 +1209,22 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
             parsed_content_for_pdf = TrainingPlanDetails(mainTitle=f"Content Unavailable: {mp_name_for_pdf_context}", sections=[], detectedLanguage=lang_fallback)
             pdf_template_file = "training_plan_pdf_template.html"
 
-
     unique_output_filename = f"{project_id}_{document_name_slug}_{uuid.uuid4().hex[:12]}.pdf"
     try:
+        # Ensure context_data['details'] is a dict, not a Pydantic model instance directly for Jinja
         context_data_for_pdf = {'details': parsed_content_for_pdf.model_dump(mode='json', exclude_none=True)}
+        
         # Add language specific units for TrainingPlan only
         if isinstance(parsed_content_for_pdf, TrainingPlanDetails):
-            current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru'])
-            context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg['TIME_UNIT_SINGULAR']
-            context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg['TIME_UNIT_DECIMAL_PLURAL']
-            context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg['TIME_UNIT_GENERAL_PLURAL']
-        context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf
+            current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru']) # Default to 'ru' if lang not in config
+            context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg.get('TIME_UNIT_SINGULAR', 'h')
+            context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg.get('TIME_UNIT_DECIMAL_PLURAL', 'h')
+            context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg.get('TIME_UNIT_GENERAL_PLURAL', 'h')
+        
+        # Ensure detectedLanguage is in the context for pdf_lesson_pdf_template.html as well
+        if 'detectedLanguage' not in context_data_for_pdf['details'] or not context_data_for_pdf['details']['detectedLanguage']:
+             context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf
+
 
         pdf_path = await generate_pdf_from_html_template(pdf_template_file, context_data_for_pdf, unique_output_filename)
         if not os.path.exists(pdf_path):
@@ -1213,7 +1236,6 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
 
 @app.post("/api/custom/projects/delete-multiple", status_code=status.HTTP_200_OK)
 async def delete_multiple_projects(delete_request: ProjectsDeleteRequest, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
-    # ... (Existing implementation - NO CHANGES NEEDED) ...
     if not delete_request.project_ids: return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"detail": "No project IDs provided for deletion."})
     try:
         async with pool.acquire() as conn:
@@ -1227,3 +1249,12 @@ async def delete_multiple_projects(delete_request: ProjectsDeleteRequest, onyx_u
 @app.get("/api/custom/health")
 async def health_check():
     return {"status": "healthy"}
+
+HeadlineBlock.model_rebuild()
+ParagraphBlock.model_rebuild()
+AlertBlock.model_rebuild()
+SectionBreakBlock.model_rebuild()
+BulletListBlock.model_rebuild() # Uses ListItem which refers to 'BulletListBlock', 'NumberedListBlock', etc.
+NumberedListBlock.model_rebuild() # Uses ListItem
+# PdfLessonDetails uses AnyContentBlockValue which uses all the above.
+PdfLessonDetails.model_rebuild()
