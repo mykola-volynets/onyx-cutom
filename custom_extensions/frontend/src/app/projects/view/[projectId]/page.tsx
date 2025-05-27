@@ -3,19 +3,26 @@
 
 import React, { Suspense, useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ProjectInstanceDetail, TrainingPlanData } from '@/types/trainingPlan'; // Ensure TrainingPlanData is imported if needed by TrainingPlanTableComponent
+// MODIFIED: Import new types and the new component
+import { 
+  ProjectInstanceDetail, 
+  MicroProductContentData, // Union type for different content structures
+  TrainingPlanData,        // Specific type for TrainingPlanTable
+  PdfLessonData            // Specific type for PdfLessonDisplay
+} from '@/types/projectSpecificTypes'; // Ensure this path is correct
 import TrainingPlanTableComponent from '@/components/TrainingPlanTable';
-// Import other display components here as you create them
-// import FAQDisplayComponent from '@/components/FAQDisplayComponent'; 
-// import MarketingCopyDisplayComponent from '@/components/MarketingCopyDisplayComponent';
+import PdfLessonDisplayComponent from '@/components/PdfLessonDisplay'; // MODIFIED: Import new component
 
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
+
+// MODIFIED: Define component names from backend (ensure these match backend constants)
+const COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanTable";
+const COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay"; // This should match the 'component_name' in your design_templates table for PDF Lessons
 
 type ProjectViewParams = {
   projectId: string;
 };
 
-// Default component for unmapped component_name or as a fallback
 const DefaultDisplayComponent = ({ instanceData }: { instanceData: ProjectInstanceDetail | null }) => (
   <div className="p-4 border rounded-md bg-gray-100">
     <h2 className="text-xl font-semibold mb-2">{instanceData?.name || 'Content Details'}</h2>
@@ -30,12 +37,6 @@ const DefaultDisplayComponent = ({ instanceData }: { instanceData: ProjectInstan
   </div>
 );
 
-// Example of how other components might be structured (they should also take consistent props)
-// const FAQDisplayComponent = ({ instanceData }: { instanceData: ProjectInstanceDetail | null }) => (
-// <div>Displaying FAQ: {instanceData?.name}</div>
-// );
-
-
 export default function ProjectInstanceViewPage() {
   const params = useParams<ProjectViewParams>();
   const router = useRouter();
@@ -48,23 +49,30 @@ export default function ProjectInstanceViewPage() {
   const fetchProjectInstanceData = useCallback(async (currentProjectId: string) => {
     setPageState('fetching');
     setErrorMessage(null);
-    setProjectInstanceData(null);
+    setProjectInstanceData(null); // Clear previous data
 
     const apiUrl = `${CUSTOM_BACKEND_URL}/projects/view/${currentProjectId}`;
     console.log("Fetching project instance details from:", apiUrl);
 
     try {
       const headers: HeadersInit = {};
-      const devUserId = "dummy-onyx-user-id-for-testing";
+      const devUserId = "dummy-onyx-user-id-for-testing"; 
       if (devUserId && process.env.NODE_ENV === 'development') {
         headers['X-Dev-Onyx-User-ID'] = devUserId;
       }
       const res = await fetch(apiUrl, { cache: 'no-store', headers });
+
       if (!res.ok) {
          const errorText = await res.text();
          console.error("Fetch error:", res.status, errorText);
-         try { const jsonError = JSON.parse(errorText); throw new Error(jsonError.detail || `HTTP error ${res.status}`); }
-         catch { throw new Error(`HTTP error ${res.status} - ${errorText.substring(0, 150)}`); }
+         let errorDetail = `HTTP error ${res.status}`;
+         try { 
+            const jsonError = JSON.parse(errorText); 
+            errorDetail = jsonError.detail || errorDetail;
+         } catch { 
+            errorDetail = `${errorDetail} - ${errorText.substring(0, 150)}`;
+         }
+         throw new Error(errorDetail);
       }
       const data: ProjectInstanceDetail = await res.json();
       setProjectInstanceData(data);
@@ -72,20 +80,20 @@ export default function ProjectInstanceViewPage() {
       if (data && data.details) { 
         setPageState('success');
       } else {
-        console.warn("Data received but details are missing or empty.");
-        setProjectInstanceData(data); // Still set data to show other info if details are missing
-        setPageState('nodata'); // Indicate that main content might be missing
+        console.warn("Data received but project details content (data.details) is missing or empty for project:", currentProjectId);
+        setProjectInstanceData(data); 
+        setPageState('nodata'); 
       }
     } catch (err: any) {
-      console.error("Error fetching data:", err);
-      setErrorMessage(err.message || "An unknown error occurred");
+      console.error("Error fetching project instance data for", currentProjectId, ":", err);
+      setErrorMessage(err.message || "An unknown error occurred while fetching project data.");
       setPageState('error');
     }
   }, []);
 
   useEffect(() => {
     if (projectId) {
-      if (pageState === 'initial_loading') {
+      if (pageState === 'initial_loading') { // Fetch only on initial load or if projectId changes and it was an error state
         fetchProjectInstanceData(projectId);
       }
     } else if (params && Object.keys(params).length > 0 && !projectId) {
@@ -102,25 +110,29 @@ export default function ProjectInstanceViewPage() {
     return <div className="p-8 text-center text-red-500">Error: {errorMessage || "Failed to load data."}</div>;
   }
   
-  // Handle case where projectInstanceData itself is null after attempting fetch (e.g. 404 not caught as error)
   if (!projectInstanceData) {
-    return <div className="p-8 text-center text-orange-500">Project data not found.</div>;
+    // This case should ideally be caught by the error state if fetch fails (e.g. 404)
+    return <div className="p-8 text-center text-orange-500">Project data could not be loaded or found.</div>;
   }
 
-  // If nodata state, but we have projectInstanceData, show default viewer with potentially empty details
   const displayContent = () => {
-    if (!projectInstanceData.component_name) {
-      return <DefaultDisplayComponent instanceData={projectInstanceData} />;
+    // If details are explicitly null or undefined, even if component_name is present, show appropriate message or default.
+    if (!projectInstanceData.details && pageState !== 'nodata') {
+        // This might indicate an unexpected state if pageState is 'success' but details are null.
+        // For 'nodata' state, it's expected that details might be null/empty.
+        console.warn(`Project details are missing for component: ${projectInstanceData.component_name}`);
+        return <div className="p-4 text-center text-gray-500">Content is not available for this project.</div>;
     }
 
     switch (projectInstanceData.component_name) {
-      case 'TrainingPlanTable':
-        // TrainingPlanTableComponent expects 'initialData' prop with the 'details' part
-        return <TrainingPlanTableComponent initialData={projectInstanceData.details} />;
-      // Add other cases here as you create more components:
-      // case 'FAQComponent':
-      //   return <FAQDisplayComponent instanceData={projectInstanceData} />; 
+      case COMPONENT_NAME_TRAINING_PLAN:
+        return <TrainingPlanTableComponent initialData={projectInstanceData.details as TrainingPlanData | null} />;
+      
+      case COMPONENT_NAME_PDF_LESSON:
+        return <PdfLessonDisplayComponent data={projectInstanceData.details as PdfLessonData | null} />;
+      
       default:
+        console.warn(`No specific display component mapped for: '${projectInstanceData.component_name}'. Using default display.`);
         return <DefaultDisplayComponent instanceData={projectInstanceData} />;
     }
   };
@@ -132,16 +144,18 @@ export default function ProjectInstanceViewPage() {
        <div className="max-w-6xl mx-auto">
         <div className="mb-4">
           <button
-            onClick={() => router.push('/projects')}
+            onClick={() => router.push('/projects')} 
             className="text-blue-600 hover:text-blue-800 text-sm"
           >
             &larr; Back to Projects
           </button>
         </div>
         <h1 className="text-3xl font-bold text-gray-800 mb-2">{displayName}</h1>
-        <p className="text-sm text-gray-500 mb-6">Design: {projectInstanceData.slug} (Component: {projectInstanceData.component_name || 'Default Viewer'})</p>
+        <p className="text-sm text-gray-500 mb-6">
+          Design Slug: {projectInstanceData.slug} (Component: {projectInstanceData.component_name || 'Default Viewer'})
+        </p>
         
-        <Suspense fallback={<div>Loading content...</div>}>
+        <Suspense fallback={<div className="p-8 text-center">Loading content display...</div>}>
           {displayContent()}
         </Suspense>
       </div>
