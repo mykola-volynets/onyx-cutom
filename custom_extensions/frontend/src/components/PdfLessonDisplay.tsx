@@ -3,110 +3,104 @@
 
 import React from 'react';
 import {
-  PdfLessonData,
-  AnyContentBlock,
-  HeadlineBlock,
-  ParagraphBlock,
-  BulletListBlock,
-  NumberedListBlock,
-  AlertBlock,
-  SectionBreakBlock,
-} from '@/types/pdfLesson'; // Assuming ListItem is part of AnyContentBlock
+  PdfLessonData, AnyContentBlock, HeadlineBlock, ParagraphBlock,
+  BulletListBlock, NumberedListBlock, AlertBlock, SectionBreakBlock,
+} from '@/types/pdfLesson';
 import {
   AlertCircle, CheckCircle, Info, XCircle, ChevronRight, Minus, Type, List, ListOrdered,
   Award, Brain, BookOpen, Edit3, Lightbulb, Search, Compass, CloudDrizzle, EyeOff,
   ClipboardCheck, AlertTriangle, Clock, ChevronsRight, Star, ArrowRight, Circle,
 } from 'lucide-react';
 
+// Type definitions moved to the top
+type MiniSection = { 
+  type: "mini_section"; 
+  headline: HeadlineBlock; 
+  list: BulletListBlock | NumberedListBlock; 
+  // 'applyBackground' is now implicitly true if it's a MiniSection, 
+  // based on the "only nested lists get their own bgs" rule for this step.
+  // If more nuanced control is needed later via LLM, this type might re-introduce 'applyBackground'.
+};
+type StandaloneBlock = { type: "standalone_block"; content: AnyContentBlock };
+type MajorSection = { 
+  type: "major_section"; 
+  headline: HeadlineBlock; 
+  items: Array<AnyContentBlock | MiniSection>;
+  _skipRenderHeadline?: boolean 
+};
+type RenderableItem = MajorSection | MiniSection | StandaloneBlock;
+
+
 const iconMap: { [key: string]: React.ElementType } = {
-  alertCircle: AlertCircle,
-  checkCircle: CheckCircle,
-  info: Info,
-  xCircle: XCircle,
-  chevronRight: ChevronRight,
-  type: Type,
-  list: List,
-  listOrdered: ListOrdered,
-  award: Award,
-  brain: Brain,
-  bookOpen: BookOpen,
-  edit3: Edit3,
-  lightbulb: Lightbulb,
-  search: Search,
-  compass: Compass,
-  cloudDrizzle: CloudDrizzle,
-  eyeOff: EyeOff,
-  clipboardCheck: ClipboardCheck,
-  alertTriangle: AlertTriangle,
-  clock: Clock,
-  chevronsRight: ChevronsRight,
-  star: Star,
-  arrowRight: ArrowRight,
-  circle: Circle,
+  alertCircle: AlertCircle, checkCircle: CheckCircle, info: Info, xCircle: XCircle,
+  chevronRight: ChevronRight, type: Type, list: List, listOrdered: ListOrdered,
+  award: Award, brain: Brain, bookOpen: BookOpen, edit3: Edit3, lightbulb: Lightbulb,
+  search: Search, compass: Compass, cloudDrizzle: CloudDrizzle, eyeOff: EyeOff,
+  clipboardCheck: ClipboardCheck, alertTriangle: AlertTriangle, clock: Clock,
+  chevronsRight: ChevronsRight, star: Star, arrowRight: ArrowRight, circle: Circle,
   default: Minus,
 };
 
 const THEME_COLORS = {
   primaryText: 'text-gray-700',
-  headingText: 'text-gray-900',
-  subHeadingText: 'text-gray-800',
+  headingText: 'text-gray-900', 
+  subHeadingText: 'text-gray-800', 
   accentBlue: 'text-sky-700',
-  accentBlueBg: 'bg-sky-600',
-  lightAccentBg: 'bg-sky-50',        
   veryLightAccentBg: 'bg-slate-100', 
   lightBorder: 'border-slate-300', 
   mutedText: 'text-gray-500',
   defaultBorder: 'border-gray-300',
   underlineAccent: 'border-sky-500',
-  alertInfoBg: 'bg-blue-50',
-  alertInfoBorder: 'border-blue-400',
-  alertInfoText: 'text-blue-700',
-  alertInfoIcon: 'text-blue-500',
-  alertSuccessBg: 'bg-green-50',
-  alertSuccessBorder: 'border-green-400',
-  alertSuccessText: 'text-green-700',
-  alertSuccessIcon: 'text-green-500',
-  alertWarningBg: 'bg-yellow-50',
-  alertWarningBorder: 'border-yellow-400',
-  alertWarningText: 'text-yellow-800',
-  alertWarningIcon: 'text-yellow-500',
-  alertDangerBg: 'bg-red-50',
-  alertDangerBorder: 'border-red-400',
-  alertDangerText: 'text-red-700',
-  alertDangerIcon: 'text-red-500',
+  alertInfoBg: 'bg-blue-50', alertInfoBorder: 'border-blue-400', 
+  alertInfoText: 'text-blue-700', alertInfoIcon: 'text-blue-500',
+  alertSuccessBg: 'bg-green-50', alertSuccessBorder: 'border-green-400',
+  alertSuccessText: 'text-green-700', alertSuccessIcon: 'text-green-500',
+  alertWarningBg: 'bg-yellow-50', alertWarningBorder: 'border-yellow-400',
+  alertWarningText: 'text-yellow-800', alertWarningIcon: 'text-yellow-500',
+  alertDangerBg: 'bg-red-50', alertDangerBorder: 'border-red-400',
+  alertDangerText: 'text-red-700', alertDangerIcon: 'text-red-500',
 };
 
 const getAlertColors = (alertType: AlertBlock['alertType']) => {
+    // ... (same as previous implementation)
     switch (alertType) {
-      case 'info':
-        return {
-          bgColor: THEME_COLORS.alertInfoBg, borderColor: THEME_COLORS.alertInfoBorder, textColor: THEME_COLORS.alertInfoText,
-          iconColorClass: THEME_COLORS.alertInfoIcon, Icon: Info,
-        };
-      case 'success':
-        return {
-          bgColor: THEME_COLORS.alertSuccessBg, borderColor: THEME_COLORS.alertSuccessBorder, textColor: THEME_COLORS.alertSuccessText,
-          iconColorClass: THEME_COLORS.alertSuccessIcon, Icon: CheckCircle,
-        };
-      case 'warning':
-        return {
-          bgColor: THEME_COLORS.alertWarningBg, borderColor: THEME_COLORS.alertWarningBorder, textColor: THEME_COLORS.alertWarningText,
-          iconColorClass: THEME_COLORS.alertWarningIcon, Icon: AlertTriangle,
-        };
-      case 'danger':
-        return {
-          bgColor: THEME_COLORS.alertDangerBg, borderColor: THEME_COLORS.alertDangerBorder, textColor: THEME_COLORS.alertDangerText,
-          iconColorClass: THEME_COLORS.alertDangerIcon, Icon: XCircle,
-        };
-      default:
-        return {
-          bgColor: THEME_COLORS.alertInfoBg, borderColor: THEME_COLORS.alertInfoBorder, textColor: THEME_COLORS.alertInfoText,
-          iconColorClass: THEME_COLORS.alertInfoIcon, Icon: Info,
-        };
-    }
+        case 'info':
+          return {
+            bgColor: THEME_COLORS.alertInfoBg, borderColor: THEME_COLORS.alertInfoBorder, textColor: THEME_COLORS.alertInfoText,
+            iconColorClass: THEME_COLORS.alertInfoIcon, Icon: Info,
+          };
+        case 'success':
+          return {
+            bgColor: THEME_COLORS.alertSuccessBg, borderColor: THEME_COLORS.alertSuccessBorder, textColor: THEME_COLORS.alertSuccessText,
+            iconColorClass: THEME_COLORS.alertSuccessIcon, Icon: CheckCircle,
+          };
+        case 'warning':
+          return {
+            bgColor: THEME_COLORS.alertWarningBg, borderColor: THEME_COLORS.alertWarningBorder, textColor: THEME_COLORS.alertWarningText,
+            iconColorClass: THEME_COLORS.alertWarningIcon, Icon: AlertTriangle,
+          };
+        case 'danger':
+          return {
+            bgColor: THEME_COLORS.alertDangerBg, borderColor: THEME_COLORS.alertDangerBorder, textColor: THEME_COLORS.alertDangerText,
+            iconColorClass: THEME_COLORS.alertDangerIcon, Icon: XCircle,
+          };
+        default:
+          return {
+            bgColor: THEME_COLORS.alertInfoBg, borderColor: THEME_COLORS.alertInfoBorder, textColor: THEME_COLORS.alertInfoText,
+            iconColorClass: THEME_COLORS.alertInfoIcon, Icon: Info,
+          };
+      }
 };
 
-const RenderBlock: React.FC<{ block: AnyContentBlock; depth?: number; isLastInMiniSection?: boolean }> = ({ block, depth = 0, isLastInMiniSection }) => {
+const RenderBlock: React.FC<{ block: AnyContentBlock; depth?: number; isFirstInBox?: boolean; isLastInBox?: boolean }> = 
+  ({ block, depth = 0, isFirstInBox, isLastInBox }) => {
+
+  let bottomMarginOverride = "";
+  if (isLastInBox) bottomMarginOverride = 'mb-0';
+  else if (isFirstInBox && (block.type === 'headline' && ((block as HeadlineBlock).level === 3 || (block as HeadlineBlock).level === 4))) {
+    bottomMarginOverride = 'mb-1.5';
+  }
+
   switch (block.type) {
     case 'headline': {
       const { level, text, iconName, backgroundColor, textColor: headlineTextColor } = block as HeadlineBlock;
@@ -114,31 +108,33 @@ const RenderBlock: React.FC<{ block: AnyContentBlock; depth?: number; isLastInMi
       const IconComponent = iconName ? iconMap[iconName] || null : null;
       
       let textStyleClass = '';
-      let bottomMargin = isLastInMiniSection ? 'mb-0' : 'mb-2'; 
+      let defaultBottomMargin = 'mb-2'; 
 
       if (level === 1) {
         textStyleClass = `text-4xl lg:text-5xl font-bold ${THEME_COLORS.headingText}`;
-        bottomMargin = isLastInMiniSection ? 'mb-0' : 'mb-3';
+        defaultBottomMargin = 'mb-3';
       } else if (level === 2) { 
         textStyleClass = `text-3xl lg:text-4xl font-semibold ${THEME_COLORS.headingText} pb-2 border-b-2 ${THEME_COLORS.underlineAccent}`;
-        bottomMargin = isLastInMiniSection ? 'mb-0' : 'mb-5'; 
+        defaultBottomMargin = 'mb-5 pt-6'; 
       } else if (level === 3) { 
         textStyleClass = `text-xl lg:text-2xl font-semibold ${THEME_COLORS.accentBlue}`;
-        bottomMargin = isLastInMiniSection === false ? 'mb-1.5' : (isLastInMiniSection ? 'mb-0' : 'mb-2 mt-4');
+        defaultBottomMargin = 'mb-2 mt-4';
       } else if (level === 4) { 
         textStyleClass = `text-lg lg:text-xl font-medium ${THEME_COLORS.subHeadingText}`;
-        bottomMargin = isLastInMiniSection === false ? 'mb-1.5' : (isLastInMiniSection ? 'mb-0' : 'mb-1 mt-3');
+        defaultBottomMargin = 'mb-1 mt-3';
       }
 
       if (depth > 0) {
         if (level === 3) textStyleClass = `text-lg font-semibold ${THEME_COLORS.accentBlue}`;
         else if (level === 4) textStyleClass = `text-base font-medium ${THEME_COLORS.subHeadingText}`;
-        bottomMargin = isLastInMiniSection ? 'mb-0' : 'mb-1.5 mt-1.5';
+        defaultBottomMargin = 'mb-1.5 mt-1.5';
       }
+      
+      const finalBottomMargin = bottomMarginOverride || defaultBottomMargin;
 
       return (
         <Tag
-          className={`flex items-center ${textStyleClass} ${bottomMargin}`}
+          className={`flex items-center ${textStyleClass} ${finalBottomMargin}`}
           style={{
             backgroundColor: backgroundColor || 'transparent',
             color: headlineTextColor || undefined,
@@ -153,32 +149,28 @@ const RenderBlock: React.FC<{ block: AnyContentBlock; depth?: number; isLastInMi
     }
     case 'paragraph': {
       return (
-        <p className={`${THEME_COLORS.primaryText} leading-relaxed ${depth > 0 ? 'mb-1.5 text-sm' : 'mb-3 text-sm'}`}> 
+        <p className={`${THEME_COLORS.primaryText} leading-relaxed ${depth > 0 ? 'mb-1.5 text-sm' : (bottomMarginOverride || 'mb-3 text-sm')}`}> 
           {(block as ParagraphBlock).text}
         </p>
       );
     }
     case 'bullet_list':
     case 'numbered_list': {
-      // Type guard to access iconName only if it's a BulletListBlock
       const listIconName = block.type === 'bullet_list' ? (block as BulletListBlock).iconName : undefined;
       const { items } = block;
       const isNumbered = block.type === 'numbered_list';
-      
       const BulletIcon = listIconName ? iconMap[listIconName] || ChevronsRight : ChevronsRight;
-      
       let paddingLeftClass = '';
       if (depth === 0) paddingLeftClass = isNumbered ? 'pl-0' : 'pl-5';
       else if (depth === 1) paddingLeftClass = isNumbered ? 'pl-5' : 'pl-10';
       else paddingLeftClass = isNumbered ? 'pl-10' : 'pl-16';
-      
       const ListTag = isNumbered ? 'ol' : 'ul';
 
       return (
-        <ListTag className={`list-none ${paddingLeftClass} ${isLastInMiniSection ? 'mb-0' : 'mb-2.5'} space-y-1`}>
+        <ListTag className={`list-none ${paddingLeftClass} ${bottomMarginOverride || 'mb-2.5'} space-y-1`}>
           {items.map((item, index) => {
             const itemNumber = isNumbered ? `${depth > 0 ? `${String.fromCharCode(97 + depth -1)}.` : ''}${index + 1}.` : '';
-            const isLastItem = index === items.length - 1;
+            const isLastItemInCurrentList = index === items.length - 1;
 
             if (typeof item === 'string') {
               return (
@@ -194,7 +186,7 @@ const RenderBlock: React.FC<{ block: AnyContentBlock; depth?: number; isLastInMi
             } else { 
               return (
                 <li key={index} className="list-none py-0.5">
-                  <RenderBlock block={item as AnyContentBlock} depth={depth + 1} isLastInMiniSection={isLastInMiniSection && isLastItem} />
+                  <RenderBlock block={item as AnyContentBlock} depth={depth + 1} isLastInBox={isLastInBox && isLastItemInCurrentList} />
                 </li>
               );
             }
@@ -214,7 +206,7 @@ const RenderBlock: React.FC<{ block: AnyContentBlock; depth?: number; isLastInMi
   
         return (
           <div
-            className={`p-3 my-4 border-l-4 rounded-r-md ${finalBgColor} ${finalBorderColor} ${depth > 0 ? 'ml-4' : ''}`}
+            className={`p-3 my-4 border-l-4 rounded-r-md ${finalBgColor} ${finalBorderColor} ${depth > 0 ? 'ml-4' : ''} ${bottomMarginOverride}`}
             style={{ backgroundColor: alertBlock.backgroundColor || undefined, borderColor: alertBlock.borderColor || undefined }}
           >
             <div className="flex">
@@ -253,33 +245,29 @@ interface PdfLessonDisplayProps {
   lessonTime?: string; 
 }
 
-const isMajorSectionSubstantial = (sectionBlocksExcludingH2: Array<AnyContentBlock | { type: "mini_section"; headline: HeadlineBlock; list: BulletListBlock | NumberedListBlock }>): boolean => {
-  if (!sectionBlocksExcludingH2 || sectionBlocksExcludingH2.length === 0) return false;
-  if (sectionBlocksExcludingH2.length > 1) return true; // More than 1 item (after H2) is substantial
-
-  const singleContentItem = sectionBlocksExcludingH2[0];
-  if ('type' in singleContentItem && singleContentItem.type === "mini_section") { // A single mini_section
-    return (singleContentItem.list.items.length > 2);
-  } else if ('type' in singleContentItem && (singleContentItem.type === 'bullet_list' || singleContentItem.type === 'numbered_list')) { // A single list
-    return (singleContentItem as BulletListBlock | NumberedListBlock).items.length > 2;
-  }
-  return true; // A single paragraph or other block is considered substantial enough
-};
-
-
 const PdfLessonDisplay: React.FC<PdfLessonDisplayProps> = ({ data, lessonTime }) => {
   if (!data || !data.contentBlocks || data.contentBlocks.length === 0) {
     return <div className="p-8 text-center text-gray-500">No lesson content available to display.</div>;
   }
-
-  type MiniSection = { type: "mini_section"; headline: HeadlineBlock; list: BulletListBlock | NumberedListBlock };
-  type StandaloneBlock = { type: "standalone_block"; content: AnyContentBlock };
-  type MajorSection = { type: "major_section"; headline: HeadlineBlock; items: Array<AnyContentBlock | MiniSection>; applyBackground: boolean; _skipRenderHeadline?: boolean };
-  type RenderableItem = MajorSection | MiniSection | StandaloneBlock;
   
+  // Adjusted type definitions
+  type MiniSectionFromLLM = { 
+    type: "mini_section"; 
+    headline: HeadlineBlock; // HeadlineBlock now has Optional[isImportant]
+    list: BulletListBlock | NumberedListBlock; 
+  };
+  type StandaloneBlock = { type: "standalone_block"; content: AnyContentBlock };
+  type MajorSection = { 
+    type: "major_section"; 
+    headline: HeadlineBlock; 
+    items: Array<AnyContentBlock | MiniSectionFromLLM>; 
+    _skipRenderHeadline?: boolean 
+  };
+  type RenderableItem = MajorSection | MiniSectionFromLLM | StandaloneBlock;
+
   const renderableItems: RenderableItem[] = [];
   let i = 0;
-  let isFirstH2 = true;
+  let isFirstH2Processed = false;
 
   let skipNextH2Headline = false;
   if (data.lessonTitle && data.contentBlocks.length > 0) {
@@ -293,61 +281,62 @@ const PdfLessonDisplay: React.FC<PdfLessonDisplayProps> = ({ data, lessonTime })
 
   while (i < data.contentBlocks.length) {
     const currentBlock = data.contentBlocks[i];
+    const nextBlock = (i + 1 < data.contentBlocks.length) ? data.contentBlocks[i+1] : null;
 
     if (currentBlock.type === 'headline' && (currentBlock as HeadlineBlock).level === 2) {
       const majorSectionHeadline = currentBlock as HeadlineBlock;
-      const sectionItems: Array<AnyContentBlock | MiniSection> = [];
-      const rawSectionBlocksForSizing: AnyContentBlock[] = []; // Check content *after* H2
+      const sectionItemsInternal: Array<AnyContentBlock | MiniSectionFromLLM> = [];
       
-      let headlineToSkip = false;
-      if (isFirstH2 && skipNextH2Headline) {
-        headlineToSkip = true;
+      let headlineToSkipThisIteration = false;
+      if (!isFirstH2Processed && skipNextH2Headline) {
+        headlineToSkipThisIteration = true;
       }
-      isFirstH2 = false; // Only applies to the very first H2
+      isFirstH2Processed = true;
 
-      i++; // Move past the H2
+      i++; 
       while (i < data.contentBlocks.length && !(data.contentBlocks[i].type === 'headline' && (data.contentBlocks[i] as HeadlineBlock).level === 2)) {
         const innerBlock = data.contentBlocks[i];
-        const nextBlock = (i + 1 < data.contentBlocks.length) ? data.contentBlocks[i+1] : null;
+        const innerNextBlock = (i + 1 < data.contentBlocks.length) ? data.contentBlocks[i+1] : null;
         
+        // Create a "mini_section" if it's H3/H4 followed by a list AND flagged as important by LLM
         if (innerBlock.type === 'headline' && 
             ((innerBlock as HeadlineBlock).level === 3 || (innerBlock as HeadlineBlock).level === 4) &&
-            nextBlock && (nextBlock.type === 'bullet_list' || nextBlock.type === 'numbered_list')) {
-          sectionItems.push({
-            type: "mini_section",
+            (innerBlock as HeadlineBlock).isImportant === true && // CHECKING THE NEW FLAG
+            innerNextBlock && (innerNextBlock.type === 'bullet_list' || innerNextBlock.type === 'numbered_list')) {
+          
+          sectionItemsInternal.push({
+            type: "mini_section", // This type implies it gets a background
             headline: innerBlock as HeadlineBlock,
-            list: nextBlock as BulletListBlock | NumberedListBlock
+            list: innerNextBlock as BulletListBlock | NumberedListBlock,
+            // applyBackground flag is no longer on MiniSection type for this iteration, 
+            // the boxing is decided by being a 'mini_section' type from important headline
           });
-          rawSectionBlocksForSizing.push(innerBlock, nextBlock);
           i += 2; 
         } else {
-          sectionItems.push(innerBlock);
-          rawSectionBlocksForSizing.push(innerBlock);
+          sectionItemsInternal.push(innerBlock);
           i++;
         }
       }
       renderableItems.push({
         type: "major_section",
         headline: majorSectionHeadline,
-        items: sectionItems,
-        applyBackground: isMajorSectionSubstantial(rawSectionBlocksForSizing),
-        _skipRenderHeadline: headlineToSkip 
+        items: sectionItemsInternal,
+        _skipRenderHeadline: headlineToSkipThisIteration 
       });
     } else if (currentBlock.type === 'headline' && 
                ((currentBlock as HeadlineBlock).level === 3 || (currentBlock as HeadlineBlock).level === 4) &&
-               (i + 1 < data.contentBlocks.length) && 
-               (data.contentBlocks[i+1].type === 'bullet_list' || data.contentBlocks[i+1].type === 'numbered_list')) {
-      // This handles mini-sections that are NOT under an H2 (top-level mini-sections)
+               (currentBlock as HeadlineBlock).isImportant === true && // CHECKING THE NEW FLAG
+               nextBlock && (nextBlock.type === 'bullet_list' || nextBlock.type === 'numbered_list')) {
+      // Top-level Mini-section (not under an H2) that is important
       renderableItems.push({
         type: "mini_section",
         headline: currentBlock as HeadlineBlock,
-        list: data.contentBlocks[i+1] as BulletListBlock | NumberedListBlock
+        list: nextBlock as BulletListBlock | NumberedListBlock,
       });
       i += 2;
     } else {
-       // Handles the case where the very first block is the one to be skipped
-      if (i === 0 && skipNextH2Headline && 
-          currentBlock.type === 'headline' && 
+      // If it's an H3/H4 + List but NOT important, render them as standalone blocks
+      if (i === 0 && skipNextH2Headline && currentBlock.type === 'headline' && 
           ((currentBlock as HeadlineBlock).level === 1 || (currentBlock as HeadlineBlock).level === 2)) {
         i++;
         continue; 
@@ -375,32 +364,32 @@ const PdfLessonDisplay: React.FC<PdfLessonDisplayProps> = ({ data, lessonTime })
       <div className="max-w-none">
         {renderableItems.map((item, index) => {
           if (item.type === "major_section") {
-            const { headline, items: subItems, applyBackground, _skipRenderHeadline } = item;
+            const { headline, items: subItems, _skipRenderHeadline } = item;
             return (
-              <div 
-                key={`major-${index}`} 
-                className={`${applyBackground ? `${THEME_COLORS.lightAccentBg} p-4 sm:p-6 rounded-md` : ''} my-6`}
-              >
-                {!_skipRenderHeadline && <RenderBlock block={headline} />} 
+              <div key={`major-${index}`} className="my-4"> 
+                {!_skipRenderHeadline && <RenderBlock block={headline} isFirstInBox={false} />} 
                 {subItems.map((subItem, subIndex) => {
                    if (typeof subItem === 'object' && 'type' in subItem && subItem.type === "mini_section") {
+                    const miniSec = subItem as MiniSectionFromLLM; // Use the new type alias
+                    // Mini-sections (important H3/H4 + List) always get background
                     return (
-                      <div key={`major-${index}-mini-${subIndex}`} className={`${THEME_COLORS.veryLightAccentBg} ${THEME_COLORS.lightBorder} border rounded-md p-3 sm:p-4 my-4`}>
-                        <RenderBlock block={subItem.headline} isLastInMiniSection={false} />
-                        <RenderBlock block={subItem.list} isLastInMiniSection={true}/>
+                      <div key={`major-${index}-mini-${subIndex}`} className={`${THEME_COLORS.veryLightAccentBg} ${THEME_COLORS.lightBorder} border rounded-lg p-3 sm:p-4 my-4`}>
+                        <RenderBlock block={miniSec.headline} isFirstInBox={true} isLastInBox={false} />
+                        <RenderBlock block={miniSec.list} isFirstInBox={false} isLastInBox={true}/>
                       </div>
                     );
-                  } else {
+                  } else { 
                     return <RenderBlock key={`major-${index}-block-${subIndex}`} block={subItem as AnyContentBlock} />;
                   }
                 })}
               </div>
             );
           } else if (item.type === "mini_section") {
+            // Mini-sections (important H3/H4 + List) always get background
             return (
-              <div key={`mini-${index}`} className={`${THEME_COLORS.veryLightAccentBg} ${THEME_COLORS.lightBorder} border rounded-md p-3 sm:p-4 my-4`}>
-                <RenderBlock block={item.headline} isLastInMiniSection={false} />
-                <RenderBlock block={item.list} isLastInMiniSection={true} />
+              <div key={`mini-${index}`} className={`${THEME_COLORS.veryLightAccentBg} ${THEME_COLORS.lightBorder} border rounded-lg p-3 sm:p-4 my-4`}>
+                <RenderBlock block={item.headline} isFirstInBox={true} isLastInBox={false} />
+                <RenderBlock block={item.list} isFirstInBox={false} isLastInBox={true} />
               </div>
             );
           } else { // standalone_block
@@ -411,5 +400,13 @@ const PdfLessonDisplay: React.FC<PdfLessonDisplayProps> = ({ data, lessonTime })
     </div>
   );
 };
+
+// Define MiniSectionFromLLM before it's used in PdfLessonDisplay
+type MiniSectionFromLLM = { 
+  type: "mini_section"; 
+  headline: HeadlineBlock; // HeadlineBlock now has Optional[isImportant]
+  list: BulletListBlock | NumberedListBlock; 
+};
+
 
 export default PdfLessonDisplay;

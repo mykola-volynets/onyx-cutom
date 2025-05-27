@@ -9,6 +9,7 @@ export interface HeadlineBlock {
   iconName?: string;
   backgroundColor?: string;
   textColor?: string;
+  isImportant?: boolean;
 }
 
 export interface ParagraphBlock {

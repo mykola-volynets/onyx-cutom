@@ -283,8 +283,10 @@ class HeadlineBlock(BaseContentBlock):
     level: int = Field(ge=1, le=4)
     text: str
     iconName: Optional[str] = None
-    backgroundColor: Optional[str] = None
+    backgroundColor: Optional[str] = None # Can still be used for specific inline headline bg
     textColor: Optional[str] = None
+    isImportant: Optional[bool] = Field(default=False, description="Set to true if this headline and its subsequent content (especially if a list) represent an important section like a goal, warning, or summary that should be visually highlighted with a background.") # NEW FIELD
+
 
 class ParagraphBlock(BaseContentBlock):
     type: str = "paragraph"
@@ -874,91 +876,61 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
         You are an expert text-to-JSON parsing assistant, specializing in transforming unstructured lesson content into a highly structured and detailed JSON format for a 'PDF Lesson'. Your output MUST be a single, valid JSON object. Adhere strictly to the JSON structure and field names exemplified in the 'CRUCIAL JSON Format Example' that will be provided later.
 
 **Overall Goal:**
-Convert the *entirety* of the provided "Raw text to parse" into a single JSON object. Ensure *all* relevant information, including titles, paragraph text, list items, alert messages, and structural breaks, is captured. Pay meticulous attention to hierarchical relationships, especially for nested lists and content within lists. Maintain the original language of the input text for all textual content in the JSON. Do not add any information not present in the source text unless explicitly instructed for default values.
+Convert the *entirety* of the provided "Raw text to parse" into a single JSON object. Ensure *all* relevant information is captured. Pay meticulous attention to hierarchical relationships. Maintain the original language.
 
 **Global Fields in JSON Output:**
-1.  `lessonTitle` (string): Extract the main title of the entire lesson. This should be the most prominent title in the source text.
-2.  `contentBlocks` (array): This is the core of the lesson, containing an ordered array of content block objects.
-3.  `detectedLanguage` (string): Infer the primary language of the text (e.g., "en", "ru"). If unsure, use the language with the most characters.
+1.  `lessonTitle` (string): Extract the main title of the entire lesson.
+2.  `contentBlocks` (array): An ordered array of content block objects.
+3.  `detectedLanguage` (string): Infer the primary language (e.g., "en", "ru").
 
 **Content Block-Specific Instructions (`contentBlocks` array items):**
 
-Each object within the `contentBlocks` array must have a `type` field. Permissible types and their specific fields are:
+Each object within `contentBlocks` must have a `type` field.
 
 1.  **`type: "headline"`**
     * `level` (integer): Headline level from 1 to 4.
-        * Level 1: Used for the absolute main title of a major section *within* the content blocks (distinct from the global `lessonTitle`). Should be rare.
-        * Level 2: For major section titles (e.g., "Lesson Structure", "Materials", "Key Concepts"). These often visually break up the document.
-        * Level 3: For sub-section titles or significant points (e.g., "Introduction to X", "Understanding Y").
-        * Level 4: For minor sub-headings or emphasized lead-ins to content (e.g., "Objective:", "Main Points:", "Format:").
+        * Level 2: For major section titles (e.g., "Lesson Structure", "Materials").
+        * Level 3: For sub-section titles.
+        * Level 4: For minor sub-headings or lead-ins (e.g., "Objective:", "Main Points:").
     * `text` (string): The headline text.
-    * `iconName` (string, optional): If the text or context implies an icon, select an appropriate one from the list below. Examples:
-        * For introductory or informational headlines: 'info', 'bookOpen', 'compass'.
-        * For objectives or key takeaways: 'checkCircle', 'award', 'star'.
-        * For concepts or ideas: 'lightbulb', 'brain'.
-        * For search or exploration: 'search'.
-        * For warnings or important notes (if a headline introduces an alert-like section): 'alertCircle'.
-    * `backgroundColor` (string, optional): If the source text strongly implies a distinct background for the headline's section (e.g., "Highlighted Section: Core Values"), provide a semantic color name (e.g., "lightBlue", "paleYellow", "lightGray"). Frontend will map this to actual colors.
-    * `textColor` (string, optional): If the source text strongly implies a specific text color for the headline itself (e.g., "Chapter 1 (Blue Text)"), provide a semantic color name (e.g., "darkBlue", "accentGreen").
+    * `iconName` (string, optional): If implied, choose from the provided list.
+    * `backgroundColor` (string, optional): For specific *inline* background color on the headline text itself (rarely used for section backgrounds, use only if DEFINETLY needed).
+    * `textColor` (string, optional): For specific *inline* text color on the headline.
+    * `isImportant` (boolean, optional): **NEW GUIDANCE:** Set this to `true` ONLY if this headline AND its *immediately following block(s) (especially if it's a list or a short paragraph followed by a list)* represent a semantically important section that should be visually highlighted with a distinct background box. Examples of "important" sections include:
+        * Lesson Goals or Objectives
+        * Key Takeaways or Summaries
+        * Critical Warnings or Important Notes (though `AlertBlock` is often better for these)
+        * Specific instructions or steps that need to stand out.
+        If the headline is just a standard structural heading without special emphasis or just a line of text (without the section content binded to it), omit `isImportant` or set it to `false`.
 
 2.  **`type: "paragraph"`**
-    * `text` (string): The full paragraph text. Preserve all formatting like bolding or italics if represented in the source text (though the JSON itself won't store markdown, the raw text content is key).
+    * `text` (string): The full paragraph text.
 
-3.  **`type: "bullet_list"`**
-    * `items` (array of `ListItem`): An array where each item can be:
-        * A simple string.
-        * Another content block object (e.g., a nested `headline`, `paragraph`, `bullet_list`, or `numbered_list`). This is CRUCIAL for representing nested structures accurately.
-    * `iconName` (string, optional): If the bullet style is distinctive or implies a specific icon (e.g., checkmarks for completed tasks, specific arrows), provide an `iconName` from the list below. Default visual might be a standard bullet or chevron. Consider 'chevronRight', 'chevronsRight', 'arrowRight', 'circle', 'checkCircle'.
+3.  **`type: "bullet_list"` / `type: "numbered_list"`**
+    * `items` (array of `ListItem`): Can be strings or other nested content blocks.
+    * `iconName` (string, optional, for `bullet_list` only): If a specific bullet icon is implied.
 
-4.  **`type: "numbered_list"`**
-    * `items` (array of `ListItem`): Similar to `bullet_list`, items can be strings or other nested content blocks. The numbering (1, 2, 3... a, b, c...) is typically handled by the frontend based on nesting depth, but ensure the order is correct.
+4.  **`type: "alert"`** (This block type inherently implies importance)
+    * `alertType` (string): "info", "success", "warning", "danger".
+    * `title` (string, optional).
+    * `text` (string).
+    * `iconName` (string, optional): Suggest based on `alertType`.
 
-5.  **`type: "alert"`**
-    * `alertType` (string): Determine the type based on the context. Valid values:
-        * `"info"`: For general informational notes, tips, or "Note:" blocks.
-        * `"success"`: For success messages, confirmations, or "Good to know:" blocks.
-        * `"warning"`: For cautionary messages, "Important:", "Warning:", or "Caution:" blocks. This is often styled with yellow/amber.
-        * `"danger"`: For critical errors or "Danger:" blocks.
-        * If unsure, default to `"info"`.
-    * `title` (string, optional): If the alert has an explicit title (e.g., "Important Note:", "Pro Tip:").
-    * `text` (string): The main text content of the alert.
-    * `iconName` (string, optional): Suggest an icon based on `alertType`.
-        * `info`: 'info'
-        * `success`: 'checkCircle'
-        * `warning`: 'alertTriangle' (preferred for warnings), or 'alertCircle'
-        * `danger`: 'xCircle'
-    * `backgroundColor`, `borderColor`, `textColor`, `iconColor` (all string, optional): If the source text implies specific colors for the alert (beyond the default for its `alertType`), provide semantic color names. For example, a "Critical Warning" might imply "lightRedBg", "darkRedBorder".
-
-6.  **`type: "section_break"`**
-    * `style` (string, optional): Describes the visual style of the break.
-        * `"solid"`: A standard solid line.
-        * `"dashed"`: A dashed line (often used in the target design).
-        * `"none"`: A thematic break implying separation but without a visible line (results in increased vertical spacing).
-        * If the text implies a clear visual separation (e.g., "***", "---", or a paragraph explicitly stating "End of Section"), use this block. Default to `"dashed"` if a visual line is implied but style isn't specified.
+5.  **`type: "section_break"`**
+    * `style` (string, optional): "solid", "dashed", or "none".
 
 **General Parsing Rules & Best Practices:**
-* **Nesting is Key**: Pay extremely close attention to how content is nested. For example, a headline or paragraph can be an item within a bullet or numbered list. A list can be nested within another list. The `items` array in list blocks is the mechanism for this.
-* **Implicit Structure**: Infer structure even if not explicitly stated. For example, if a phrase like "Key Takeaways:" is followed by several bulleted points, that phrase should likely be a `headline` (e.g., level 4) followed by a `bullet_list` block.
-* **Icon Names - Permissible Values**: If you use `iconName`, it MUST be one of the following:
-    `alertCircle`, `checkCircle`, `info`, `xCircle`, `chevronRight`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `edit3`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `alertTriangle`, `clock`, `chevronsRight`, `star`, `arrowRight`, `circle`, `default` (maps to `Minus`). Choose semantically.
-* **Color Fields**: Only populate `backgroundColor`, `textColor`, `borderColor`, `iconColor` if the source text *strongly and explicitly describes or implies* a specific color for that element that differs from a likely default. Use semantic names (e.g., "lightBlue", "warningYellowBg", "accentRedText").
-* **Empty Strings vs. Null**: For string fields that are required by the JSON schema (see example) but have no corresponding content in the text, use an empty string `""`. Do NOT use `null` for these. Optional fields can be omitted if not present.
-* **Data Types**: Strings must be quoted, numerical values (like headline `level`) must be numbers, lists must be JSON arrays `[]`, and objects must be JSON objects `{}`.
-* **Completeness**: Ensure every piece of textual information from the "Raw text to parse" is captured within an appropriate block and field. Do not omit content.
-* **Sequential Order**: The order of blocks in the `contentBlocks` array must match the order in the source text.
-
-**Prioritize Semantic Meaning for Block Types:**
-* Choose block types based on their semantic role in the document, not just superficial formatting.
-* For example, if text says "IMPORTANT: Remember to save your work.", this should become an `alert` block with `alertType: "warning"` or `"info"`, and potentially `title: "IMPORTANT"`, rather than just a bolded paragraph.
-* A list of steps should be a `numbered_list`. A collection of related but unordered points should be a `bullet_list`.
-
-By following these detailed instructions, you will generate a JSON output that accurately reflects the structure, content, and intended visual cues of the original lesson text, making it ready for rich frontend rendering.
+* **Prioritize list structures**: In case of doubt, use lists rather than plain paragraphs.
+* **Nesting is Key**: Accurately represent nested structures.
+* **Semantic Interpretation**: For `isImportant` on headlines, analyze if the content introduced by the headline fits categories like goals, key summaries, critical instructions, or highlighted learning points. Do NOT mark every H3/H4 + List as important by default.
+* **Icon Names - Permissible Values**: (Include your list of valid icon names here, as in the previous detailed prompt).
+* **Completeness and Order**: Capture all text in the correct sequence.
 ---
 CRUCIAL JSON Format Example:
-(The `DEFAULT_PDF_LESSON_JSON_EXAMPLE_FOR_LLM` or the template-specific `template_structuring_prompt` content will be appended here by the calling Python code.)
+(Your `DEFAULT_PDF_LESSON_JSON_EXAMPLE_FOR_LLM` or template-specific JSON example will be appended here. **Crucially, update this example to include the `isImportant: true` field on a headline that you would expect to be boxed.**)
 ---
 Raw text to parse:
-(The `ai_response` raw text will be appended here by the calling Python code.)
+(Raw text is appended here)
 ---
 Return ONLY the JSON object.
         """
