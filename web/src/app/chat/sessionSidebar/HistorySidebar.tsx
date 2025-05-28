@@ -6,7 +6,7 @@ import React, {
   forwardRef,
   useContext,
   useCallback,
-  useState, // Added useState
+  useState,
 } from "react";
 import Link from "next/link";
 import {
@@ -53,7 +53,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CircleX, PinIcon, ChevronDown, ChevronRight, Settings2, Construction } from "lucide-react"; // Added Chevrons and Construction (for Builder Tools icon)
+import { CircleX, PinIcon, ChevronDown, ChevronRight, Settings2, UserCog } from "lucide-react";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { TruncatedText } from "@/components/ui/truncatedText";
 
@@ -199,8 +199,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
     const { refreshAssistants, pinnedAssistants, setPinnedAssistants } =
       useAssistants();
 
-    // === NEW STATE FOR COLLAPSIBLE SECTION ===
-    const [isBuilderToolsOpen, setIsBuilderToolsOpen] = useState(false); // Default to closed
+    const [isAdminOpen, setIsAdminOpen] = useState(false);
 
     const currentChatId = currentChatSession?.id;
 
@@ -253,6 +252,85 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
       router.push(newChatUrl);
     }, [reset, page, currentChatSession, router]);
 
+    const renderAssistantsSection = (isNested: boolean) => (
+        <>
+            <div className={`flex font-normal text-sm gap-x-2 leading-normal text-text-500/80 dark:text-[#D4D4D4] items-center font-normal leading-normal ${isNested ? "px-1 mb-1" : "px-4"}`}>
+            Assistants
+            </div>
+            <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+            >
+            <SortableContext
+                items={pinnedAssistants.map((a) =>
+                a.id === 0 ? "assistant-0" : a.id
+                )}
+                strategy={verticalListSortingStrategy}
+            >
+                <div className={`flex flex-col gap-y-1 ${isNested ? "px-0" : "px-0 mr-4 mt-1"}`}>
+                {pinnedAssistants.map((assistant: Persona) => (
+                    <SortableAssistant
+                    key={assistant.id === 0 ? "assistant-0" : assistant.id}
+                    assistant={assistant}
+                    active={assistant.id === liveAssistant?.id}
+                    onClick={() => {
+                        router.push(
+                        buildChatUrl(searchParams, null, assistant.id)
+                        );
+                    }}
+                    onPinAction={async (e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        await toggleAssistantPinnedStatus(
+                        pinnedAssistants.map((a) => a.id),
+                        assistant.id,
+                        false // This means unpin
+                        );
+                        await refreshAssistants();
+                    }}
+                    />
+                ))}
+                </div>
+            </SortableContext>
+            </DndContext>
+            {!pinnedAssistants.some((a) => a.id === liveAssistant?.id) &&
+            liveAssistant && (
+                <div className={`w-full mt-1 ${isNested ? "" : "pr-4"}`}>
+                <SortableAssistant
+                    pinned={false}
+                    assistant={liveAssistant}
+                    active={liveAssistant.id === liveAssistant?.id}
+                    onClick={() => {
+                    router.push(
+                        buildChatUrl(searchParams, null, liveAssistant.id)
+                    );
+                    }}
+                    onPinAction={async (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    await toggleAssistantPinnedStatus(
+                        [...pinnedAssistants.map((a) => a.id)],
+                        liveAssistant.id,
+                        true // This means pin
+                    );
+                    await refreshAssistants();
+                    }}
+                />
+                </div>
+            )}
+
+            <div className={`w-full mt-1 ${isNested ? "" : "px-4"}`}>
+            <button
+                aria-label="Explore Assistants"
+                onClick={() => setShowAssistantsModal(true)}
+                className={`w-full cursor-pointer text-black dark:text-[#D4D4D4] hover:bg-background-chat-hover flex items-center gap-x-2 py-1 px-2 rounded-md ${isNested ? "text-sm" : "text-base"}`}
+            >
+                Explore Assistants
+            </button>
+            </div>
+        </>
+    );
+
 
     return (
       <>
@@ -261,17 +339,12 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
           className={`
             flex
             flex-none
-            gap-y-4 /* This might need adjustment if sections are too close */
-            bg-background-sidebar
-            w-full
-            border-r
-            dark:border-none
-            dark:text-[#D4D4D4]
-            dark:bg-[#000]
-            border-sidebar-border
-            flex
             flex-col relative
+            w-full
             h-screen
+            bg-background-sidebar
+            border-r dark:border-none border-sidebar-border
+            dark:text-[#D4D4D4] dark:bg-[#000]
             pt-2
             transition-transform
             `}
@@ -285,72 +358,73 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
               explicitlyUntoggle={explicitlyUntoggle}
             />
           </div>
-          {page == "chat" && (
-            <div className="px-4 px-1 -mx-2 gap-y-1 flex-col text-text-history-sidebar-button flex"> {/* Removed gap-x-1.5 items-center */}
-              <Link
-                className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
-                href={
-                  `/${page}` +
-                  (currentChatSession?.persona_id !== undefined
-                    ? `?assistantId=${currentChatSession?.persona_id}`
-                    : "")
+
+          {/* Top-level navigation items */}
+          <div className="px-4 px-1 -mx-2 gap-y-1 flex-col text-text-history-sidebar-button flex pt-4"> {/* Added pt-4 for spacing from logo */}
+            <Link
+              className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
+              href={
+                `/${page}` +
+                (currentChatSession?.persona_id !== undefined
+                  ? `?assistantId=${currentChatSession?.persona_id}`
+                  : "")
+              }
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey) {
+                  return;
                 }
-                onClick={(e) => {
-                  if (e.metaKey || e.ctrlKey) {
-                    return;
-                  }
-                  e.preventDefault();
-                  handleNewChat();
-                }}
-              >
-                <NewChatIcon size={20} className="flex-none" />
-                <p className="my-auto flex font-normal items-center ">
-                  New Chat
-                </p>
-              </Link>
-              <Link
-                className="w-full px-2 py-1 rounded-md items-center hover:bg-hover cursor-pointer transition-all duration-150 flex gap-x-2"
-                href="/chat/my-documents"
-              >
-                <KnowledgeGroupIcon
-                  size={20}
-                  className="flex-none text-text-history-sidebar-button"
-                />
-                <p className="my-auto flex font-normal items-center text-base">
-                  My Documents
-                </p>
-              </Link>
-              
-              {/* === NEW COLLAPSIBLE BUILDER TOOLS SECTION === */}
-              <div className="mt-1"> {/* Added some top margin */}
+                e.preventDefault();
+                handleNewChat();
+              }}
+            >
+              <NewChatIcon size={20} className="flex-none" />
+              <p className="my-auto flex font-normal items-center ">
+                New Chat
+              </p>
+            </Link>
+            <Link
+              className="w-full px-2 py-1 rounded-md items-center hover:bg-hover cursor-pointer transition-all duration-150 flex gap-x-2"
+              href="/chat/my-documents"
+            >
+              <KnowledgeGroupIcon
+                size={20}
+                className="flex-none text-text-history-sidebar-button"
+              />
+              <p className="my-auto flex font-normal items-center text-base">
+                My Documents
+              </p>
+            </Link>
+            <Link
+              className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
+              href="/custom-projects-ui/projects"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <FiPackage size={18} className="flex-none text-text-history-sidebar-button" />
+              <p className="my-auto flex font-normal items-center text-base">
+                Projects
+              </p>
+            </Link>
+            
+            {/* Admin toggle section - only shown on "chat" page */}
+            {page === "chat" && (
+              <div className="mt-1">
                 <button
-                  onClick={() => setIsBuilderToolsOpen(!isBuilderToolsOpen)}
+                  onClick={() => setIsAdminOpen(!isAdminOpen)}
                   className="w-full flex items-center justify-between px-2 py-1 group rounded-md hover:bg-accent-background-hovered cursor-pointer transition-all duration-150"
-                  aria-expanded={isBuilderToolsOpen}
+                  aria-expanded={isAdminOpen}
                 >
                   <div className="flex items-center gap-x-2">
-                    <Construction size={18} className="flex-none text-text-history-sidebar-button" /> {/* Example Icon */}
+                    <UserCog size={18} className="flex-none text-text-history-sidebar-button" />
                     <p className="my-auto flex font-normal items-center text-base">
-                      Builder Tools
+                      Admin
                     </p>
                   </div>
-                  {isBuilderToolsOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  {isAdminOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                 </button>
 
-                {isBuilderToolsOpen && (
-                  <div className="pl-3 mt-1 space-y-1"> {/* Indented links */}
-                    <Link
-                      className="w-full pl-2 pr-1 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
-                      href="/custom-projects-ui/projects"
-                      target="_blank" // Kept target blank as in original
-                      rel="noopener noreferrer"
-                    >
-                      <FiPackage size={18} className="flex-none text-text-history-sidebar-button" />
-                      <p className="my-auto flex font-normal items-center text-sm"> {/* Adjusted text size for nested items */}
-                        Projects
-                      </p>
-                    </Link>
-
+                {isAdminOpen && (
+                  <div className="pl-3 mt-1 space-y-1">
                     <Link
                       className="w-full pl-2 pr-1 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
                       href="/custom-projects-ui/pipelines"
@@ -369,7 +443,6 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {/* Using FiPackage again, or you can choose another icon */}
                       <Settings2 size={18} className="flex-none text-text-history-sidebar-button" /> 
                       <p className="my-auto flex font-normal items-center text-sm">
                         Templates (Designs)
@@ -380,10 +453,9 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                       <Link
                         className="w-full pl-2 pr-1 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
                         href="/chat/input-prompts" 
-                        // target="_blank" rel="noopener noreferrer" // Consider if this should open in new tab too
                       >
                         <DocumentIcon2
-                          size={18} // Adjusted size to match others
+                          size={18}
                           className="flex-none text-text-history-sidebar-button"
                         />
                         <p className="my-auto flex font-normal items-center text-sm">
@@ -391,90 +463,28 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                         </p>
                       </Link>
                     )}
+                    {/* Assistants section rendered inside Admin when open and on chat page */}
+                    <div className="pt-2">
+                         {renderAssistantsSection(true)}
+                    </div>
                   </div>
                 )}
               </div>
-              {/* === END OF NEW COLLAPSIBLE SECTION === */}
-
-              {/* Original Prompt Shortcuts link is removed from here as it's moved above */}
-            </div>
-          )}
-          <div className="h-full relative overflow-x-hidden overflow-y-auto pt-2"> {/* Added pt-2 for spacing */}
-            <div className="flex px-4 font-normal text-sm gap-x-2 leading-normal text-text-500/80 dark:text-[#D4D4D4] items-center font-normal leading-normal">
-              Assistants
-            </div>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-              modifiers={[restrictToVerticalAxis]}
-            >
-              <SortableContext
-                items={pinnedAssistants.map((a) =>
-                  a.id === 0 ? "assistant-0" : a.id
-                )}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="flex px-0 mr-4 flex-col gap-y-1 mt-1">
-                  {pinnedAssistants.map((assistant: Persona) => (
-                    <SortableAssistant
-                      key={assistant.id === 0 ? "assistant-0" : assistant.id}
-                      assistant={assistant}
-                      active={assistant.id === liveAssistant?.id}
-                      onClick={() => {
-                        router.push(
-                          buildChatUrl(searchParams, null, assistant.id)
-                        );
-                      }}
-                      onPinAction={async (e: React.MouseEvent) => {
-                        e.stopPropagation();
-                        await toggleAssistantPinnedStatus(
-                          pinnedAssistants.map((a) => a.id),
-                          assistant.id,
-                          false // This means unpin
-                        );
-                        await refreshAssistants();
-                      }}
-                    />
-                  ))}
+            )}
+          </div>
+          
+          {/* Main content area for Assistants (if not in Admin toggle) and PagesTab */}
+          {/* This div will take up remaining vertical space */}
+          <div className="flex-grow relative overflow-x-hidden overflow-y-auto pt-4"> {/* Added pt-4 for spacing */}
+            {/* Conditionally render the Assistants section here ONLY if:
+              1. We are NOT on the "chat" page (Assistants always visible on other pages)
+            */}
+            { page !== "chat" && (
+                <div className="mb-4"> 
+                     {renderAssistantsSection(false)}
                 </div>
-              </SortableContext>
-            </DndContext>
-            {!pinnedAssistants.some((a) => a.id === liveAssistant?.id) &&
-              liveAssistant && (
-                <div className="w-full mt-1 pr-4"> {/* Added pr-4 to align with items above */}
-                  <SortableAssistant
-                    pinned={false}
-                    assistant={liveAssistant}
-                    active={liveAssistant.id === liveAssistant?.id}
-                    onClick={() => {
-                      router.push(
-                        buildChatUrl(searchParams, null, liveAssistant.id)
-                      );
-                    }}
-                    onPinAction={async (e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      await toggleAssistantPinnedStatus(
-                        [...pinnedAssistants.map((a) => a.id)],
-                        liveAssistant.id,
-                        true // This means pin
-                      );
-                      await refreshAssistants();
-                    }}
-                  />
-                </div>
-              )}
-
-            <div className="w-full px-4 mt-1"> {/* Added mt-1 for spacing */}
-              <button
-                aria-label="Explore Assistants"
-                onClick={() => setShowAssistantsModal(true)}
-                className="w-full cursor-pointer text-base text-black dark:text-[#D4D4D4] hover:bg-background-chat-hover flex items-center gap-x-2 py-1 px-2 rounded-md"
-              >
-                Explore Assistants
-              </button>
-            </div>
-
+            )}
+            
             <PagesTab
               toggleChatSessionSearchModal={toggleChatSessionSearchModal}
               showDeleteModal={showDeleteModal}
