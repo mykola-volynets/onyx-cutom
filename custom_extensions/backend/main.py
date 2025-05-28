@@ -307,23 +307,23 @@ class HeadlineBlock(BaseContentBlock):
     level: int = Field(ge=1, le=4)
     text: str
     iconName: Optional[str] = None
-    backgroundColor: Optional[str] = None # Can still be used for specific inline headline bg
+    backgroundColor: Optional[str] = None
     textColor: Optional[str] = None
-    isImportant: Optional[bool] = Field(default=False, description="Set to true if this headline and its subsequent content (especially if a list) represent an important section like a goal, warning, or summary that should be visually highlighted with a background.") # NEW FIELD
-
+    isImportant: Optional[bool] = Field(default=False, description="Set to true if this headline (typically Level 4) and its immediately following single block (list or paragraph) form an important section to be visually boxed.")
 
 class ParagraphBlock(BaseContentBlock):
     type: str = "paragraph"
     text: str
+    isRecommendation: Optional[bool] = Field(default=False, description="Set to true if this paragraph is a 'recommendation' within a numbered list item, to be styled distinctly.") # For specific styling
 
 class BulletListBlock(BaseContentBlock):
     type: str = "bullet_list"
-    items: List[ListItem] = Field(default_factory=list) # ListItem is now more permissive
+    items: List[ListItem] = Field(default_factory=list)
     iconName: Optional[str] = None
 
 class NumberedListBlock(BaseContentBlock):
     type: str = "numbered_list"
-    items: List[ListItem] = Field(default_factory=list) # ListItem is now more permissive
+    items: List[ListItem] = Field(default_factory=list) # Items can now be Headline + Paragraph for mini-title structure
 
 class AlertBlock(BaseContentBlock):
     # ... (definition remains the same)
@@ -898,53 +898,56 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
         llm_json_example = selected_design_template.template_structuring_prompt or DEFAULT_PDF_LESSON_JSON_EXAMPLE_FOR_LLM
         component_specific_instructions = """
         You are an expert text-to-JSON parsing assistant for 'PDF Lesson' content.
-Your output MUST be a single, valid JSON object. Strictly follow the JSON structure.
+Your output MUST be a single, valid JSON object. Strictly follow the JSON structure provided in the example.
 
 **Overall Goal:** Convert the *entirety* of the "Raw text to parse" into structured JSON. Capture all information and hierarchical relationships. Maintain original language.
 
 **Global Fields:**
-1.  `lessonTitle` (string): Main lesson title.
-2.  `contentBlocks` (array): Ordered array of content block objects.
+1.  `lessonTitle` (string): Main lesson title for the document.
+2.  `contentBlocks` (array): Ordered array of content block objects that form the body of the lesson.
 3.  `detectedLanguage` (string): e.g., "en", "ru".
 
 **Content Block Instructions (`contentBlocks` array items):** Each object has a `type`.
 
 1.  **`type: "headline"`**
-    * `level` (integer): 1-4.
-        * Level 1 (e.g., "Overview"): Icon "compass".
-        * Level 2 (e.g., "Understanding X"): Icon "brain".
-        * Level 3 (e.g., "Key Concepts"): Icon "lightbulb".
-        * Level 4 (e.g., "Objective:", "Important Note:", "Goal:"): Icon "info" for notes, "award" for goals.
+    * `level` (integer):
+        * `1`: Reserved for the main title of a document, usually handled by `lessonTitle`. If the input text contains a clear main title that is also part of the body, use level 1.
+        * `2`: Major Section Header (e.g., "Understanding X", "Typical Mistakes"). These should use `iconName: "info"`.
+        * `3`: Sub-section Header or Mini-Title. When used as a mini-title inside a numbered list item (see `numbered_list` instruction below), it should not have an icon.
+        * `4`: Special Call-outs (e.g., "Module Goal", "Important Note"). Typically use `iconName: "target"` for goals, or `iconName: "award"` for other important notes.
     * `text` (string): Headline text.
-    * `iconName` (string, optional): Use semantic icons from the list below where appropriate.
-    * `isImportant` (boolean, optional): Set to `true` if this headline AND its *immediately following block(s) (especially a list or paragraph)* represent a semantically important section (Goals, Objectives, Key Takeaways, Critical Warnings/Notes that need a visual box). Omit or set to `false` for standard structural headings.
+    * `iconName` (string, optional): Based on level and context as described above.
+    * `isImportant` (boolean, optional): Set to `true` for Level 4 headlines like "Module Goal" or "Important Note". If `true`, this headline AND its *immediately following single block* (typically a `bullet_list` or `paragraph`) will be grouped into a visually distinct highlighted box.
 
 2.  **`type: "paragraph"`**
     * `text` (string): Full paragraph text.
+    * `isRecommendation` (boolean, optional): If this paragraph functions as a "Recommendation" (often prefixed with "Рекомендация:" or "Recommendation:") and appears within a structured item (like inside a numbered list box, usually after a mini-title and description), set this to `true`.
 
 3.  **`type: "bullet_list"`**
-    * `items` (array of `ListItem`): Strings or other nested content blocks.
-    * `iconName` (string, optional): For top-level bullet lists, default to `check` if no other icon is more appropriate. For nested bullet lists, default to `bullet-circle`.
+    * `items` (array of `ListItem`): Can be strings or other nested content blocks.
+    * `iconName` (string, optional): Default to `chevronRight`. If this bullet list is acting as a structural container for a numbered list item's content (mini-title + description), set `iconName: "none"`.
 
 4.  **`type: "numbered_list"`**
-    * `items` (array of `ListItem`).
+    * `items` (array of `ListItem`):
+        * Can be simple strings for basic numbered points.
+        * For complex items that should appear as a single visual "box" with a mini-title, description, and optional recommendation:
+            * Each such item in the `numbered_list`'s `items` array should itself be a `bullet_list` block with `iconName: "none"`.
+            * The `items` of this *inner* `bullet_list` should then be:
+                1. A `headline` block (e.g., `level: 3`, `text: "Mini-Title Text"`, no icon).
+                2. A `paragraph` block (for the main descriptive text).
+                3. Optionally, another `paragraph` block with `isRecommendation: true`.
 
-5.  **`type: "alert"`** (Use for distinct system-style alerts, not for general important notes which should use `headline` with `isImportant: true`)
+5.  **`type: "alert"`**
     * `alertType` (string): "info", "success", "warning", "danger".
-    * `title` (string, optional).
-    * `text` (string).
-    * `iconName` (string, optional): Suggest based on `alertType`.
+    * `title` (string, optional). `text` (string). `iconName` (string, optional).
 
 6.  **`type: "section_break"`**
     * `style` (string, optional): "solid", "dashed", or "none".
 
 **General Parsing Rules & Icon Names:**
-* **List Structures:** Prioritize lists.
-* **Nesting:** Accurately represent nested structures.
-* **Semantic Interpretation for `isImportant`:** Analyze if the content fits categories for visual boxing.
-* **Icon Names - Permissible Values**: `alertCircle`, `checkCircle`, `info`, `xCircle`, `chevronRight`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `edit3`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `alertTriangle`, `clock`, `chevronsRight`, `star`, `arrowRight`, `circle`, `minus`, **`check`**, **`bullet-circle`**. Choose semantically.
-* **Empty Strings**: Use `""` for required string fields with no content. Optional fields can be omitted.
-* **Completeness & Order**: Capture all text in correct sequence.
+* Ensure correct `level` for headlines. Section headers are `level: 2`. Mini-titles in lists are `level: 3`.
+* Icons: `info` for H2. `target` or `award` for H4 `isImportant`. `chevronRight` for general bullet lists. No icons for H3 mini-titles.
+* Permissible Icon Names: `info`, `target`, `award`, `chevronRight`, `bullet-circle`, `compass`.
 ---
 CRUCIAL JSON Format Example:
 (Your `DEFAULT_PDF_LESSON_JSON_EXAMPLE_FOR_LLM` should be updated to reflect a structure that would render like your target. **Include an example of a headline with `isImportant: true` followed by a list, and bullet lists using the `check` icon.**)

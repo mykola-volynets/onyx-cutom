@@ -1,291 +1,244 @@
 <!DOCTYPE html>
-<html lang="{{ lesson_data.detectedLanguage if lesson_data and lesson_data.detectedLanguage else 'en' }}">
+<html lang="{{ lesson_data.detectedLanguage if lesson_data and lesson_data.detectedLanguage else 'ru' }}">
 <head>
     <meta charset="UTF-8">
     <title>{{ lesson_data.lessonTitle if lesson_data and lesson_data.lessonTitle else 'PDF Lesson' }}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
         :root {
             --font-primary: 'Inter', Arial, sans-serif;
 
-            /* RED Accent Palette (as per text instruction) - PLEASE ADJUST THESE SHADES TO YOUR LIKING */
-            --color-primary-accent: #C82333;
-            --color-primary-accent-dark: #A21020;
-            --color-primary-accent-light-bg: #F8D7DA;
-            --color-primary-accent-border: #F5C6CB;
+            --color-primary-accent: #FF1414;
+            --color-primary-accent-dark: #CC1010;
+            --color-primary-accent-light-bg: #fafafa;
 
+            --color-text-black: #000000;
             --color-text-darkest: #18181B;
-            --color-text-dark: #27272A;
             --color-text-default: #3F3F46;
-            --color-text-muted: #71717A;
-            --color-text-light: #A1A1AA;
-
-            --color-border-extralight: #F3F4F6; /* gray-100, for very subtle dividers */
-            --color-border-light: #E4E4E7;   /* zinc-200 */
-            --color-border-medium: #D4D4D8;   /* zinc-300 */
-
+            --color-text-muted: #555555;
+            --color-border-extralight: #F3F4F6;
             --color-background-page: #FFFFFF;
 
             --font-weight-normal: 400;
             --font-weight-medium: 500;
             --font-weight-semibold: 600;
+            --font-weight-bold: 700;
 
             --font-size-paragraph-small: 7pt;
-            --font-size-list-item: 7pt; /* Matched to small paragraph size */
+            --font-size-list-item: 7pt;
             --font-size-base: 10pt;
             --line-height-base: 1.5;
 
-            --font-size-other-section-header: 14pt;
             --font-size-main-title: 24pt;
+            --font-size-h1-content: 18pt;
+            --font-size-other-section-header: 9pt; /* H2 size */
+
+            --font-size-h3-box: 11pt; /* Default for H3 in case it's not a mini-title */
+            --font-size-h4-box: 10pt;
+            --font-size-p-box: 8.5pt; /* Default for P in box if not mini-text */
+
+            --font-size-mini-title: 8pt;
+            --font-size-mini-title-text: 7pt;
 
             --space-xxs: 2px;
             --space-xs: 4px;
-            --space-sm: 6px;
-            --space-md: 10px;
-            --space-lg: 12px;
-            --space-xl: 16px;
-            --space-2xl: 22px;
-            --space-3xl: 28px;
+            --space-sm: 8px;
+            --space-md: 12px;
+            --space-lg: 18px;
+            --space-xl: 24px;
+            --space-2xl: 32px;
+            --space-3xl: 48px;
 
-            --content-max-width-constrained: 53%; /* Keep the variable */
+            --content-max-width-constrained: 53%;
         }
 
         @page {
-            margin-top: 8mm;
-            margin-bottom: 12mm;
-            margin-left: 10mm;
-            margin-right: 10mm;
-            size: A4;
+            margin-top: 10mm; margin-bottom: 12mm; margin-left: 10mm; margin-right: 10mm; size: A4;
         }
 
         body {
-            font-family: var(--font-primary);
-            margin: 0; padding: 0;
-            background-color: var(--color-background-page);
-            color: var(--color-text-default);
-            font-size: var(--font-size-base);
-            font-weight: var(--font-weight-normal);
+            font-family: var(--font-primary); margin: 0; padding: 0;
+            background-color: var(--color-background-page); color: var(--color-text-default);
+            font-size: var(--font-size-base); font-weight: var(--font-weight-normal);
             line-height: var(--line-height-base);
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-            widows: 3; orphans: 3;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+            widows: 3; orphans: 3; counter-reset: numbered-box;
         }
 
         .pdf-container { width: 100%; box-sizing: border-box; padding: 0; }
 
-        .lesson-title-section {
-            margin-bottom: var(--space-xl);
-            padding-bottom: var(--space-sm);
-            border-bottom: none; /* REMOVED divider from under main title */
-        }
+        .lesson-title-section { margin-bottom: var(--space-md); padding-bottom: 0; border-bottom: none; }
         .lesson-title-text {
-            font-size: var(--font-size-main-title);
-            font-weight: var(--font-weight-medium);
-            color: var(--color-text-darkest);
-            margin: 0 0 var(--space-sm) 0;
-            line-height: 1.3;
-            letter-spacing: 0.01em;
-        }
-        .lesson-time {
-            display: flex; align-items: center;
-            color: var(--color-text-muted);
-            font-size: var(--font-size-sm);
-            font-weight: var(--font-weight-normal);
-            margin-top: var(--space-xs);
-        }
-        .lesson-time .icon-svg {
-            width: 0.9em; height: 0.9em; margin-right: var(--space-sm);
-            fill: var(--color-text-muted); stroke: none;
+            font-size: var(--font-size-main-title); font-weight: var(--font-weight-medium);
+            color: var(--color-text-darkest); margin: 0 0 var(--space-sm) 0;
+            line-height: 1.3; letter-spacing: 0.01em;
         }
 
-        .icon-svg {
-            display: inline-block; vertical-align: middle;
-            width: 1em; height: 1em; flex-shrink: 0; stroke-width: 2px;
-        }
+        .icon-svg { display: inline-block; vertical-align: middle; width: 1em; height: 1em; flex-shrink: 0; }
 
-        .content-block-wrapper { margin-bottom: var(--space-md); }
+        .content-block-wrapper { margin-bottom: var(--space-sm); }
         .content-block-wrapper:last-child { margin-bottom: 0; }
 
-        /* REMOVED .constrained-width rule */
-
-        .headline-block {
-            display: flex; align-items: flex-start;
-            font-size: var(--font-size-other-section-header);
-            font-weight: var(--font-weight-semibold);
-            line-height: 1.4;
-            letter-spacing: 0.01em;
-            margin-top: var(--space-lg);
-            margin-bottom: var(--space-sm);
-            color: var(--color-text-darkest);
-            border-bottom: none; /* No default border for headlines */
-            padding-bottom: 0;
-            max-width: 100%; /* Headlines should be full width */
-        }
-        .headline-block .icon-svg {
-            margin-right: var(--space-sm);
-            margin-top: 0.15em;
-            width: 0.8em; height: 0.8em; stroke-width: 2px;
-            flex-shrink: 0; color: var(--color-primary-accent);
-        }
+        .headline-block { display: flex; align-items: flex-start; line-height: 1.4; margin-bottom: var(--space-sm); max-width: 100%; }
+        .headline-block .icon-svg { margin-right: var(--space-sm); margin-top: 0.15em; width: 0.8em; height: 0.8em; flex-shrink: 0; color: var(--color-primary-accent); stroke-width: 2px; }
         .headline-block span { flex-grow: 1; }
 
-        .headline-block.h1, .headline-block.h2 { color: var(--color-text-darkest); }
-        .headline-block.h1 .icon-svg, .headline-block.h2 .icon-svg { color: var(--color-primary-accent); }
-        .headline-block.h3 { color: var(--color-primary-accent-dark); }
-        .headline-block.h3 .icon-svg { color: var(--color-primary-accent-dark); }
+        .headline-block.h1 {
+            font-size: var(--font-size-h1-content); font-weight: var(--font-weight-semibold);
+            color: var(--color-text-darkest); margin-top: var(--space-2xl);
+        }
+        .headline-block.h2 { /* Section Headers */
+            font-family: var(--font-primary);
+            font-size: var(--font-size-other-section-header); /* 9pt */
+            font-weight: var(--font-weight-medium);        /* 500 medium */
+            color: var(--color-text-darkest); text-transform: uppercase;
+            line-height: 1.4; letter-spacing: 0.01em;
+            margin-top: var(--space-3xl); margin-bottom: var(--space-lg);
+        }
+        .headline-block.h3 {
+            font-size: var(--font-size-h3-box); font-weight: var(--font-weight-semibold);
+            color: var(--color-text-black); margin-top: var(--space-lg); margin-bottom: var(--space-xs);
+        }
         .headline-block.h4 {
-            color: var(--color-text-dark);
-            font-size: var(--font-size-md); /* H4 might be slightly smaller */
-            font-weight: var(--font-weight-semibold); /* Keep semibold for H4 titles */
+            font-size: var(--font-size-h4-box); font-weight: var(--font-weight-bold);
+            color: var(--color-primary-accent); margin-top: var(--space-lg); margin-bottom: var(--space-sm);
         }
         .mini-section-box .headline-block.h4 {
-            color: var(--color-primary-accent-dark);
-            font-weight: var(--font-weight-semibold);
-            margin-top:0; margin-bottom: var(--space-sm);
-            font-size: var(--font-size-md); line-height: 1.3; letter-spacing: 0.005em;
-            border-bottom: none; padding-bottom: 0;
+             margin-top: 0; font-size: var(--font-size-h4-box);
+             font-weight: var(--font-weight-bold); color: var(--color-primary-accent);
         }
-        .headline-block.h4 .icon-svg { color: currentColor; }
+         .headline-block.h4 .icon-svg { color: var(--color-primary-accent); width: 1em; height: 1em; }
 
         .paragraph-block {
-            font-size: var(--font-size-paragraph-small);
-            line-height: 1.5; letter-spacing: 0.01em;
-            font-weight: var(--font-weight-normal);
-            margin-bottom: var(--space-sm);
-            /* NO max-width here - it's handled by the wrapper */
+            font-size: var(--font-size-paragraph-small); line-height: 1.5;
+            font-weight: var(--font-weight-normal); margin-bottom: var(--space-sm);
+            color: var(--color-text-default);
         }
-        .list-block-wrapper ul, .list-block-wrapper ol {
-            padding-left: 0; list-style-type: none;
-            margin-top: var(--space-xs); margin-bottom: var(--space-md);
-            max-width: 100%; /* Ensure lists are full-width */
-        }
-        .list-block-wrapper li {
-            display: flex; position: relative;
-            padding-left: calc(var(--space-sm) + 0.8em);
-            margin-bottom: var(--space-xs);
-            font-size: var(--font-size-list-item);
-            font-weight: var(--font-weight-normal);
-            line-height: 1.45; letter-spacing: 0.01em;
-        }
-        .list-block-wrapper .list-marker {
-            position: absolute; left: 0; top: 0.22em;
-            width: 0.8em; height: 0.8em;
-            display: inline-flex; align-items: center; justify-content: center;
-        }
-        .list-block-wrapper .list-marker .icon-svg {
-            width: 0.7em; height: 0.7em; stroke-width: 2.5px;
-        }
-        .list-block-wrapper ul > li > .list-marker .icon-svg { color: var(--color-primary-accent); }
-        .list-block-wrapper ol > li > .list-marker .number-text {
+        .paragraph-block.recommendation {
+            font-size: 8pt; color: var(--color-text-muted);
+            margin-top: var(--space-sm); margin-bottom:0; /* Recommendation is often last */
             font-weight: var(--font-weight-medium);
-            font-size: var(--font-size-list-item);
-            color: var(--color-text-dark); line-height: 1;
+            padding-left: 13px; /* Space for the bar */
+            position: relative;
         }
-        .list-item-content-wrapper .list-block-wrapper {
-            margin-left: var(--space-md); margin-top: var(--space-xs); margin-bottom: var(--space-xs);
+        .paragraph-block.recommendation::before {
+            content: ""; position: absolute; left: 0;
+            top: 0.1em; /* Adjust for vertical alignment with text */
+            height: calc(100% - 0.2em); /* Adjust height based on text */
+            width: 3px; background-color: var(--color-primary-accent);
         }
-        .list-item-content-wrapper .list-block-wrapper ul > li > .list-marker .icon-svg { color: var(--color-text-muted); }
-        .list-item-content-wrapper .list-block-wrapper li { padding-left: calc(var(--space-sm) + 0.7em); font-size: var(--font-size-list-item); }
-        .list-item-content-wrapper .list-block-wrapper .list-marker { top: 0.25em; width: 0.7em; height: 0.7em; }
-        .list-item-content-wrapper .list-block-wrapper .list-marker .icon-svg { width: 0.6em; height: 0.6em; }
+
+
+        .list-block-wrapper ul, .list-block-wrapper ol { padding-left: 0; list-style-type: none; margin-top: var(--space-xs); margin-bottom: var(--space-md); max-width: 100%; }
+        .list-block-wrapper li { display: flex; position: relative; margin-bottom: var(--space-xs); font-size: var(--font-size-list-item); font-weight: var(--font-weight-normal); line-height: 1.45; }
         .list-item-text-or-block { flex-grow: 1; }
 
-        .mini-section-box-wrapper { /* Full width wrapper */
-            margin-top: var(--space-lg); margin-bottom: var(--space-lg);
-            page-break-inside: avoid;
+        .content-wrapper > .content-block-wrapper.type-bullet_list ul > li,
+        .mini-section-box ul > li { padding-left: calc(var(--space-sm) + 0.8em); }
+        .content-wrapper > .content-block-wrapper.type-bullet_list ul > li > .list-marker,
+        .mini-section-box ul > li > .list-marker { position: absolute; left: 0; top: 0.25em; width: 0.8em; height: 0.8em; }
+        .content-wrapper > .content-block-wrapper.type-bullet_list ul > li > .list-marker .icon-svg,
+        .mini-section-box ul > li > .list-marker .icon-svg {
+            width: 0.7em; height: 0.7em; stroke-width: 3px; color: var(--color-primary-accent); fill: none;
         }
-        .mini-section-box { /* Visual box, also full width */
+        .list-item-content-wrapper ul > li { padding-left: calc(var(--space-sm) + 0.8em); }
+        .list-item-content-wrapper ul > li > .list-marker .icon-svg { width: 0.6em; height: 0.6em; color: var(--color-text-muted); }
+
+        /* OL - Numbered Box Lists */
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol {
+            list-style: none; padding-left: 0; margin-top: var(--space-lg);
+        }
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li { /* This is the LI of the OL - it forms the visual box */
+            counter-increment: numbered-box; border: 1px solid var(--color-primary-accent);
+            background-color: var(--color-primary-accent-light-bg); padding: var(--space-lg);
+            margin-bottom: var(--space-lg); position: relative; border-radius: 5px; display: block;
+            padding-left: calc(24px + var(--space-md) + var(--space-lg)); /* num_width(24) + gap_after_num(12) + text_padding_left(18) */
+        }
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li::before { /* Number circle */
+            content: counter(numbered-box); position: absolute; left: var(--space-lg); top: var(--space-lg);
+            background-color: var(--color-primary-accent); color: white;
+            width: 24px; height: 24px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center;
+            font-weight: var(--font-weight-semibold); font-size: 11pt; line-height: 1;
+        }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li > .list-marker { display: none; } /* Hide default markers for outer LI */
+
+        /* The direct child of OL > LI > .list-item-text-or-block should be the container (type-bullet_list) */
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-item-text-or-block > .content-block-wrapper.type-bullet_list {
+            margin-bottom: 0;
+        }
+        /* Inner UL (from the type-bullet_list acting as container) - make transparent */
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-block-wrapper.type-bullet_list > ul {
+            margin: 0; padding: 0; list-style: none;
+        }
+        /* LIs of the inner UL - also transparent containers */
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-block-wrapper.type-bullet_list > ul > li {
+            padding: 0; margin: 0 0 var(--space-xs) 0; display: block;
+        }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-block-wrapper.type-bullet_list > ul > li:last-child {
+            margin-bottom: 0;
+        }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-block-wrapper.type-bullet_list > ul > li > .list-marker {
+            display: none; /* Hide markers of this inner, structural bullet list */
+        }
+
+        /* Mini-title (Headline inside the inner bullet list of a numbered box item) */
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-block-wrapper.type-bullet_list .headline-block {
+            margin-top: 0 !important; margin-bottom: var(--space-xs) !important;
+            font-size: var(--font-size-mini-title); font-weight: var(--font-weight-medium);
+            color: var(--color-text-black); line-height: 1.3;
+        }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-block-wrapper.type-bullet_list .headline-block .icon-svg {
+            display: none; /* No icon for mini-titles */
+        }
+        /* Text following mini-title (Paragraph inside the inner bullet list) */
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-block-wrapper.type-bullet_list .paragraph-block {
+            font-size: var(--font-size-mini-title-text); font-weight: var(--font-weight-normal);
+            color: var(--color-text-muted); max-width: 100%; line-height: 1.4;
+        }
+        /* Recommendation inside the inner bullet list */
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-block-wrapper.type-bullet_list .paragraph-block.recommendation {
+            font-size: 8pt; color: var(--color-text-muted);
+            margin-top: var(--space-sm); margin-bottom: 0; font-weight: var(--font-weight-medium);
+            padding-left: 13px; position: relative;
+        }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-block-wrapper.type-bullet_list .paragraph-block.recommendation::before {
+            content: ""; position: absolute; left: 0;
+            top: 0.1em; height: calc(100% - 0.2em);
+            width: 3px; background-color: var(--color-primary-accent);
+        }
+
+
+        /* Mini Section Box ('Цель Урока') */
+        .mini-section-box-wrapper { margin-top: var(--space-xl); margin-bottom: var(--space-xl); page-break-inside: avoid; }
+        .mini-section-box {
             background-color: var(--color-primary-accent-light-bg);
-            border: 1px solid var(--color-primary-accent-border);
-            border-radius: 5px; padding: var(--space-md);
+            border: 1px solid var(--color-primary-accent);
+            border-radius: 5px;
+            padding: var(--space-md) var(--space-xl); /* Symmetrical 12px top/bottom */
         }
-        /* Content *inside* the box IS constrained if it's not a headline or list */
-        .mini-section-box .content-block-wrapper:not(:has(> .headline-block)):not(.type-bullet_list):not(.type-numbered_list) > *,
-        .mini-section-box .paragraph-block,
-        /* .mini-section-box .list-block-wrapper, */ /* <--- REMOVED list from constraint */
-        .mini-section-box .alert-block {
-           max-width: var(--content-max-width-constrained);
+         .mini-section-box > .content-block-wrapper:first-child {
+            margin-top: 0 !important;
         }
-        /* Ensure lists inside boxes are full-width (of the box) */
-        .mini-section-box .list-block-wrapper {
-            max-width: 100%;
+        .mini-section-box > .content-block-wrapper:first-child > .headline-block {
+            margin-top: 0 !important;
         }
-        /* Ensure headlines within boxes are not additionally constrained */
-        .mini-section-box .headline-block {
-            max-width: none;
-        }
-        .mini-section-box > .content-block-wrapper:first-child > .headline-block { margin-top: 0 !important; }
-        .mini-section-box *:last-child { margin-bottom: 0 !important; }
-        .mini-section-box .list-block-wrapper li { margin-bottom: var(--space-xxs); font-size: var(--font-size-paragraph-small); line-height: 1.4; }
-        .mini-section-box .list-block-wrapper .list-marker { top: 0.2em; }
+        .mini-section-box .content-block-wrapper, .mini-section-box .paragraph-block, .mini-section-box .list-block-wrapper { max-width: 100%; }
+        .mini-section-box .list-block-wrapper li { font-size: var(--font-size-list-item); }
 
-        .alert-block {
-            display: flex; padding: var(--space-md); margin: var(--space-lg) 0;
-            border-left-width: 3px; border-style: solid; border-radius: 0 3px 3px 0;
-            page-break-inside: avoid;
-            /* NO max-width here - handled by wrapper */
-        }
-        .alert-block .icon-container { flex-shrink: 0; padding-top: 1px; margin-right: var(--space-sm); }
-        .alert-block .icon-container .icon-svg { width: 15px; height: 15px; stroke-width:2px;}
-        .alert-block .text-container .alert-title { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); }
-        .alert-block .text-container .alert-text { font-size: var(--font-size-sm); font-weight: var(--font-weight-normal); }
-        .alert-block .text-container .alert-title + .alert-text { margin-top: var(--space-xs); }
-
-        .alert-info { background-color: #eef2ff; border-color: #818cf8; color: #4338ca; } .alert-info .icon-svg { color: #6366f1;}
-        .alert-success { background-color: #f0fdf4; border-color: #4ade80; color: #166534; } .alert-success .icon-svg { color: #22c55e; }
-        .alert-warning { background-color: #fefce8; border-color: #facc15; color: #a16207; } .alert-warning .icon-svg { color: #eab308; }
-        .alert-danger { background-color: #FEF2F2; border-color: #FCA5A5; color: #B91C1C; } .alert-danger .icon-svg { color: #EF4444;}
-
-        .section-break-block.solid, .section-break-block.dashed {
-            border: none; border-top: 0.5pt solid var(--color-border-extralight);
-            margin: var(--space-xl) 0;
-            /* REMOVED max-width here */
-        }
+        /* Section Breaks & Dividers */
+        .section-break-block.solid, .section-break-block.dashed { border: none; border-top: 0.5pt solid var(--color-border-extralight); margin: var(--space-xl) 0; }
         .section-break-block.none { height: var(--space-lg); border:none; }
+        .content-section-divider { border: none; border-top: 0.5pt solid var(--color-border-extralight); margin: var(--space-3xl) 0 var(--space-lg) 0; max-width: 100%; }
 
-        .content-section-divider { /* New class for automatic dividers */
-            border: none; border-top: 0.5pt solid var(--color-border-extralight);
-            margin: var(--space-lg) 0 var(--space-md) 0;
-            max-width: var(--content-max-width-constrained);
-        }
+        .content-wrapper > .content-block-wrapper.type-paragraph { max-width: var(--content-max-width-constrained); }
+        .content-wrapper > .content-block-wrapper.type-alert { max-width: var(--content-max-width-constrained); }
+        .list-block-wrapper .content-block-wrapper.type-paragraph { max-width: 100%; }
 
-        .error-message, .warning-message {
-            font-weight: var(--font-weight-medium); padding: var(--space-sm); border-radius: 3px;
-            /* max-width: var(--content-max-width-constrained); */ /* Allow errors to be full width? Or constrain? Let's constrain top-level.*/
-        }
-        .error-message { color: #D32F2F; background-color: #FFEBEE; }
-        .warning-message { color: #FFA000; background-color: #FFF8E1; }
-
-        /* Page Break Rules */
         .headline-block, .alert-block, .mini-section-box-wrapper, li, .paragraph-block { page-break-inside: avoid; }
-        .headline-block { page-break-after: avoid; }
-        hr.section-break-block, hr.content-section-divider { page-break-before: auto; page-break-after: avoid;} /* Avoid breaking right after a divider */
-
-
-        /* --- ADDED RULES FOR WIDTH CONTROL --- */
-        /* Apply constraint ONLY to direct children of .content-wrapper that are paragraphs */
-        .content-wrapper > .content-block-wrapper.type-paragraph {
-            max-width: var(--content-max-width-constrained);
-        }
-        /* Apply constraint to direct alerts as well */
-        .content-wrapper > .content-block-wrapper.type-alert {
-            max-width: var(--content-max-width-constrained);
-        }
-        /* Apply constraint ONLY to direct section breaks */
-        .content-wrapper > .content-block-wrapper.type-section_break > .section-break-block {
-            max-width: var(--content-max-width-constrained);
-        }
-         /* Apply constraint ONLY to direct error/warning messages */
-        .content-wrapper > .error-message,
-        .content-wrapper > .warning-message {
-             max-width: var(--content-max-width-constrained);
-        }
-        /* Ensure that ANY paragraph wrapper *inside* a list is NOT constrained */
-        .list-block-wrapper .content-block-wrapper.type-paragraph {
-            max-width: 100%;
-        }
-        /* --- END ADDED RULES --- */
+        .headline-block.h2 { page-break-before: auto; page-break-after: avoid; }
+        hr.content-section-divider { page-break-before: auto; page-break-after: avoid;}
 
     </style>
 </head>
@@ -298,6 +251,8 @@
             <symbol id="icon-lightbulb" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 16a5 5 0 1 0 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3" /><path d="M9.7 17l1.3 -1.3" /><path d="M14.3 17l-1.3 -1.3" /><path d="M12 12l0 -7" /><path d="M7 9l0 -1" /><path d="M17 9l0 -1" /><path d="M9 6l0 -1" /><path d="M15 6l0 -1" /></symbol>
             <symbol id="icon-info" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></symbol>
             <symbol id="icon-award" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0" /><path d="M12 15l3.4 5.89l1.598 -3.233l3.598 .232l-2.5 -2.766l.304 -3.733l-3.4 -1.89l-3.4 1.89l.304 3.733l-2.5 2.766l3.598 -.233l1.598 3.232z" /></symbol>
+            <symbol id="icon-target" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"> <path stroke="none" d="M0 0h24v24H0z" fill="none"></path> <circle cx="12" cy="12" r="1"></circle> <circle cx="12" cy="12" r="5"></circle> <circle cx="12" cy="12" r="9"></circle> </symbol>
+            <symbol id="icon-check" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"> <path stroke="none" d="M0 0h24v24H0z" fill="none"/> <path d="M5 12l5 5l10 -10" /> </symbol>
             <symbol id="icon-chevronRight" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></symbol>
             <symbol id="icon-alertCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 8l0 4" /><path d="M12 16l.01 0" /></symbol>
             <symbol id="icon-checkCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" /></symbol>
@@ -310,7 +265,7 @@
     </svg>
 
     <div class="pdf-container">
-        {% set lesson_data = details.details %} {# <-- Keeping original 'details.details' as requested #}
+        {% set lesson_data = details.details %}
         {% set first_block_is_title_duplicate = false %}
         {% if lesson_data is mapping and lesson_data.contentBlocks and lesson_data.contentBlocks|length > 0 %}
             {% set first_block = lesson_data.contentBlocks[0] %}
@@ -322,37 +277,24 @@
         {% if lesson_data is mapping and lesson_data.lessonTitle is defined %}
             <div class="lesson-title-section">
                 <h1 class="lesson-title-text">{{ lesson_data.lessonTitle }}</h1>
-                {% if lesson_data.estimatedTime %}
-                    <div class="lesson-time">
-                        <svg class="icon-svg"><use xlink:href="#icon-clock" /></svg>
-                        <span>{{ lesson_data.estimatedTime }}</span>
-                    </div>
-                {% endif %}
             </div>
         {% endif %}
 
         {% macro render_icon_svg_macro(icon_name_str, default_icon_for_type=None, css_class="", depth=0) %}
             {% set final_icon_name = icon_name_str %}
             {% if not final_icon_name %}
-                {% if default_icon_for_type == 'alert-info' %}{% set final_icon_name = 'info' %}
+                {% if default_icon_for_type == 'h2' %}{% set final_icon_name = 'info' %}
+                {% elif default_icon_for_type == 'h4-important' %}{% set final_icon_name = 'target' %}
+                {% elif default_icon_for_type == 'ul' %}{% set final_icon_name = 'chevronRight' %}
+                {% elif default_icon_for_type == 'ul-nested' %}{% set final_icon_name = 'chevronRight' %}
+                {% elif default_icon_for_type == 'alert-info' %}{% set final_icon_name = 'info' %}
                 {% elif default_icon_for_type == 'alert-success' %}{% set final_icon_name = 'checkCircle' %}
                 {% elif default_icon_for_type == 'alert-warning' %}{% set final_icon_name = 'alertTriangle' %}
                 {% elif default_icon_for_type == 'alert-danger' %}{% set final_icon_name = 'xCircle' %}
-                {% elif default_icon_for_type == 'bullet' %}
-                    {% if depth == 0 %}{% set final_icon_name = 'chevronRight' %} {# Changed from 'check' to 'chevronRight' #}
-                    {% else %}{% set final_icon_name = 'bullet-circle' %}
-                    {% endif %}
-                {% elif default_icon_for_type == 'generic-headline-h1' %}{% set final_icon_name = 'compass' %}
-                {% elif default_icon_for_type == 'generic-headline-h2' %}{% set final_icon_name = 'brain' %}
-                {% elif default_icon_for_type == 'generic-headline-h3' %}{% set final_icon_name = 'lightbulb' %}
-                {% elif default_icon_for_type == 'generic-headline-h4' %}{% set final_icon_name = 'info' %}
-                {% elif default_icon_for_type == 'generic-headline' %}{% set final_icon_name = 'chevronRight' %}
                 {% endif %}
             {% endif %}
             {% if final_icon_name %}
                 <svg class="icon-svg {{ css_class }} icon-{{final_icon_name}}"><use xlink:href="#icon-{{ final_icon_name }}" /></svg>
-            {% elif default_icon_for_type == 'bullet-fallback' %}
-                <span class="list-marker-fallback">&gt;</span> {# Changed from bull to > #}
             {% endif %}
         {% endmacro %}
 
@@ -361,21 +303,15 @@
                 {% for item_content in items_list %}
                     <li>
                         <div class="list-marker">
-                        {% if item_content is string or (item_content is mapping and item_content.get('type') not in ['bullet_list', 'numbered_list']) %}
                             {% if list_type_str == 'bullet_list' %}
-                                {{ render_icon_svg_macro(list_icon_name_str if depth == 0 else None, 'bullet', 'bullet-icon', depth) }}
-                            {% elif list_type_str == 'numbered_list' %}
-                                <span class="number-text">{{ loop.index }}.</span>
+                                 {{ render_icon_svg_macro(None, 'ul' if depth == 0 else 'ul-nested', 'bullet-icon', depth) }}
                             {% endif %}
-                        {% endif %}
                         </div>
                         <div class="list-item-text-or-block">
                         {% if item_content is string %}
                             <span>{{ item_content }}</span>
                         {% elif item_content is mapping %}
-                            <div class="list-item-content-wrapper">
-                                {{ render_single_block_recursive_macro(item_content, depth + 1, is_in_box_context_for_list) }}
-                            </div>
+                            {{ render_single_block_recursive_macro(item_content, depth + 1, is_in_box_context_for_list) }}
                         {% else %}
                             <span class="error-message">Item is not string or dict: {{ item_content }}</span>
                         {% endif %}
@@ -391,17 +327,22 @@
         {% macro render_single_block_recursive_macro(block_data, depth=0, is_in_box_context=false) %}
             {% if block_data is mapping %}
                 {% set block_type = block_data.get('type') %}
+                {% set level = block_data.level | default(3) %}
+                {% set is_important = block_data.get('isImportant') %}
 
-                {# --- REMOVED THE DYNAMIC 'constrained-width' CLASS --- #}
                 <div class="content-block-wrapper type-{{block_type}}">
                     {% if block_type == 'headline' %}
-                        <div class="headline-block h{{ block_data.level | default(3) }}"
-                             style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }}; padding: 0.2em 0.4em;{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% endif %}">
-                            {{ render_icon_svg_macro(block_data.iconName, 'generic-headline-h' ~ (block_data.level | default(3)) ) }}
+                        <div class="headline-block h{{ level }}"
+                             style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% endif %}">
+                             {% if level == 2 %}
+                                 {{ render_icon_svg_macro(block_data.iconName, 'h2' ) }}
+                             {% elif level == 4 and is_important %}
+                                  {{ render_icon_svg_macro(block_data.iconName, 'h4-important' ) }}
+                             {% endif %}
                             <span>{{ block_data.text | default('') }}</span>
                         </div>
                     {% elif block_type == 'paragraph' %}
-                        <p class="paragraph-block">{{ block_data.text | default('') }}</p>
+                        <p class="paragraph-block {{ 'recommendation' if block_data.isRecommendation else '' }}">{{ block_data.text | default('') }}</p>
                     {% elif block_type == 'bullet_list' or block_type == 'numbered_list' %}
                         <div class="list-block-wrapper {{block_type}} depth-{{depth}}">
                             {% if block_type == 'bullet_list' %}
@@ -411,7 +352,7 @@
                             {% endif %}
                         </div>
                     {% elif block_type == 'alert' %}
-                        <div class="alert-block alert-{{ block_data.alertType | default('info') }}"
+                       <div class="alert-block alert-{{ block_data.alertType | default('info') }}"
                              style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %}{% if block_data.borderColor %}border-color: {{ block_data.borderColor }};{% endif %}{% if block_data.textColor %}color: {{ block_data.textColor }};{% endif %}">
                             <div class="icon-container" style="{% if block_data.iconColor %}color: {{ block_data.iconColor }}; fill: {{ block_data.iconColor }};{% endif %}">
                                 {{ render_icon_svg_macro(block_data.iconName, 'alert-' + (block_data.alertType|default('info')) ) }}
@@ -423,7 +364,7 @@
                         </div>
                     {% elif block_type == 'section_break' %}
                         {% if block_data.style == 'solid' or block_data.style == 'dashed' %}
-                            <hr class="section-break-block {{ block_data.style }}"> {# <-- REMOVED class here #}
+                            <hr class="section-break-block {{ block_data.style }}">
                         {% elif block_data.style == 'none' %}
                              <div class="section-break-block none"></div>
                         {% endif %}
@@ -438,68 +379,58 @@
 
         <div class="content-wrapper">
         {% if lesson_data is mapping and lesson_data.contentBlocks is iterable and lesson_data.contentBlocks is not string %}
-            {% set next_block_in_box_content = [false] %} {# Tracks if the *next* block is content for the current important box #}
+            {% set next_block_in_box_content = [false] %}
 
             {% for loop_index in range(lesson_data.contentBlocks | length) %}
                 {% set current_block_item = lesson_data.contentBlocks[loop_index] %}
                 {% set next_block_item = lesson_data.contentBlocks[loop_index+1] if (loop_index+1) < (lesson_data.contentBlocks | length) else none %}
                 {% set is_last_block_overall = loop_index == (lesson_data.contentBlocks | length) - 1 %}
 
-                {# ---- START: Render current block or box ---- #}
                 {% if loop_index == 0 and first_block_is_title_duplicate %}
-                    {# Skip rendering the first headline block if it's a duplicate of the lesson title #}
                 {% elif next_block_in_box_content[0] %}
-                    {# This block was already rendered as part of a mini-section content, skip it #}
                     {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(false) %}
                 {% else %}
                     {% set is_important_headline = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
                     {% set is_relevant_content_following_for_box = next_block_item is mapping and next_block_item.get('type') in ['bullet_list', 'numbered_list', 'paragraph', 'alert'] %}
-
                     {% if is_important_headline %}
-                        <div class="mini-section-box-wrapper">
-                            <div class="mini-section-box">
-                                {{ render_single_block_recursive_macro(current_block_item, 0, true) }} {# is_in_box_context = true for headline in box #}
-                                {% if is_relevant_content_following_for_box %}
-                                    {{ render_single_block_recursive_macro(next_block_item, 0, true) }} {# is_in_box_context = true for content in box #}
-                                    {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(true) %}
-                                {% endif %}
-                            </div>
-                        </div>
+                        <div class="mini-section-box-wrapper"> <div class="mini-section-box">
+                            {{ render_single_block_recursive_macro(current_block_item, 0, true) }}
+                            {% if is_relevant_content_following_for_box %}
+                                {{ render_single_block_recursive_macro(next_block_item, 0, true) }}
+                                {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(true) %}
+                            {% endif %}
+                        </div> </div>
                     {% else %}
-                        {{ render_single_block_recursive_macro(current_block_item, 0, false) }} {# is_in_box_context = false #}
+                        {{ render_single_block_recursive_macro(current_block_item, 0, false) }}
                     {% endif %}
                 {% endif %}
-                {# ---- END: Render current block or box ---- #}
 
-                {# ---- START: Divider Logic ---- #}
                 {% set render_this_divider = false %}
                 {% if not is_last_block_overall %}
-                    {# Check if current block (or its box if it was important) should be followed by a divider #}
-                    {% set current_block_was_highlighted_box_header = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
-                    {% set current_block_was_highlighted_box_content = next_block_in_box_content[0] %} {# True if the *previous* block was an important header that consumed this one #}
-
-                    {% if not current_block_was_highlighted_box_header and not (loop_index > 0 and lesson_data.contentBlocks[loop_index-1].isImportant and is_relevant_content_following) %}
-                        {# ^-- The above condition checks if the current block itself initiated a highlight box,
-                             OR if the block *just processed* was the content of a highlight box.
-                             Essentially, don't put a divider right after a .mini-section-box-wrapper
-                        #}
-                        {% if next_block_item and next_block_item.type == 'headline' and next_block_item.level <= 2 and not next_block_item.isImportant %}
-                                {# Only add divider if next is a major, non-highlighted headline #}
-                            {% set render_this_divider = true %}
+                    {% set current_is_important = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
+                    {% set previous_was_important = false %}
+                    {% if loop_index > 0 %}
+                        {% set prev = lesson_data.contentBlocks[loop_index-1] %}
+                        {% if prev is mapping and prev.get('type') == 'headline' and prev.get('isImportant') %}
+                             {% set previous_was_important = true %}
                         {% endif %}
+                    {% endif %}
+                    {% set was_consumed = next_block_in_box_content[0] %}
+                    {% set next_is_h2 = next_block_item and next_block_item.type == 'headline' and next_block_item.level == 2 and not next_block_item.isImportant %}
+                    {% if next_is_h2 and not current_is_important and not was_consumed and not previous_was_important %}
+                         {% set render_this_divider = true %}
                     {% endif %}
                 {% endif %}
 
                 {% if render_this_divider %}
-                    <hr class="section-divider-hr">
+                    <hr class="content-section-divider">
                 {% endif %}
-                {# ---- END: Divider Logic ---- #}
 
             {% endfor %}
         {% elif lesson_data and lesson_data.contentBlocks is not none %}
-             <p class="error-message constrained-width">contentBlocks is not iterable. Type: {{ lesson_data.contentBlocks|type }}</p>
+             <p class="error-message">contentBlocks is not iterable. Type: {{ lesson_data.contentBlocks|type }}</p>
         {% else %}
-             <p class="warning-message constrained-width">No content blocks found.</p>
+             <p class="warning-message">No content blocks found.</p>
         {% endif %}
         </div>
     </div>
