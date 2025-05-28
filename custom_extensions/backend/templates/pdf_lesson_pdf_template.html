@@ -8,52 +8,52 @@
 
         :root {
             --font-primary: 'Inter', Arial, sans-serif;
-            
-            /* RED Accent Palette (as per text instruction) - PLEASE ADJUST THESE SHADES TO YOUR LIKING */
-            --color-primary-accent: #C82333;       
-            --color-primary-accent-dark: #A21020;  
-            --color-primary-accent-light-bg: #F8D7DA; 
-            --color-primary-accent-border: #F5C6CB; 
 
-            --color-text-darkest: #18181B;  
-            --color-text-dark: #27272A;    
-            --color-text-default: #3F3F46; 
-            --color-text-muted: #71717A;   
-            --color-text-light: #A1A1AA;   
+            /* RED Accent Palette (as per text instruction) - PLEASE ADJUST THESE SHADES TO YOUR LIKING */
+            --color-primary-accent: #C82333;
+            --color-primary-accent-dark: #A21020;
+            --color-primary-accent-light-bg: #F8D7DA;
+            --color-primary-accent-border: #F5C6CB;
+
+            --color-text-darkest: #18181B;
+            --color-text-dark: #27272A;
+            --color-text-default: #3F3F46;
+            --color-text-muted: #71717A;
+            --color-text-light: #A1A1AA;
 
             --color-border-extralight: #F3F4F6; /* gray-100, for very subtle dividers */
-            --color-border-light: #E4E4E7;    /* zinc-200 */
+            --color-border-light: #E4E4E7;   /* zinc-200 */
             --color-border-medium: #D4D4D8;   /* zinc-300 */
 
             --color-background-page: #FFFFFF;
-            
+
             --font-weight-normal: 400;
             --font-weight-medium: 500;
             --font-weight-semibold: 600;
-            
-            --font-size-paragraph-small: 7pt; 
+
+            --font-size-paragraph-small: 7pt;
             --font-size-list-item: 7pt; /* Matched to small paragraph size */
-            --font-size-base: 10pt;     
+            --font-size-base: 10pt;
             --line-height-base: 1.5;
 
-            --font-size-other-section-header: 14pt; 
-            --font-size-main-title: 24pt;      
+            --font-size-other-section-header: 14pt;
+            --font-size-main-title: 24pt;
 
             --space-xxs: 2px;
             --space-xs: 4px;
-            --space-sm: 6px; 
-            --space-md: 10px; 
-            --space-lg: 12px; 
-            --space-xl: 16px; 
+            --space-sm: 6px;
+            --space-md: 10px;
+            --space-lg: 12px;
+            --space-xl: 16px;
             --space-2xl: 22px;
             --space-3xl: 28px;
 
-            --content-max-width-constrained: 53%; /* New width constraint */
+            --content-max-width-constrained: 53%; /* Keep the variable */
         }
 
         @page {
-            margin-top: 8mm; 
-            margin-bottom: 12mm; 
+            margin-top: 8mm;
+            margin-bottom: 12mm;
             margin-left: 10mm;
             margin-right: 10mm;
             size: A4;
@@ -64,7 +64,7 @@
             margin: 0; padding: 0;
             background-color: var(--color-background-page);
             color: var(--color-text-default);
-            font-size: var(--font-size-base); 
+            font-size: var(--font-size-base);
             font-weight: var(--font-weight-normal);
             line-height: var(--line-height-base);
             -webkit-print-color-adjust: exact;
@@ -75,22 +75,22 @@
         .pdf-container { width: 100%; box-sizing: border-box; padding: 0; }
 
         .lesson-title-section {
-            margin-bottom: var(--space-xl); 
-            padding-bottom: var(--space-sm); 
+            margin-bottom: var(--space-xl);
+            padding-bottom: var(--space-sm);
             border-bottom: none; /* REMOVED divider from under main title */
         }
         .lesson-title-text {
-            font-size: var(--font-size-main-title); 
-            font-weight: var(--font-weight-medium); 
+            font-size: var(--font-size-main-title);
+            font-weight: var(--font-weight-medium);
             color: var(--color-text-darkest);
-            margin: 0 0 var(--space-sm) 0; 
-            line-height: 1.3; 
-            letter-spacing: 0.01em; 
+            margin: 0 0 var(--space-sm) 0;
+            line-height: 1.3;
+            letter-spacing: 0.01em;
         }
         .lesson-time {
             display: flex; align-items: center;
             color: var(--color-text-muted);
-            font-size: var(--font-size-sm); 
+            font-size: var(--font-size-sm);
             font-weight: var(--font-weight-normal);
             margin-top: var(--space-xs);
         }
@@ -101,31 +101,32 @@
 
         .icon-svg {
             display: inline-block; vertical-align: middle;
-            width: 1em; height: 1em; flex-shrink: 0; stroke-width: 2px; 
+            width: 1em; height: 1em; flex-shrink: 0; stroke-width: 2px;
         }
 
         .content-block-wrapper { margin-bottom: var(--space-md); }
         .content-block-wrapper:last-child { margin-bottom: 0; }
-        
-        .constrained-width { max-width: var(--content-max-width-constrained); }
-        
-        .headline-block { 
-            display: flex; align-items: flex-start; 
-            font-size: var(--font-size-other-section-header); 
-            font-weight: var(--font-weight-semibold);      
-            line-height: 1.4;                              
-            letter-spacing: 0.01em;                        
+
+        /* REMOVED .constrained-width rule */
+
+        .headline-block {
+            display: flex; align-items: flex-start;
+            font-size: var(--font-size-other-section-header);
+            font-weight: var(--font-weight-semibold);
+            line-height: 1.4;
+            letter-spacing: 0.01em;
             margin-top: var(--space-lg);
-            margin-bottom: var(--space-sm); 
+            margin-bottom: var(--space-sm);
             color: var(--color-text-darkest);
             border-bottom: none; /* No default border for headlines */
             padding-bottom: 0;
+            max-width: 100%; /* Headlines should be full width */
         }
-        .headline-block .icon-svg { 
-            margin-right: var(--space-sm); 
-            margin-top: 0.15em; 
+        .headline-block .icon-svg {
+            margin-right: var(--space-sm);
+            margin-top: 0.15em;
             width: 0.8em; height: 0.8em; stroke-width: 2px;
-            flex-shrink: 0; color: var(--color-primary-accent); 
+            flex-shrink: 0; color: var(--color-primary-accent);
         }
         .headline-block span { flex-grow: 1; }
 
@@ -133,51 +134,53 @@
         .headline-block.h1 .icon-svg, .headline-block.h2 .icon-svg { color: var(--color-primary-accent); }
         .headline-block.h3 { color: var(--color-primary-accent-dark); }
         .headline-block.h3 .icon-svg { color: var(--color-primary-accent-dark); }
-        .headline-block.h4 { 
-            color: var(--color-text-dark); 
+        .headline-block.h4 {
+            color: var(--color-text-dark);
             font-size: var(--font-size-md); /* H4 might be slightly smaller */
             font-weight: var(--font-weight-semibold); /* Keep semibold for H4 titles */
         }
-         .mini-section-box .headline-block.h4 {
-             color: var(--color-primary-accent-dark);
-             font-weight: var(--font-weight-semibold); 
-             margin-top:0; margin-bottom: var(--space-sm);
-             font-size: var(--font-size-md); line-height: 1.3; letter-spacing: 0.005em;
-             border-bottom: none; padding-bottom: 0;
-         }
+        .mini-section-box .headline-block.h4 {
+            color: var(--color-primary-accent-dark);
+            font-weight: var(--font-weight-semibold);
+            margin-top:0; margin-bottom: var(--space-sm);
+            font-size: var(--font-size-md); line-height: 1.3; letter-spacing: 0.005em;
+            border-bottom: none; padding-bottom: 0;
+        }
         .headline-block.h4 .icon-svg { color: currentColor; }
 
         .paragraph-block {
-            font-size: var(--font-size-paragraph-small); 
-            line-height: 1.5; letter-spacing: 0.01em; 
-            font-weight: var(--font-weight-normal); 
-            margin-bottom: var(--space-sm); 
+            font-size: var(--font-size-paragraph-small);
+            line-height: 1.5; letter-spacing: 0.01em;
+            font-weight: var(--font-weight-normal);
+            margin-bottom: var(--space-sm);
+            /* NO max-width here - it's handled by the wrapper */
         }
         .list-block-wrapper ul, .list-block-wrapper ol {
             padding-left: 0; list-style-type: none;
             margin-top: var(--space-xs); margin-bottom: var(--space-md);
+            max-width: 100%; /* Ensure lists are full-width */
         }
         .list-block-wrapper li {
             display: flex; position: relative;
-            padding-left: calc(var(--space-sm) + 0.8em); 
+            padding-left: calc(var(--space-sm) + 0.8em);
             margin-bottom: var(--space-xs);
-            font-size: var(--font-size-list-item); 
+            font-size: var(--font-size-list-item);
             font-weight: var(--font-weight-normal);
-            line-height: 1.45; letter-spacing: 0.01em; 
+            line-height: 1.45; letter-spacing: 0.01em;
         }
         .list-block-wrapper .list-marker {
-            position: absolute; left: 0; top: 0.22em; 
+            position: absolute; left: 0; top: 0.22em;
             width: 0.8em; height: 0.8em;
             display: inline-flex; align-items: center; justify-content: center;
         }
-        .list-block-wrapper .list-marker .icon-svg { 
-            width: 0.7em; height: 0.7em; stroke-width: 2.5px; 
+        .list-block-wrapper .list-marker .icon-svg {
+            width: 0.7em; height: 0.7em; stroke-width: 2.5px;
         }
-        .list-block-wrapper ul > li > .list-marker .icon-svg { color: var(--color-primary-accent); } 
+        .list-block-wrapper ul > li > .list-marker .icon-svg { color: var(--color-primary-accent); }
         .list-block-wrapper ol > li > .list-marker .number-text {
-            font-weight: var(--font-weight-medium); 
-            font-size: var(--font-size-list-item); 
-            color: var(--color-text-dark); line-height: 1; 
+            font-weight: var(--font-weight-medium);
+            font-size: var(--font-size-list-item);
+            color: var(--color-text-dark); line-height: 1;
         }
         .list-item-content-wrapper .list-block-wrapper {
             margin-left: var(--space-md); margin-top: var(--space-xs); margin-bottom: var(--space-xs);
@@ -189,22 +192,26 @@
         .list-item-text-or-block { flex-grow: 1; }
 
         .mini-section-box-wrapper { /* Full width wrapper */
-             margin-top: var(--space-lg); margin-bottom: var(--space-lg);
-             page-break-inside: avoid;
+            margin-top: var(--space-lg); margin-bottom: var(--space-lg);
+            page-break-inside: avoid;
         }
         .mini-section-box { /* Visual box, also full width */
             background-color: var(--color-primary-accent-light-bg);
             border: 1px solid var(--color-primary-accent-border);
-            border-radius: 5px; padding: var(--space-md); 
+            border-radius: 5px; padding: var(--space-md);
         }
-        /* Content *inside* the box IS constrained if it's not a headline */
-        .mini-section-box .content-block-wrapper:not(:has(> .headline-block)) > *,
+        /* Content *inside* the box IS constrained if it's not a headline or list */
+        .mini-section-box .content-block-wrapper:not(:has(> .headline-block)):not(.type-bullet_list):not(.type-numbered_list) > *,
         .mini-section-box .paragraph-block,
-        .mini-section-box .list-block-wrapper,
+        /* .mini-section-box .list-block-wrapper, */ /* <--- REMOVED list from constraint */
         .mini-section-box .alert-block {
            max-width: var(--content-max-width-constrained);
         }
-         /* Ensure headlines within boxes are not additionally constrained by this rule, they take box width */
+        /* Ensure lists inside boxes are full-width (of the box) */
+        .mini-section-box .list-block-wrapper {
+            max-width: 100%;
+        }
+        /* Ensure headlines within boxes are not additionally constrained */
         .mini-section-box .headline-block {
             max-width: none;
         }
@@ -217,11 +224,12 @@
             display: flex; padding: var(--space-md); margin: var(--space-lg) 0;
             border-left-width: 3px; border-style: solid; border-radius: 0 3px 3px 0;
             page-break-inside: avoid;
+            /* NO max-width here - handled by wrapper */
         }
         .alert-block .icon-container { flex-shrink: 0; padding-top: 1px; margin-right: var(--space-sm); }
-        .alert-block .icon-container .icon-svg { width: 15px; height: 15px; stroke-width:2px;} 
-        .alert-block .text-container .alert-title { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); } 
-        .alert-block .text-container .alert-text { font-size: var(--font-size-sm); font-weight: var(--font-weight-normal); } 
+        .alert-block .icon-container .icon-svg { width: 15px; height: 15px; stroke-width:2px;}
+        .alert-block .text-container .alert-title { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); }
+        .alert-block .text-container .alert-text { font-size: var(--font-size-sm); font-weight: var(--font-weight-normal); }
         .alert-block .text-container .alert-title + .alert-text { margin-top: var(--space-xs); }
 
         .alert-info { background-color: #eef2ff; border-color: #818cf8; color: #4338ca; } .alert-info .icon-svg { color: #6366f1;}
@@ -229,21 +237,22 @@
         .alert-warning { background-color: #fefce8; border-color: #facc15; color: #a16207; } .alert-warning .icon-svg { color: #eab308; }
         .alert-danger { background-color: #FEF2F2; border-color: #FCA5A5; color: #B91C1C; } .alert-danger .icon-svg { color: #EF4444;}
 
-        .section-break-block.solid, .section-break-block.dashed { 
-            border: none; border-top: 0.5pt solid var(--color-border-extralight); 
-            margin: var(--space-xl) 0; max-width: var(--content-max-width-constrained);
+        .section-break-block.solid, .section-break-block.dashed {
+            border: none; border-top: 0.5pt solid var(--color-border-extralight);
+            margin: var(--space-xl) 0;
+            /* REMOVED max-width here */
         }
-        .section-break-block.none { height: var(--space-lg); border:none; } 
-        
+        .section-break-block.none { height: var(--space-lg); border:none; }
+
         .content-section-divider { /* New class for automatic dividers */
             border: none; border-top: 0.5pt solid var(--color-border-extralight);
             margin: var(--space-lg) 0 var(--space-md) 0;
             max-width: var(--content-max-width-constrained);
         }
 
-        .error-message, .warning-message { 
-            font-weight: var(--font-weight-medium); padding: var(--space-sm); border-radius: 3px; 
-            max-width: var(--content-max-width-constrained); 
+        .error-message, .warning-message {
+            font-weight: var(--font-weight-medium); padding: var(--space-sm); border-radius: 3px;
+            /* max-width: var(--content-max-width-constrained); */ /* Allow errors to be full width? Or constrain? Let's constrain top-level.*/
         }
         .error-message { color: #D32F2F; background-color: #FFEBEE; }
         .warning-message { color: #FFA000; background-color: #FFF8E1; }
@@ -252,6 +261,31 @@
         .headline-block, .alert-block, .mini-section-box-wrapper, li, .paragraph-block { page-break-inside: avoid; }
         .headline-block { page-break-after: avoid; }
         hr.section-break-block, hr.content-section-divider { page-break-before: auto; page-break-after: avoid;} /* Avoid breaking right after a divider */
+
+
+        /* --- ADDED RULES FOR WIDTH CONTROL --- */
+        /* Apply constraint ONLY to direct children of .content-wrapper that are paragraphs */
+        .content-wrapper > .content-block-wrapper.type-paragraph {
+            max-width: var(--content-max-width-constrained);
+        }
+        /* Apply constraint to direct alerts as well */
+        .content-wrapper > .content-block-wrapper.type-alert {
+            max-width: var(--content-max-width-constrained);
+        }
+        /* Apply constraint ONLY to direct section breaks */
+        .content-wrapper > .content-block-wrapper.type-section_break > .section-break-block {
+            max-width: var(--content-max-width-constrained);
+        }
+         /* Apply constraint ONLY to direct error/warning messages */
+        .content-wrapper > .error-message,
+        .content-wrapper > .warning-message {
+             max-width: var(--content-max-width-constrained);
+        }
+        /* Ensure that ANY paragraph wrapper *inside* a list is NOT constrained */
+        .list-block-wrapper .content-block-wrapper.type-paragraph {
+            max-width: 100%;
+        }
+        /* --- END ADDED RULES --- */
 
     </style>
 </head>
@@ -276,7 +310,7 @@
     </svg>
 
     <div class="pdf-container">
-        {% set lesson_data = details.details %}
+        {% set lesson_data = details.details %} {# <-- Keeping original 'details.details' as requested #}
         {% set first_block_is_title_duplicate = false %}
         {% if lesson_data is mapping and lesson_data.contentBlocks and lesson_data.contentBlocks|length > 0 %}
             {% set first_block = lesson_data.contentBlocks[0] %}
@@ -288,7 +322,7 @@
         {% if lesson_data is mapping and lesson_data.lessonTitle is defined %}
             <div class="lesson-title-section">
                 <h1 class="lesson-title-text">{{ lesson_data.lessonTitle }}</h1>
-                {% if lesson_data.estimatedTime %} 
+                {% if lesson_data.estimatedTime %}
                     <div class="lesson-time">
                         <svg class="icon-svg"><use xlink:href="#icon-clock" /></svg>
                         <span>{{ lesson_data.estimatedTime }}</span>
@@ -308,11 +342,11 @@
                     {% if depth == 0 %}{% set final_icon_name = 'chevronRight' %} {# Changed from 'check' to 'chevronRight' #}
                     {% else %}{% set final_icon_name = 'bullet-circle' %}
                     {% endif %}
-                {% elif default_icon_for_type == 'generic-headline-h1' %}{% set final_icon_name = 'compass' %} 
-                {% elif default_icon_for_type == 'generic-headline-h2' %}{% set final_icon_name = 'brain' %}   
-                {% elif default_icon_for_type == 'generic-headline-h3' %}{% set final_icon_name = 'lightbulb' %} 
-                {% elif default_icon_for_type == 'generic-headline-h4' %}{% set final_icon_name = 'info' %}    
-                {% elif default_icon_for_type == 'generic-headline' %}{% set final_icon_name = 'chevronRight' %}      
+                {% elif default_icon_for_type == 'generic-headline-h1' %}{% set final_icon_name = 'compass' %}
+                {% elif default_icon_for_type == 'generic-headline-h2' %}{% set final_icon_name = 'brain' %}
+                {% elif default_icon_for_type == 'generic-headline-h3' %}{% set final_icon_name = 'lightbulb' %}
+                {% elif default_icon_for_type == 'generic-headline-h4' %}{% set final_icon_name = 'info' %}
+                {% elif default_icon_for_type == 'generic-headline' %}{% set final_icon_name = 'chevronRight' %}
                 {% endif %}
             {% endif %}
             {% if final_icon_name %}
@@ -357,11 +391,9 @@
         {% macro render_single_block_recursive_macro(block_data, depth=0, is_in_box_context=false) %}
             {% if block_data is mapping %}
                 {% set block_type = block_data.get('type') %}
-                {% set is_headline_type = block_type == 'headline' %}
-                {# A block is constrained if it's NOT a headline OR if it IS a headline but inside a box context #}
-                {% set apply_constraint = (not is_headline_type) or (is_headline_type and is_in_box_context) %}
-                
-                <div class="content-block-wrapper {{ 'constrained-width' if apply_constraint else '' }} type-{{block_type}}">
+
+                {# --- REMOVED THE DYNAMIC 'constrained-width' CLASS --- #}
+                <div class="content-block-wrapper type-{{block_type}}">
                     {% if block_type == 'headline' %}
                         <div class="headline-block h{{ block_data.level | default(3) }}"
                              style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }}; padding: 0.2em 0.4em;{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% endif %}">
@@ -390,25 +422,24 @@
                             </div>
                         </div>
                     {% elif block_type == 'section_break' %}
-                        {# Render only if explicitly styled as solid or dashed, otherwise it's a spacer handled by its own height #}
                         {% if block_data.style == 'solid' or block_data.style == 'dashed' %}
-                           <hr class="section-break-block {{ block_data.style }} {{ 'constrained-width' if apply_constraint else '' }}">
+                            <hr class="section-break-block {{ block_data.style }}"> {# <-- REMOVED class here #}
                         {% elif block_data.style == 'none' %}
-                            <div class="section-break-block none {{ 'constrained-width' if apply_constraint else '' }}"></div>
+                             <div class="section-break-block none"></div>
                         {% endif %}
                     {% else %}
-                        <p class="error-message {{ 'constrained-width' if apply_constraint else '' }}">Unsupported block type: {{ block_type }}</p>
+                        <p class="error-message">Unsupported block type: {{ block_type }}</p>
                     {% endif %}
                 </div>
             {% else %}
-                <p class="error-message {{ 'constrained-width' if apply_constraint else '' }}">Block data is not a dictionary/mapping: {{ block_data }}</p>
+                <p class="error-message">Block data is not a dictionary/mapping: {{ block_data }}</p>
             {% endif %}
         {% endmacro %}
 
         <div class="content-wrapper">
         {% if lesson_data is mapping and lesson_data.contentBlocks is iterable and lesson_data.contentBlocks is not string %}
             {% set next_block_in_box_content = [false] %} {# Tracks if the *next* block is content for the current important box #}
-            
+
             {% for loop_index in range(lesson_data.contentBlocks | length) %}
                 {% set current_block_item = lesson_data.contentBlocks[loop_index] %}
                 {% set next_block_item = lesson_data.contentBlocks[loop_index+1] if (loop_index+1) < (lesson_data.contentBlocks | length) else none %}
@@ -423,9 +454,9 @@
                 {% else %}
                     {% set is_important_headline = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
                     {% set is_relevant_content_following_for_box = next_block_item is mapping and next_block_item.get('type') in ['bullet_list', 'numbered_list', 'paragraph', 'alert'] %}
-                    
+
                     {% if is_important_headline %}
-                        <div class="mini-section-box-wrapper"> 
+                        <div class="mini-section-box-wrapper">
                             <div class="mini-section-box">
                                 {{ render_single_block_recursive_macro(current_block_item, 0, true) }} {# is_in_box_context = true for headline in box #}
                                 {% if is_relevant_content_following_for_box %}
@@ -439,21 +470,21 @@
                     {% endif %}
                 {% endif %}
                 {# ---- END: Render current block or box ---- #}
-                
+
                 {# ---- START: Divider Logic ---- #}
                 {% set render_this_divider = false %}
                 {% if not is_last_block_overall %}
                     {# Check if current block (or its box if it was important) should be followed by a divider #}
                     {% set current_block_was_highlighted_box_header = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
                     {% set current_block_was_highlighted_box_content = next_block_in_box_content[0] %} {# True if the *previous* block was an important header that consumed this one #}
-                                        
+
                     {% if not current_block_was_highlighted_box_header and not (loop_index > 0 and lesson_data.contentBlocks[loop_index-1].isImportant and is_relevant_content_following) %}
-                        {# ^-- The above condition checks if the current block itself initiated a highlight box, 
+                        {# ^-- The above condition checks if the current block itself initiated a highlight box,
                              OR if the block *just processed* was the content of a highlight box.
                              Essentially, don't put a divider right after a .mini-section-box-wrapper
                         #}
                         {% if next_block_item and next_block_item.type == 'headline' and next_block_item.level <= 2 and not next_block_item.isImportant %}
-                             {# Only add divider if next is a major, non-highlighted headline #}
+                                {# Only add divider if next is a major, non-highlighted headline #}
                             {% set render_this_divider = true %}
                         {% endif %}
                     {% endif %}
