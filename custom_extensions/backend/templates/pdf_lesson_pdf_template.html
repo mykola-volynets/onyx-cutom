@@ -1,314 +1,476 @@
 <!DOCTYPE html>
-<html lang="{{ details.details.detectedLanguage if details and details.details and details.details.detectedLanguage else 'en' }}">
+<html lang="{{ lesson_data.detectedLanguage if lesson_data and lesson_data.detectedLanguage else 'en' }}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ details.details.lessonTitle if details and details.details and details.details.lessonTitle else 'PDF Lesson' }}</title>
+    <title>{{ lesson_data.lessonTitle if lesson_data and lesson_data.lessonTitle else 'PDF Lesson' }}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #ffffff;
-            color: #4B5563; /* Default text color, like text-gray-600 */
-            font-size: 12px;
-            line-height: 1.6;
-            widows: 3; /* Prevent single lines at top of page */
-            orphans: 3; /* Prevent single lines at bottom of page */
-        }
-        .pdf-container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 32px 40px;
-            background-color: #ffffff;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --font-primary: 'Inter', Arial, sans-serif;
+            
+            /* RED Accent Palette (as per text instruction) - PLEASE ADJUST THESE SHADES TO YOUR LIKING */
+            --color-primary-accent: #C82333;       
+            --color-primary-accent-dark: #A21020;  
+            --color-primary-accent-light-bg: #F8D7DA; 
+            --color-primary-accent-border: #F5C6CB; 
+
+            --color-text-darkest: #18181B;  
+            --color-text-dark: #27272A;    
+            --color-text-default: #3F3F46; 
+            --color-text-muted: #71717A;   
+            --color-text-light: #A1A1AA;   
+
+            --color-border-extralight: #F3F4F6; /* gray-100, for very subtle dividers */
+            --color-border-light: #E4E4E7;    /* zinc-200 */
+            --color-border-medium: #D4D4D8;   /* zinc-300 */
+
+            --color-background-page: #FFFFFF;
+            
+            --font-weight-normal: 400;
+            --font-weight-medium: 500;
+            --font-weight-semibold: 600;
+            
+            --font-size-paragraph-small: 7pt; 
+            --font-size-list-item: 7pt; /* Matched to small paragraph size */
+            --font-size-base: 10pt;     
+            --line-height-base: 1.5;
+
+            --font-size-other-section-header: 14pt; 
+            --font-size-main-title: 24pt;      
+
+            --space-xxs: 2px;
+            --space-xs: 4px;
+            --space-sm: 6px; 
+            --space-md: 10px; 
+            --space-lg: 12px; 
+            --space-xl: 16px; 
+            --space-2xl: 22px;
+            --space-3xl: 28px;
+
+            --content-max-width-constrained: 53%; /* New width constraint */
         }
 
-        .lesson-title-section { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 2px solid #0ea5e9; /* sky-500 */ }
-        .lesson-title-text { font-size: 28px; line-height: 1.25; font-weight: 700; color: #111827; /* gray-900 */ margin-bottom: 8px; }
-        .lesson-time { display: flex; align-items: center; color: #6b7280; /* gray-500 */ font-size: 14px; margin-top: 4px; }
-        .lesson-time .icon-svg { width: 16px; height: 16px; margin-right: 6px; }
+        @page {
+            margin-top: 8mm; 
+            margin-bottom: 12mm; 
+            margin-left: 10mm;
+            margin-right: 10mm;
+            size: A4;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            margin: 0; padding: 0;
+            background-color: var(--color-background-page);
+            color: var(--color-text-default);
+            font-size: var(--font-size-base); 
+            font-weight: var(--font-weight-normal);
+            line-height: var(--line-height-base);
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            widows: 3; orphans: 3;
+        }
+
+        .pdf-container { width: 100%; box-sizing: border-box; padding: 0; }
+
+        .lesson-title-section {
+            margin-bottom: var(--space-xl); 
+            padding-bottom: var(--space-sm); 
+            border-bottom: none; /* REMOVED divider from under main title */
+        }
+        .lesson-title-text {
+            font-size: var(--font-size-main-title); 
+            font-weight: var(--font-weight-medium); 
+            color: var(--color-text-darkest);
+            margin: 0 0 var(--space-sm) 0; 
+            line-height: 1.3; 
+            letter-spacing: 0.01em; 
+        }
+        .lesson-time {
+            display: flex; align-items: center;
+            color: var(--color-text-muted);
+            font-size: var(--font-size-sm); 
+            font-weight: var(--font-weight-normal);
+            margin-top: var(--space-xs);
+        }
+        .lesson-time .icon-svg {
+            width: 0.9em; height: 0.9em; margin-right: var(--space-sm);
+            fill: var(--color-text-muted); stroke: none;
+        }
 
         .icon-svg {
-            fill: none; /* Ensure no fill by default */
-            stroke: currentColor; /* Stroke uses the current text color */
-            width: 1.1em;
-            height: 1.1em;
-            flex-shrink: 0;
-            /* Stroke width is set in the symbol definition, 
-               but you could add stroke-width: 2px; here if needed */
+            display: inline-block; vertical-align: middle;
+            width: 1em; height: 1em; flex-shrink: 0; stroke-width: 2px; 
         }
 
-        .content-block-wrapper { margin-bottom: 12px; }
-
-        .headline-block { display: flex; align-items: center; color: #1f2937; /* gray-800 default */ }
-        .headline-block .icon-svg {
-            margin-right: 8px;
-            /* fill and stroke are set per icon or inherited */
+        .content-block-wrapper { margin-bottom: var(--space-md); }
+        .content-block-wrapper:last-child { margin-bottom: 0; }
+        
+        .constrained-width { max-width: var(--content-max-width-constrained); }
+        
+        .headline-block { 
+            display: flex; align-items: flex-start; 
+            font-size: var(--font-size-other-section-header); 
+            font-weight: var(--font-weight-semibold);      
+            line-height: 1.4;                              
+            letter-spacing: 0.01em;                        
+            margin-top: var(--space-lg);
+            margin-bottom: var(--space-sm); 
+            color: var(--color-text-darkest);
+            border-bottom: none; /* No default border for headlines */
+            padding-bottom: 0;
         }
+        .headline-block .icon-svg { 
+            margin-right: var(--space-sm); 
+            margin-top: 0.15em; 
+            width: 0.8em; height: 0.8em; stroke-width: 2px;
+            flex-shrink: 0; color: var(--color-primary-accent); 
+        }
+        .headline-block span { flex-grow: 1; }
 
-        .headline-block.h1 { font-size: 22px; font-weight: 700; color: #111827; margin-bottom: 12px;}
-        .headline-block.h1 .icon-svg { width: 24px; height: 24px; }
-        .headline-block.h2 { font-size: 20px; font-weight: 600; color: #111827; padding-bottom: 8px; border-bottom: 2px solid #0ea5e9; margin-top: 24px; margin-bottom: 20px;}
-        .headline-block.h2 .icon-svg { width: 20px; height: 20px; }
-        .headline-block.h3 { font-size: 17px; font-weight: 600; color: #0369a1; /* sky-700 */ margin-top: 16px; margin-bottom: 8px; }
-        .headline-block.h3 .icon-svg { width: 18px; height: 18px; } /* Match H3 color & fill */
-        .headline-block.h4 { font-size: 15px; font-weight: 500; color: #1f2937; margin-top: 12px; margin-bottom: 6px; }
-        .headline-block.h4 .icon-svg { width: 16px; height: 16px; }
+        .headline-block.h1, .headline-block.h2 { color: var(--color-text-darkest); }
+        .headline-block.h1 .icon-svg, .headline-block.h2 .icon-svg { color: var(--color-primary-accent); }
+        .headline-block.h3 { color: var(--color-primary-accent-dark); }
+        .headline-block.h3 .icon-svg { color: var(--color-primary-accent-dark); }
+        .headline-block.h4 { 
+            color: var(--color-text-dark); 
+            font-size: var(--font-size-md); /* H4 might be slightly smaller */
+            font-weight: var(--font-weight-semibold); /* Keep semibold for H4 titles */
+        }
+         .mini-section-box .headline-block.h4 {
+             color: var(--color-primary-accent-dark);
+             font-weight: var(--font-weight-semibold); 
+             margin-top:0; margin-bottom: var(--space-sm);
+             font-size: var(--font-size-md); line-height: 1.3; letter-spacing: 0.005em;
+             border-bottom: none; padding-bottom: 0;
+         }
+        .headline-block.h4 .icon-svg { color: currentColor; }
 
-        .list-item-content-wrapper .headline-block.h3 { font-size: 15px; margin-top:8px; margin-bottom:6px; }
-        .list-item-content-wrapper .headline-block.h4 { font-size: 14px; margin-top:8px; margin-bottom:6px; }
-
-        .paragraph-block { color: #374151; /* gray-700 */ font-size: 13px; margin-bottom: 12px; line-height: 1.65; }
-        .list-item-content-wrapper .paragraph-block { margin-bottom: 6px; }
-        .mini-section-box .paragraph-block { margin-bottom: 6px; }
-
-        .list-block-wrapper { margin-bottom: 10px; }
-        .list-block-wrapper ul, .list-block-wrapper ol { padding-left: 0; list-style-type: none; margin-top: 4px; }
-        .list-block-wrapper li { display: flex; align-items: flex-start; font-size: 13px; color: #374151; padding-top: 3px; padding-bottom: 3px; margin-bottom: 3px; }
-        .list-block-wrapper .list-marker { margin-right: 8px; flex-shrink: 0; color: #0369a1; /* accentBlue */ margin-top: 3px; line-height:1; }
-        .list-block-wrapper .list-marker .icon-svg { width: 12px; height:12px; /* For chevronRight etc. */ }
-        .list-block-wrapper .list-marker.number-text { font-weight: 500; }
-
-        .list-block-wrapper.depth-0 > ul, .list-block-wrapper.depth-0 > ol { padding-left: 20px; }
-        .list-item-content-wrapper .list-block-wrapper > ul,
-        .list-item-content-wrapper .list-block-wrapper > ol { padding-left: 20px; }
-
-        .list-item-content-wrapper { margin-top: 4px; margin-bottom: 4px; }
-
-        .alert-block { display: flex; padding: 12px; margin: 16px 0; border-left-width: 4px; border-style: solid; border-radius: 0 6px 6px 0; }
-        .alert-block .icon-container { flex-shrink: 0; padding-top: 2px; margin-right: 10px; }
-        .alert-block .icon-container .icon-svg { width: 18px; height: 18px;}
-        .alert-block .text-container .alert-title { font-size: 14px; font-weight: 600; }
-        .alert-block .text-container .alert-text { font-size: 13px; }
-        .alert-block .text-container .alert-title + .alert-text { margin-top: 2px; }
-
-        .alert-info { background-color: #eff6ff; border-color: #60a5fa; color: #1d4ed8; } .alert-info .icon-svg { fill: #3b82f6; fill: none !important;}
-        .alert-success { background-color: #f0fdf4; border-color: #4ade80; color: #166534; } .alert-success .icon-svg { color: #22c55e; fill: none !important; }
-        .alert-warning { background-color: #fefce8; border-color: #facc15; color: #a16207; } .alert-warning .icon-svg { color: #eab308; fill: none !important;}
-        .alert-danger { background-color: #fef2f2; border-color: #f87171; color: #b91c1c; } .alert-danger .icon-svg { color: #ef4444; fill: none !important;}
-
-        .section-break-block.solid { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
-        .section-break-block.dashed { border: none; border-top: 1px dashed #d1d5db; margin: 40px 0; }
-        .section-break-block.none { height: 32px; }
-
-        .mini-section-box { background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 16px 0; }
-        .mini-section-box > .content-block-wrapper:first-child { margin-top: 0; }
-        .mini-section-box > .content-block-wrapper:first-child > .headline-block { margin-top: 0 !important; margin-bottom: 6px !important; }
-        .mini-section-box > .content-block-wrapper > .list-block-wrapper { margin-bottom: 0 !important; }
-
-        .error-message { color: #c62828; font-weight: bold; }
-        .warning-message { color: #f9a825; }
-
-        /* ----- Page Break Rules ----- */
-        .content-block-wrapper,
-        .alert-block,
-        .mini-section-box,
+        .paragraph-block {
+            font-size: var(--font-size-paragraph-small); 
+            line-height: 1.5; letter-spacing: 0.01em; 
+            font-weight: var(--font-weight-normal); 
+            margin-bottom: var(--space-sm); 
+        }
+        .list-block-wrapper ul, .list-block-wrapper ol {
+            padding-left: 0; list-style-type: none;
+            margin-top: var(--space-xs); margin-bottom: var(--space-md);
+        }
         .list-block-wrapper li {
+            display: flex; position: relative;
+            padding-left: calc(var(--space-sm) + 0.8em); 
+            margin-bottom: var(--space-xs);
+            font-size: var(--font-size-list-item); 
+            font-weight: var(--font-weight-normal);
+            line-height: 1.45; letter-spacing: 0.01em; 
+        }
+        .list-block-wrapper .list-marker {
+            position: absolute; left: 0; top: 0.22em; 
+            width: 0.8em; height: 0.8em;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .list-block-wrapper .list-marker .icon-svg { 
+            width: 0.7em; height: 0.7em; stroke-width: 2.5px; 
+        }
+        .list-block-wrapper ul > li > .list-marker .icon-svg { color: var(--color-primary-accent); } 
+        .list-block-wrapper ol > li > .list-marker .number-text {
+            font-weight: var(--font-weight-medium); 
+            font-size: var(--font-size-list-item); 
+            color: var(--color-text-dark); line-height: 1; 
+        }
+        .list-item-content-wrapper .list-block-wrapper {
+            margin-left: var(--space-md); margin-top: var(--space-xs); margin-bottom: var(--space-xs);
+        }
+        .list-item-content-wrapper .list-block-wrapper ul > li > .list-marker .icon-svg { color: var(--color-text-muted); }
+        .list-item-content-wrapper .list-block-wrapper li { padding-left: calc(var(--space-sm) + 0.7em); font-size: var(--font-size-list-item); }
+        .list-item-content-wrapper .list-block-wrapper .list-marker { top: 0.25em; width: 0.7em; height: 0.7em; }
+        .list-item-content-wrapper .list-block-wrapper .list-marker .icon-svg { width: 0.6em; height: 0.6em; }
+        .list-item-text-or-block { flex-grow: 1; }
+
+        .mini-section-box-wrapper { /* Full width wrapper */
+             margin-top: var(--space-lg); margin-bottom: var(--space-lg);
+             page-break-inside: avoid;
+        }
+        .mini-section-box { /* Visual box, also full width */
+            background-color: var(--color-primary-accent-light-bg);
+            border: 1px solid var(--color-primary-accent-border);
+            border-radius: 5px; padding: var(--space-md); 
+        }
+        /* Content *inside* the box IS constrained if it's not a headline */
+        .mini-section-box .content-block-wrapper:not(:has(> .headline-block)) > *,
+        .mini-section-box .paragraph-block,
+        .mini-section-box .list-block-wrapper,
+        .mini-section-box .alert-block {
+           max-width: var(--content-max-width-constrained);
+        }
+         /* Ensure headlines within boxes are not additionally constrained by this rule, they take box width */
+        .mini-section-box .headline-block {
+            max-width: none;
+        }
+        .mini-section-box > .content-block-wrapper:first-child > .headline-block { margin-top: 0 !important; }
+        .mini-section-box *:last-child { margin-bottom: 0 !important; }
+        .mini-section-box .list-block-wrapper li { margin-bottom: var(--space-xxs); font-size: var(--font-size-paragraph-small); line-height: 1.4; }
+        .mini-section-box .list-block-wrapper .list-marker { top: 0.2em; }
+
+        .alert-block {
+            display: flex; padding: var(--space-md); margin: var(--space-lg) 0;
+            border-left-width: 3px; border-style: solid; border-radius: 0 3px 3px 0;
             page-break-inside: avoid;
         }
+        .alert-block .icon-container { flex-shrink: 0; padding-top: 1px; margin-right: var(--space-sm); }
+        .alert-block .icon-container .icon-svg { width: 15px; height: 15px; stroke-width:2px;} 
+        .alert-block .text-container .alert-title { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); } 
+        .alert-block .text-container .alert-text { font-size: var(--font-size-sm); font-weight: var(--font-weight-normal); } 
+        .alert-block .text-container .alert-title + .alert-text { margin-top: var(--space-xs); }
 
-        .headline-block {
-            page-break-after: avoid; /* Don't leave headlines at the bottom */
-            page-break-inside: avoid; /* Don't split headlines (though unlikely) */
+        .alert-info { background-color: #eef2ff; border-color: #818cf8; color: #4338ca; } .alert-info .icon-svg { color: #6366f1;}
+        .alert-success { background-color: #f0fdf4; border-color: #4ade80; color: #166534; } .alert-success .icon-svg { color: #22c55e; }
+        .alert-warning { background-color: #fefce8; border-color: #facc15; color: #a16207; } .alert-warning .icon-svg { color: #eab308; }
+        .alert-danger { background-color: #FEF2F2; border-color: #FCA5A5; color: #B91C1C; } .alert-danger .icon-svg { color: #EF4444;}
+
+        .section-break-block.solid, .section-break-block.dashed { 
+            border: none; border-top: 0.5pt solid var(--color-border-extralight); 
+            margin: var(--space-xl) 0; max-width: var(--content-max-width-constrained);
+        }
+        .section-break-block.none { height: var(--space-lg); border:none; } 
+        
+        .content-section-divider { /* New class for automatic dividers */
+            border: none; border-top: 0.5pt solid var(--color-border-extralight);
+            margin: var(--space-lg) 0 var(--space-md) 0;
+            max-width: var(--content-max-width-constrained);
         }
 
-        .list-block-wrapper {
-             page-break-inside: avoid; /* Try to keep lists together */
+        .error-message, .warning-message { 
+            font-weight: var(--font-weight-medium); padding: var(--space-sm); border-radius: 3px; 
+            max-width: var(--content-max-width-constrained); 
         }
+        .error-message { color: #D32F2F; background-color: #FFEBEE; }
+        .warning-message { color: #FFA000; background-color: #FFF8E1; }
 
-        p, .paragraph-block {
-            page-break-inside: auto; /* Allow paragraphs to break, but use widows/orphans */
-            widows: 3;
-            orphans: 3;
-        }
-
-        hr.section-break-block {
-            page-break-after: always; /* Force break *after* a separator */
-        }
-        /* ----- End Page Break Rules ----- */
+        /* Page Break Rules */
+        .headline-block, .alert-block, .mini-section-box-wrapper, li, .paragraph-block { page-break-inside: avoid; }
+        .headline-block { page-break-after: avoid; }
+        hr.section-break-block, hr.content-section-divider { page-break-before: auto; page-break-after: avoid;} /* Avoid breaking right after a divider */
 
     </style>
 </head>
 <body>
-    <div class="pdf-container">
-
-    {% set lesson_data = details.details %}
-
-    {% if lesson_data is mapping and lesson_data.lessonTitle is defined %}
-        <div class="lesson-title-section">
-            <h1 class="lesson-title-text">{{ lesson_data.lessonTitle }}</h1>
-            {# Example for lessonTime. Add 'lessonTime' to lesson_data in main.py if needed.
-            {% if lesson_data.lessonTime %}
-                <div class="lesson-time">
-                    <svg class="icon-svg"><use xlink:href="#icon-clock" /></svg>
-                    <span>{{ lesson_data.lessonTime }}</span>
-                </div>
-            {% endif %} #}
-        </div>
-    {% endif %}
-
-    {# ----- SVG Icon Definitions ----- #}
     <svg width="0" height="0" style="position:absolute;display:none;" aria-hidden="true">
         <defs>
-            {# Removed fill="none" - We control this with CSS now #}
-            <symbol id="icon-alertCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 8l0 4" /><path d="M12 16l.01 0" /></symbol>
-            <symbol id="icon-checkCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" /></symbol>
-            <symbol id="icon-info" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></symbol>
-            <symbol id="icon-xCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M10 10l4 4m0 -4l-4 4" /></symbol>
-            <symbol id="icon-chevronRight" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></symbol>
-            <symbol id="icon-type" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l-4 -5v-5" /><path d="M4 10l4 -4" /><path d="M12 20h4l-4 -5v-5" /><path d="M12 10l4 -4" /><path d="M21 20h-4l4 -5v-5" /><path d="M21 10l-4 -4" /></symbol>
-            <symbol id="icon-list" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l11 0" /><path d="M9 12l11 0" /><path d="M9 18l11 0" /><path d="M5 6l0 .01" /><path d="M5 12l0 .01" /><path d="M5 18l0 .01" /></symbol>
-            <symbol id="icon-listOrdered" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11 6h9" /><path d="M11 12h9" /><path d="M11 18h9" /><path d="M4 16a2 2 0 1 1 4 0c0 .591 -.5 1 -1.5 1.5s-1.5 .909 -1.5 1.5a2 2 0 1 0 4 0" /><path d="M6 4v-1" /></symbol>
-            <symbol id="icon-award" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0" /><path d="M12 15l3.4 5.89l1.598 -3.233l3.598 .232l-2.5 -2.766l.304 -3.733l-3.4 -1.89l-3.4 1.89l.304 3.733l-2.5 2.766l3.598 -.233l1.598 3.232z" /></symbol>
-            <symbol id="icon-brain" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15.519 15.5m-1.519 0a1.519 1.519 0 1 0 3.038 0a1.519 1.519 0 1 0 -3.038 0" /><path d="M18.526 12.5m-1.526 0a1.526 1.526 0 1 0 3.052 0a1.526 1.526 0 1 0 -3.052 0" /><path d="M18.526 18.5m-1.526 0a1.526 1.526 0 1 0 3.052 0a1.526 1.526 0 1 0 -3.052 0" /><path d="M15.519 10.5m-1.519 0a1.519 1.519 0 1 0 3.038 0a1.519 1.519 0 1 0 -3.038 0" /><path d="M12 15.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0" /><path d="M9 12.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0" /><path d="M12.002 11.509a1.5 1.5 0 1 0-1.068 2.558" /><path d="M12 3c2.481 .744 4.585 2.283 6.022 4.505c1.228 1.893 1.634 4.078 1.208 6.191c-.548 2.72 -2.362 4.994 -5.23 6.304" /><path d="M12 3c-2.481 .744 -4.585 2.283 -6.022 4.505c-1.228 1.893 -1.634 4.078 -1.208 6.191c.548 2.72 2.362 4.994 5.23 6.304" /></symbol>
-            <symbol id="icon-bookOpen" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0" /><path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0" /><path d="M3 6l0 13" /><path d="M12 6l0 13" /><path d="M21 6l0 13" /></symbol>
-            <symbol id="icon-edit3" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 15l8.385 -8.415a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3z" /><path d="M16 5l3 3" /><path d="M9 7.07a7 7 0 0 0 1 13.93a7 7 0 0 0 6.929 -6" /></symbol>
-            <symbol id="icon-lightbulb" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 16a5 5 0 1 0 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3" /><path d="M9.7 17l1.3 -1.3" /><path d="M14.3 17l-1.3 -1.3" /><path d="M12 12l0 -7" /><path d="M7 9l0 -1" /><path d="M17 9l0 -1" /><path d="M9 6l0 -1" /><path d="M15 6l0 -1" /></symbol>
-            <symbol id="icon-search" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></symbol>
-            <symbol id="icon-compass" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M12 3l0 2" /><path d="M12 19l0 2" /><path d="M3 12l2 0" /><path d="M19 12l2 0" /></symbol>
-            <symbol id="icon-cloudDrizzle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-12" /><path d="M11 14v2" /><path d="M7 14v2" /><path d="M15 14v2" /></symbol>
-            <symbol id="icon-eyeOff" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c.927 -2.26 2.504 -4.032 4.5 -5.076" /><path d="M3 3l18 18" /></symbol>
-            <symbol id="icon-clipboardCheck" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /><path d="M15 11l-2 2l-1 -1" /></symbol>
-            <symbol id="icon-alertTriangle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></symbol>
-            <symbol id="icon-clock" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 7l0 5l3 3" /></symbol>
-            <symbol id="icon-star" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.255l3.086 6.255l6.9 1l-5 4.867l1.179 6.873z" /></symbol>
-            <symbol id="icon-arrowRight" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></symbol>
-            <symbol id="icon-circle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></symbol>
-            <symbol id="icon-minus" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l14 0" /></symbol>
+            <symbol id="icon-clock" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5H10V5z" clip-rule="evenodd" /></symbol>
+            <symbol id="icon-compass" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M12 3l0 2" /><path d="M12 19l0 2" /><path d="M3 12l2 0" /><path d="M19 12l2 0" /></symbol>
+            <symbol id="icon-brain" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15.519 15.5m-1.519 0a1.519 1.519 0 1 0 3.038 0a1.519 1.519 0 1 0 -3.038 0" /><path d="M18.526 12.5m-1.526 0a1.526 1.526 0 1 0 3.052 0a1.526 1.526 0 1 0 -3.052 0" /><path d="M18.526 18.5m-1.526 0a1.526 1.526 0 1 0 3.052 0a1.526 1.526 0 1 0 -3.052 0" /><path d="M15.519 10.5m-1.519 0a1.519 1.519 0 1 0 3.038 0a1.519 1.519 0 1 0 -3.038 0" /><path d="M12 15.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0" /><path d="M9 12.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0" /><path d="M12.002 11.509a1.5 1.5 0 1 0 -1.068 2.558" /><path d="M12 3c2.481 .744 4.585 2.283 6.022 4.505c1.228 1.893 1.634 4.078 1.208 6.191c-.548 2.72 -2.362 4.994 -5.23 6.304" /><path d="M12 3c-2.481 .744 -4.585 2.283 -6.022 4.505c-1.228 1.893 -1.634 4.078 -1.208 6.191c.548 2.72 2.362 4.994 5.23 6.304" /></symbol>
+            <symbol id="icon-lightbulb" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 16a5 5 0 1 0 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3" /><path d="M9.7 17l1.3 -1.3" /><path d="M14.3 17l-1.3 -1.3" /><path d="M12 12l0 -7" /><path d="M7 9l0 -1" /><path d="M17 9l0 -1" /><path d="M9 6l0 -1" /><path d="M15 6l0 -1" /></symbol>
+            <symbol id="icon-info" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></symbol>
+            <symbol id="icon-award" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0" /><path d="M12 15l3.4 5.89l1.598 -3.233l3.598 .232l-2.5 -2.766l.304 -3.733l-3.4 -1.89l-3.4 1.89l.304 3.733l-2.5 2.766l3.598 -.233l1.598 3.232z" /></symbol>
+            <symbol id="icon-chevronRight" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></symbol>
+            <symbol id="icon-alertCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 8l0 4" /><path d="M12 16l.01 0" /></symbol>
+            <symbol id="icon-checkCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" /></symbol>
+            <symbol id="icon-xCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M10 10l4 4m0 -4l-4 4" /></symbol>
+            <symbol id="icon-alertTriangle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></symbol>
+            <symbol id="icon-type" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l-4 -5v-5" /><path d="M4 10l4 -4" /><path d="M12 20h4l-4 -5v-5" /><path d="M12 10l4 -4" /><path d="M21 20h-4l4 -5v-5" /><path d="M21 10l-4 -4" /></symbol>
+            <symbol id="icon-bullet-circle" viewBox="0 0 24 24" fill="currentColor"> <circle cx="12" cy="12" r="2.5"/> </symbol>
+            <symbol id="icon-minus" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l14 0" /></symbol>
         </defs>
     </svg>
-    {# ----- END ICON DEFINITIONS ----- #}
 
-    {% macro render_icon_svg_macro(icon_name_str, default_icon_for_type=None, css_class="") %}
-        {% set final_icon_name = icon_name_str %}
-        {% if not final_icon_name %}
-            {% if default_icon_for_type == 'alert-info' %}{% set final_icon_name = 'info' %}
-            {% elif default_icon_for_type == 'alert-success' %}{% set final_icon_name = 'checkCircle' %}
-            {% elif default_icon_for_type == 'alert-warning' %}{% set final_icon_name = 'alertTriangle' %}
-            {% elif default_icon_for_type == 'alert-danger' %}{% set final_icon_name = 'xCircle' %}
-            {% elif default_icon_for_type == 'bullet' %}{% set final_icon_name = 'chevronRight' %}
-            {% elif default_icon_for_type == 'generic-headline' %}{% set final_icon_name = 'type' %} {# Default for unspecified headline icons #}
+    <div class="pdf-container">
+        {% set lesson_data = details.details %}
+        {% set first_block_is_title_duplicate = false %}
+        {% if lesson_data is mapping and lesson_data.contentBlocks and lesson_data.contentBlocks|length > 0 %}
+            {% set first_block = lesson_data.contentBlocks[0] %}
+            {% if first_block.type == 'headline' and first_block.level == 1 and first_block.text|trim == lesson_data.lessonTitle|trim %}
+                {% set first_block_is_title_duplicate = true %}
             {% endif %}
         {% endif %}
 
-        {% if final_icon_name %}
-            <svg class="icon-svg {{ css_class }}"><use xlink:href="#icon-{{ final_icon_name }}" /></svg>
-        {% elif default_icon_for_type == 'bullet-fallback' %}
-             <span class="list-marker">&bull;</span>
-        {% endif %}
-    {% endmacro %}
-
-    {# Macro for list items (unchanged, but relies on new CSS/SVG) #}
-    {% macro render_list_items_recursive_macro(items_list, list_type_str, list_icon_name_str, depth) %}
-        {% if items_list is iterable and items_list is not string %}
-            {% for item_content in items_list %}
-                <li>
-                    <div class="list-marker">
-                    {% if item_content is string %}
-                        {% if list_type_str == 'bullet' %}
-                            {{ render_icon_svg_macro(list_icon_name_str if list_icon_name_str else 'chevronRight', 'bullet-fallback', 'bullet-icon') }}
-                        {% else %} {# numbered_list #}
-                            <span class="number-text">{{ loop.index }}.</span>
-                        {% endif %}
-                    {% endif %}
+        {% if lesson_data is mapping and lesson_data.lessonTitle is defined %}
+            <div class="lesson-title-section">
+                <h1 class="lesson-title-text">{{ lesson_data.lessonTitle }}</h1>
+                {% if lesson_data.estimatedTime %} 
+                    <div class="lesson-time">
+                        <svg class="icon-svg"><use xlink:href="#icon-clock" /></svg>
+                        <span>{{ lesson_data.estimatedTime }}</span>
                     </div>
-                    <div class="list-item-text-or-block">
-                    {% if item_content is string %}
-                        <span>{{ item_content }}</span>
-                    {% elif item_content is mapping %}
-                        <div class="list-item-block-container">
-                            {{ render_single_block_recursive_macro(item_content, depth + 1) }}
-                        </div>
-                    {% else %}
-                        <span class="error-message">Item is not string or dict.</span>
-                    {% endif %}
-                    </div>
-                </li>
-            {% else %}
-                 <li class="warning-message">List for "{{list_type_str}}" was empty.</li>
-            {% endfor %}
-        {% elif items_list is not none %}
-            <li class="error-message">Items list for "{{list_type_str}}" is not iterable.</li>
-        {% else %}
-             <li class="warning-message">Items list for "{{list_type_str}}" is None.</li>
-        {% endif %}
-    {% endmacro %}
-
-    {# Macro for single block (unchanged, but relies on new CSS/SVG) #}
-    {% macro render_single_block_recursive_macro(block_data, depth=0) %}
-        {% if block_data is mapping %}
-            {% set block_type = block_data.get('type') %}
-            <div class="content-block-wrapper">
-                {% if block_type == 'headline' %}
-                    <div class="headline-block h{{ block_data.level | default(3) }}"
-                         style="padding-left: {{ depth * 15 }}px;{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }}; padding-right: 0.4em;{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% endif %}">
-                        {{ render_icon_svg_macro(block_data.iconName, 'generic-headline') }}
-                        <span>{{ block_data.text | default('') }}</span>
-                    </div>
-                {% elif block_type == 'paragraph' %}
-                    <p class="paragraph-block" style="padding-left: {{ depth * 15 }}px;">{{ block_data.text | default('') }}</p>
-                {% elif block_type == 'bullet_list' %}
-                    <div class="list-block-wrapper bullet_list depth-{{depth}}" style="padding-left: {{ depth * 5 }}px;"> {# Reduced multiplier for lists #}
-                        <ul>{{ render_list_items_recursive_macro(block_data.get('items'), 'bullet', block_data.iconName, depth) }}</ul>
-                    </div>
-                {% elif block_type == 'numbered_list' %}
-                    <div class="list-block-wrapper numbered_list depth-{{depth}}" style="padding-left: {{ depth * 5 }}px;">  {# Reduced multiplier for lists #}
-                        <ol>{{ render_list_items_recursive_macro(block_data.get('items'), 'numbered', None, depth) }}</ol>
-                    </div>
-                {% elif block_type == 'alert' %}
-                    <div class="alert-block alert-{{ block_data.alertType | default('info') }}"
-                         style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %}{% if block_data.borderColor %}border-color: {{ block_data.borderColor }};{% endif %}{% if block_data.textColor %}color: {{ block_data.textColor }};{% endif %}">
-                        <div class="icon-container" style="{% if block_data.iconColor %}color: {{ block_data.iconColor }}; fill: {{ block_data.iconColor }};{% endif %}">
-                            {{ render_icon_svg_macro(block_data.iconName, 'alert-' + (block_data.alertType|default('info')) ) }}
-                        </div>
-                        <div class="text-container">
-                            {% if block_data.title %}<div class="alert-title">{{ block_data.title }}</div>{% endif %}
-                            <div class="alert-text">{{ block_data.text | default('') }}</div>
-                        </div>
-                    </div>
-                {% elif block_type == 'section_break' %}
-                    <hr class="section-break-block {{ block_data.style | default('solid') }}">
-                {% else %}
-                    <p class="error-message">Unsupported block type: {{ block_type }}</p>
                 {% endif %}
             </div>
-        {% else %}
-            <p class="error-message">Block data is not a dictionary/mapping.</p>
         {% endif %}
-    {% endmacro %}
-    {# ----- END MACROS ----- #}
 
-    <div class="content-wrapper">
-    {% if lesson_data is mapping and lesson_data.contentBlocks is iterable and lesson_data.contentBlocks is not string %}
-        {% set rendered_next_block = [false] %} {# Using a list to allow modification in loop #}
-        {% for i in range(lesson_data.contentBlocks | length) %}
-            {% if rendered_next_block[0] %}
-                {% set temp = rendered_next_block.pop() %} {# Reset flag #}
-                {% set temp = rendered_next_block.append(false) %}
-                {# This block was rendered as part of a mini-section, skip it #}
-            {% else %}
-                {% set current_block_item = lesson_data.contentBlocks[i] %}
-                {% set next_block_item = lesson_data.contentBlocks[i+1] if (i+1) < (lesson_data.contentBlocks | length) else none %}
-
-                {% set is_important_headline = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
-                {% set is_list_following = next_block_item is mapping and next_block_item.get('type') in ['bullet_list', 'numbered_list'] %}
-
-                {% if is_important_headline and is_list_following %}
-                    <div class="mini-section-box">
-                        {{ render_single_block_recursive_macro(current_block_item, 0) }}
-                        {{ render_single_block_recursive_macro(next_block_item, 0) }}
-                    </div>
-                    {% set temp = rendered_next_block.pop() %} {# Mark next block to be skipped #}
-                    {% set temp = rendered_next_block.append(true) %}
-                {% else %}
-                     {{ render_single_block_recursive_macro(current_block_item, 0) }}
+        {% macro render_icon_svg_macro(icon_name_str, default_icon_for_type=None, css_class="", depth=0) %}
+            {% set final_icon_name = icon_name_str %}
+            {% if not final_icon_name %}
+                {% if default_icon_for_type == 'alert-info' %}{% set final_icon_name = 'info' %}
+                {% elif default_icon_for_type == 'alert-success' %}{% set final_icon_name = 'checkCircle' %}
+                {% elif default_icon_for_type == 'alert-warning' %}{% set final_icon_name = 'alertTriangle' %}
+                {% elif default_icon_for_type == 'alert-danger' %}{% set final_icon_name = 'xCircle' %}
+                {% elif default_icon_for_type == 'bullet' %}
+                    {% if depth == 0 %}{% set final_icon_name = 'chevronRight' %} {# Changed from 'check' to 'chevronRight' #}
+                    {% else %}{% set final_icon_name = 'bullet-circle' %}
+                    {% endif %}
+                {% elif default_icon_for_type == 'generic-headline-h1' %}{% set final_icon_name = 'compass' %} 
+                {% elif default_icon_for_type == 'generic-headline-h2' %}{% set final_icon_name = 'brain' %}   
+                {% elif default_icon_for_type == 'generic-headline-h3' %}{% set final_icon_name = 'lightbulb' %} 
+                {% elif default_icon_for_type == 'generic-headline-h4' %}{% set final_icon_name = 'info' %}    
+                {% elif default_icon_for_type == 'generic-headline' %}{% set final_icon_name = 'chevronRight' %}      
                 {% endif %}
             {% endif %}
-        {% endfor %}
-    {% endif %}
-    </div>
+            {% if final_icon_name %}
+                <svg class="icon-svg {{ css_class }} icon-{{final_icon_name}}"><use xlink:href="#icon-{{ final_icon_name }}" /></svg>
+            {% elif default_icon_for_type == 'bullet-fallback' %}
+                <span class="list-marker-fallback">&gt;</span> {# Changed from bull to > #}
+            {% endif %}
+        {% endmacro %}
+
+        {% macro render_list_items_recursive_macro(items_list, list_type_str, list_icon_name_str, depth, is_in_box_context_for_list) %}
+            {% if items_list is iterable and items_list is not string and items_list|length > 0 %}
+                {% for item_content in items_list %}
+                    <li>
+                        <div class="list-marker">
+                        {% if item_content is string or (item_content is mapping and item_content.get('type') not in ['bullet_list', 'numbered_list']) %}
+                            {% if list_type_str == 'bullet_list' %}
+                                {{ render_icon_svg_macro(list_icon_name_str if depth == 0 else None, 'bullet', 'bullet-icon', depth) }}
+                            {% elif list_type_str == 'numbered_list' %}
+                                <span class="number-text">{{ loop.index }}.</span>
+                            {% endif %}
+                        {% endif %}
+                        </div>
+                        <div class="list-item-text-or-block">
+                        {% if item_content is string %}
+                            <span>{{ item_content }}</span>
+                        {% elif item_content is mapping %}
+                            <div class="list-item-content-wrapper">
+                                {{ render_single_block_recursive_macro(item_content, depth + 1, is_in_box_context_for_list) }}
+                            </div>
+                        {% else %}
+                            <span class="error-message">Item is not string or dict: {{ item_content }}</span>
+                        {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            {% elif items_list is none or (items_list is iterable and items_list|length == 0) %}
+            {% else %}
+                <li class="error-message">Items list for "{{list_type_str}}" is not iterable. Type: {{ items_list|type }}</li>
+            {% endif %}
+        {% endmacro %}
+
+        {% macro render_single_block_recursive_macro(block_data, depth=0, is_in_box_context=false) %}
+            {% if block_data is mapping %}
+                {% set block_type = block_data.get('type') %}
+                {% set is_headline_type = block_type == 'headline' %}
+                {# A block is constrained if it's NOT a headline OR if it IS a headline but inside a box context #}
+                {% set apply_constraint = (not is_headline_type) or (is_headline_type and is_in_box_context) %}
+                
+                <div class="content-block-wrapper {{ 'constrained-width' if apply_constraint else '' }} type-{{block_type}}">
+                    {% if block_type == 'headline' %}
+                        <div class="headline-block h{{ block_data.level | default(3) }}"
+                             style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }}; padding: 0.2em 0.4em;{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% endif %}">
+                            {{ render_icon_svg_macro(block_data.iconName, 'generic-headline-h' ~ (block_data.level | default(3)) ) }}
+                            <span>{{ block_data.text | default('') }}</span>
+                        </div>
+                    {% elif block_type == 'paragraph' %}
+                        <p class="paragraph-block">{{ block_data.text | default('') }}</p>
+                    {% elif block_type == 'bullet_list' or block_type == 'numbered_list' %}
+                        <div class="list-block-wrapper {{block_type}} depth-{{depth}}">
+                            {% if block_type == 'bullet_list' %}
+                                <ul>{{ render_list_items_recursive_macro(block_data.get('items'), block_type, block_data.iconName, depth, is_in_box_context) }}</ul>
+                            {% else %}
+                                <ol>{{ render_list_items_recursive_macro(block_data.get('items'), block_type, None, depth, is_in_box_context) }}</ol>
+                            {% endif %}
+                        </div>
+                    {% elif block_type == 'alert' %}
+                        <div class="alert-block alert-{{ block_data.alertType | default('info') }}"
+                             style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %}{% if block_data.borderColor %}border-color: {{ block_data.borderColor }};{% endif %}{% if block_data.textColor %}color: {{ block_data.textColor }};{% endif %}">
+                            <div class="icon-container" style="{% if block_data.iconColor %}color: {{ block_data.iconColor }}; fill: {{ block_data.iconColor }};{% endif %}">
+                                {{ render_icon_svg_macro(block_data.iconName, 'alert-' + (block_data.alertType|default('info')) ) }}
+                            </div>
+                            <div class="text-container">
+                                {% if block_data.title %}<div class="alert-title">{{ block_data.title }}</div>{% endif %}
+                                <div class="alert-text">{{ block_data.text | default('') }}</div>
+                            </div>
+                        </div>
+                    {% elif block_type == 'section_break' %}
+                        {# Render only if explicitly styled as solid or dashed, otherwise it's a spacer handled by its own height #}
+                        {% if block_data.style == 'solid' or block_data.style == 'dashed' %}
+                           <hr class="section-break-block {{ block_data.style }} {{ 'constrained-width' if apply_constraint else '' }}">
+                        {% elif block_data.style == 'none' %}
+                            <div class="section-break-block none {{ 'constrained-width' if apply_constraint else '' }}"></div>
+                        {% endif %}
+                    {% else %}
+                        <p class="error-message {{ 'constrained-width' if apply_constraint else '' }}">Unsupported block type: {{ block_type }}</p>
+                    {% endif %}
+                </div>
+            {% else %}
+                <p class="error-message {{ 'constrained-width' if apply_constraint else '' }}">Block data is not a dictionary/mapping: {{ block_data }}</p>
+            {% endif %}
+        {% endmacro %}
+
+        <div class="content-wrapper">
+        {% if lesson_data is mapping and lesson_data.contentBlocks is iterable and lesson_data.contentBlocks is not string %}
+            {% set next_block_in_box_content = [false] %} {# Tracks if the *next* block is content for the current important box #}
+            
+            {% for loop_index in range(lesson_data.contentBlocks | length) %}
+                {% set current_block_item = lesson_data.contentBlocks[loop_index] %}
+                {% set next_block_item = lesson_data.contentBlocks[loop_index+1] if (loop_index+1) < (lesson_data.contentBlocks | length) else none %}
+                {% set is_last_block_overall = loop_index == (lesson_data.contentBlocks | length) - 1 %}
+
+                {# ---- START: Render current block or box ---- #}
+                {% if loop_index == 0 and first_block_is_title_duplicate %}
+                    {# Skip rendering the first headline block if it's a duplicate of the lesson title #}
+                {% elif next_block_in_box_content[0] %}
+                    {# This block was already rendered as part of a mini-section content, skip it #}
+                    {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(false) %}
+                {% else %}
+                    {% set is_important_headline = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
+                    {% set is_relevant_content_following_for_box = next_block_item is mapping and next_block_item.get('type') in ['bullet_list', 'numbered_list', 'paragraph', 'alert'] %}
+                    
+                    {% if is_important_headline %}
+                        <div class="mini-section-box-wrapper"> 
+                            <div class="mini-section-box">
+                                {{ render_single_block_recursive_macro(current_block_item, 0, true) }} {# is_in_box_context = true for headline in box #}
+                                {% if is_relevant_content_following_for_box %}
+                                    {{ render_single_block_recursive_macro(next_block_item, 0, true) }} {# is_in_box_context = true for content in box #}
+                                    {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(true) %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        {{ render_single_block_recursive_macro(current_block_item, 0, false) }} {# is_in_box_context = false #}
+                    {% endif %}
+                {% endif %}
+                {# ---- END: Render current block or box ---- #}
+                
+                {# ---- START: Divider Logic ---- #}
+                {% set render_this_divider = false %}
+                {% if not is_last_block_overall %}
+                    {# Check if current block (or its box if it was important) should be followed by a divider #}
+                    {% set current_block_was_highlighted_box_header = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
+                    {% set current_block_was_highlighted_box_content = next_block_in_box_content[0] %} {# True if the *previous* block was an important header that consumed this one #}
+                                        
+                    {% if not current_block_was_highlighted_box_header and not (loop_index > 0 and lesson_data.contentBlocks[loop_index-1].isImportant and is_relevant_content_following) %}
+                        {# ^-- The above condition checks if the current block itself initiated a highlight box, 
+                             OR if the block *just processed* was the content of a highlight box.
+                             Essentially, don't put a divider right after a .mini-section-box-wrapper
+                        #}
+                        {% if next_block_item and next_block_item.type == 'headline' and next_block_item.level <= 2 and not next_block_item.isImportant %}
+                             {# Only add divider if next is a major, non-highlighted headline #}
+                            {% set render_this_divider = true %}
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+
+                {% if render_this_divider %}
+                    <hr class="section-divider-hr">
+                {% endif %}
+                {# ---- END: Divider Logic ---- #}
+
+            {% endfor %}
+        {% elif lesson_data and lesson_data.contentBlocks is not none %}
+             <p class="error-message constrained-width">contentBlocks is not iterable. Type: {{ lesson_data.contentBlocks|type }}</p>
+        {% else %}
+             <p class="warning-message constrained-width">No content blocks found.</p>
+        {% endif %}
+        </div>
     </div>
 </body>
 </html>
