@@ -15,6 +15,7 @@ import traceback
 import json
 import uuid
 import shutil
+import logging
 
 # --- Constants & DB Setup ---
 CUSTOM_PROJECTS_DATABASE_URL = os.getenv("CUSTOM_PROJECTS_DATABASE_URL")
@@ -28,9 +29,32 @@ LLM_DEFAULT_MODEL = os.getenv("COHERE_DEFAULT_MODEL", "command-r-plus")
 
 DB_POOL = None
 
+# --- Logger ---
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+
 # --- Directory for Design Template Images ---
 STATIC_DESIGN_IMAGES_DIR = "static_design_images"
 os.makedirs(STATIC_DESIGN_IMAGES_DIR, exist_ok=True)
+
+def inspect_list_items_recursively(data_structure: Any, path: str = ""):
+    if isinstance(data_structure, dict):
+        for key, value in data_structure.items():
+            new_path = f"{path}.{key}" if path else key
+            if key == "items": # Focus on 'items' keys
+                logger.info(f"PDF Deep Inspect: Path: {new_path}, Type: {type(value)}, Is List: {isinstance(value, list)}, Value (first 100): {str(value)[:100]}")
+                if not isinstance(value, list) and value is not None:
+                    logger.error(f"PDF DEEP ERROR: Non-list 'items' at {new_path}. Type: {type(value)}, Value: {str(value)[:200]}")
+            # Recursively inspect further only if value is dict or list
+            if isinstance(value, (dict, list)):
+                inspect_list_items_recursively(value, new_path)
+    elif isinstance(data_structure, list):
+        for i, item in enumerate(data_structure):
+            new_path = f"{path}[{i}]"
+            # Recursively inspect further only if item is dict or list
+            if isinstance(item, (dict, list)):
+                inspect_list_items_recursively(item, new_path)
 
 DEFAULT_TRAINING_PLAN_JSON_EXAMPLE_FOR_LLM = """
 {
@@ -893,7 +917,7 @@ Each object within `contentBlocks` must have a `type` field.
         * Level 3: For sub-section titles.
         * Level 4: For minor sub-headings or lead-ins (e.g., "Objective:", "Main Points:").
     * `text` (string): The headline text.
-    * `iconName` (string, optional): If implied, choose from the provided list.
+    * `iconName` (string, optional): If suits, choose from the provided list (try to use as often as possible)..
     * `backgroundColor` (string, optional): For specific *inline* background color on the headline text itself (rarely used for section backgrounds, use only if DEFINETLY needed).
     * `textColor` (string, optional): For specific *inline* text color on the headline.
     * `isImportant` (boolean, optional): **NEW GUIDANCE:** Set this to `true` ONLY if this headline AND its *immediately following block(s) (especially if it's a list or a short paragraph followed by a list)* represent a semantically important section that should be visually highlighted with a distinct background box. Examples of "important" sections include:
@@ -923,7 +947,10 @@ Each object within `contentBlocks` must have a `type` field.
 * **Prioritize list structures**: In case of doubt, use lists rather than plain paragraphs.
 * **Nesting is Key**: Accurately represent nested structures.
 * **Semantic Interpretation**: For `isImportant` on headlines, analyze if the content introduced by the headline fits categories like goals, key summaries, critical instructions, or highlighted learning points. Do NOT mark every H3/H4 + List as important by default.
-* **Icon Names - Permissible Values**: (Include your list of valid icon names here, as in the previous detailed prompt).
+* **Icon Names - Permissible Values**: If you use `iconName`, it MUST be one of the following:
+    `alertCircle`, `checkCircle`, `info`, `xCircle`, `chevronRight`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `edit3`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `alertTriangle`, `clock`, `chevronsRight`, `star`, `arrowRight`, `circle`, `default` (maps to `Minus`). Choose semantically.
+* **Color Fields**: Only populate `backgroundColor`, `textColor`, `borderColor`, `iconColor` if the source text *strongly and explicitly describes or implies* a specific color for that element that differs from a likely default. Use semantic names (e.g., "lightBlue", "warningYellowBg", "accentRedText").
+* **Empty Strings vs. Null**: For string fields that are required by the JSON schema (see example) but have no corresponding content in the text, use an empty string `""`. Do NOT use `null` for these. Optional fields can be omitted if not present.
 * **Completeness and Order**: Capture all text in the correct sequence.
 ---
 CRUCIAL JSON Format Example:
@@ -1212,74 +1239,124 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
     mp_name_for_pdf_context = target_row_dict.get('microproduct_name') or target_row_dict.get('project_name')
     user_friendly_pdf_filename = f"{create_slug(mp_name_for_pdf_context)}_{uuid.uuid4().hex[:8]}.pdf"
     
-    content_json = target_row_dict.get('microproduct_content')
+    content_json = target_row_dict.get('microproduct_content') # This is a dict from DB
     component_name = target_row_dict.get("design_component_name")
-    parsed_content_for_pdf: Optional[MicroProductContentType] = None
+    
+    data_for_template_render: Optional[Dict[str, Any]] = None
     pdf_template_file: str
-    detected_lang_for_pdf = 'ru' 
+    
+    # Initial language detection
+    detected_lang_for_pdf = 'ru'
+    if isinstance(content_json, dict) and content_json.get('detectedLanguage'):
+        detected_lang_for_pdf = content_json.get('detectedLanguage')
+    elif mp_name_for_pdf_context:
+        detected_lang_for_pdf = detect_language(mp_name_for_pdf_context)
+    
+    logger.info(f"Project {project_id} PDF Gen: Raw content_json from DB (type: {type(content_json)}). First 1000 chars: {str(content_json)[:1000]}")
 
-    if content_json and isinstance(content_json, dict):
-        try:
-            if component_name == COMPONENT_NAME_PDF_LESSON:
-                parsed_content_for_pdf = PdfLessonDetails(**content_json)
-                pdf_template_file = "pdf_lesson_pdf_template.html"
-                if parsed_content_for_pdf and parsed_content_for_pdf.detectedLanguage:
-                    detected_lang_for_pdf = parsed_content_for_pdf.detectedLanguage
-            elif component_name == COMPONENT_NAME_TRAINING_PLAN:
-                parsed_content_for_pdf = TrainingPlanDetails(**content_json)
-                pdf_template_file = "training_plan_pdf_template.html"
-                if parsed_content_for_pdf and parsed_content_for_pdf.detectedLanguage:
-                    detected_lang_for_pdf = parsed_content_for_pdf.detectedLanguage
-            else: # Fallback
-                print(f"PDF: Unknown component_name '{component_name}' for project {project_id}. Defaulting to TrainingPlan template.")
-                parsed_content_for_pdf = TrainingPlanDetails(**content_json) 
-                pdf_template_file = "training_plan_pdf_template.html"
-                if parsed_content_for_pdf and hasattr(parsed_content_for_pdf, 'detectedLanguage') and parsed_content_for_pdf.detectedLanguage: # Check attr
-                        detected_lang_for_pdf = parsed_content_for_pdf.detectedLanguage
-        except Exception as pydantic_e:
-            print(f"Error validating content from DB JSON for PDF (project {project_id}, component {component_name}): {pydantic_e}")
-            # Fallback content
-            parsed_content_for_pdf = PdfLessonDetails(lessonTitle=f"Content Error: {mp_name_for_pdf_context}", contentBlocks=[], detectedLanguage=detected_lang_for_pdf) if component_name == COMPONENT_NAME_PDF_LESSON else TrainingPlanDetails(mainTitle=f"Content Error: {mp_name_for_pdf_context}", sections=[], detectedLanguage=detected_lang_for_pdf)
-            pdf_template_file = "pdf_lesson_pdf_template.html" if component_name == COMPONENT_NAME_PDF_LESSON else "training_plan_pdf_template.html"
+    parsed_model_for_fallback_lang = None # To hold parsed model if we need its lang
 
-    elif isinstance(content_json, str) and component_name == COMPONENT_NAME_TRAINING_PLAN: # Legacy string
-        parsed_content_for_pdf = parse_training_plan_from_string(content_json, mp_name_for_pdf_context)
-        pdf_template_file = "training_plan_pdf_template.html"
-        if parsed_content_for_pdf and parsed_content_for_pdf.detectedLanguage:
-            detected_lang_for_pdf = parsed_content_for_pdf.detectedLanguage
+    if component_name == COMPONENT_NAME_PDF_LESSON:
+        pdf_template_file = "pdf_lesson_pdf_template.html"
+        if content_json and isinstance(content_json, dict):
+            logger.info(f"Project {project_id} PDF Gen (PDF LESSON): Using raw content_json directly for template.")
+            # Create a fresh copy to avoid modifying the dict from the DB connection
+            data_for_template_render = json.loads(json.dumps(content_json)) # Force pure Python dict/list
             
-    if not parsed_content_for_pdf: # Final fallback if still no content
-        lang_fallback = detect_language(mp_name_for_pdf_context)
-        if component_name == COMPONENT_NAME_PDF_LESSON:
-            parsed_content_for_pdf = PdfLessonDetails(lessonTitle=f"Content Unavailable: {mp_name_for_pdf_context}", contentBlocks=[], detectedLanguage=lang_fallback)
-            pdf_template_file = "pdf_lesson_pdf_template.html"
-        else:
-            parsed_content_for_pdf = TrainingPlanDetails(mainTitle=f"Content Unavailable: {mp_name_for_pdf_context}", sections=[], detectedLanguage=lang_fallback)
-            pdf_template_file = "training_plan_pdf_template.html"
+            # Try to parse just for language detection if not present in raw
+            if not data_for_template_render.get('detectedLanguage'):
+                try:
+                    parsed_model_for_fallback_lang = PdfLessonDetails(**content_json)
+                    if parsed_model_for_fallback_lang and parsed_model_for_fallback_lang.detectedLanguage:
+                        detected_lang_for_pdf = parsed_model_for_fallback_lang.detectedLanguage
+                except Exception: # Pydantic parsing failed, stick to earlier detected lang
+                    pass 
+                data_for_template_render['detectedLanguage'] = detected_lang_for_pdf
+        else: # Fallback if content_json is not a dict
+            logger.warning(f"Project {project_id} PDF Gen (PDF LESSON): content_json is not a valid dict or is None. Using fallback structure.")
+            data_for_template_render = {
+                "lessonTitle": f"Content Unavailable/Invalid: {mp_name_for_pdf_context}", 
+                "contentBlocks": [], 
+                "detectedLanguage": detected_lang_for_pdf
+            }
+
+    elif component_name == COMPONENT_NAME_TRAINING_PLAN:
+        pdf_template_file = "training_plan_pdf_template.html"
+        parsed_model = None
+        temp_dumped_dict = None
+        if content_json and isinstance(content_json, dict):
+            try:
+                parsed_model = TrainingPlanDetails(**content_json)
+                if parsed_model.detectedLanguage:
+                    detected_lang_for_pdf = parsed_model.detectedLanguage
+                temp_dumped_dict = parsed_model.model_dump(mode='json', exclude_none=True)
+                data_for_template_render = json.loads(json.dumps(temp_dumped_dict)) # JSON cycle
+            except Exception as e:
+                logger.error(f"Pydantic parsing/dumping failed for TrainingPlan (Proj {project_id}): {e}", exc_info=True)
+        
+        if data_for_template_render is None: # Fallback if parsing/dumping failed or content_json was invalid
+             logger.warning(f"Project {project_id} PDF Gen (TRAINING PLAN): data_for_template_render is None. Using fallback.")
+             data_for_template_render = {
+                "mainTitle": f"Content Error: {mp_name_for_pdf_context}", 
+                "sections": [], 
+                "detectedLanguage": detected_lang_for_pdf
+            }
+        current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru'])
+        data_for_template_render['time_unit_singular'] = current_lang_cfg.get('TIME_UNIT_SINGULAR', 'h')
+        data_for_template_render['time_unit_decimal_plural'] = current_lang_cfg.get('TIME_UNIT_DECIMAL_PLURAL', 'h')
+        data_for_template_render['time_unit_general_plural'] = current_lang_cfg.get('TIME_UNIT_GENERAL_PLURAL', 'h')
+
+    else: # Fallback for unknown component_name
+        logger.warning(f"PDF: Unknown component_name '{component_name}' for project {project_id}. Defaulting to simple PDF Lesson structure.")
+        pdf_template_file = "pdf_lesson_pdf_template.html" 
+        data_for_template_render = {
+            "lessonTitle": f"Unknown Content Type: {mp_name_for_pdf_context}", 
+            "contentBlocks": [{"type":"paragraph", "text":"The content type of this project is not configured for PDF export."}], 
+            "detectedLanguage": detected_lang_for_pdf
+        }
+
+    if not isinstance(data_for_template_render, dict): # Should always be a dict by now
+         logger.critical(f"Project {project_id} PDF Gen: data_for_template_render is NOT A DICT ({type(data_for_template_render)}) before final context prep. This is a critical error in logic.")
+         # Attempt to provide a minimal safe dict to prevent total failure
+         data_for_template_render = {"lessonTitle": "Critical Data Preparation Error", "contentBlocks": [], "detectedLanguage": "en"}
+
+
+    # Deep inspection of the dictionary that will be passed to Jinja's "details" variable
+    if isinstance(data_for_template_render, dict):
+        logger.info(f"Project {project_id} PDF Gen: Starting deep inspection of data_for_template_render (to be passed as 'details' in template context)...")
+        inspect_list_items_recursively(data_for_template_render.get('contentBlocks', []), "data_for_template_render.contentBlocks")
 
     unique_output_filename = f"{project_id}_{document_name_slug}_{uuid.uuid4().hex[:12]}.pdf"
     try:
-        # Ensure context_data['details'] is a dict, not a Pydantic model instance directly for Jinja
-        context_data_for_pdf = {'details': parsed_content_for_pdf.model_dump(mode='json', exclude_none=True)}
-        
-        # Add language specific units for TrainingPlan only
-        if isinstance(parsed_content_for_pdf, TrainingPlanDetails):
-            current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru']) # Default to 'ru' if lang not in config
-            context_data_for_pdf['details']['time_unit_singular'] = current_lang_cfg.get('TIME_UNIT_SINGULAR', 'h')
-            context_data_for_pdf['details']['time_unit_decimal_plural'] = current_lang_cfg.get('TIME_UNIT_DECIMAL_PLURAL', 'h')
-            context_data_for_pdf['details']['time_unit_general_plural'] = current_lang_cfg.get('TIME_UNIT_GENERAL_PLURAL', 'h')
-        
-        # Ensure detectedLanguage is in the context for pdf_lesson_pdf_template.html as well
-        if 'detectedLanguage' not in context_data_for_pdf['details'] or not context_data_for_pdf['details']['detectedLanguage']:
-             context_data_for_pdf['details']['detectedLanguage'] = detected_lang_for_pdf
+        # The context passed to Jinja will have `data_for_template_render` available as `details`
+        context_for_jinja = {'details': data_for_template_render}
+
+        logger.info(f"Project {project_id} PDF Gen: Type of context_for_jinja['details']: {type(context_for_jinja.get('details'))}")
+        if isinstance(context_for_jinja.get('details'), dict):
+            final_cb_type = type(context_for_jinja.get('details', {}).get('contentBlocks'))
+            logger.info(f"Project {project_id} PDF Gen: Type of context_for_jinja['details']['contentBlocks']: {final_cb_type}")
+            if isinstance(context_for_jinja.get('details', {}).get('contentBlocks'), list):
+                 for block_idx, block_item_final_check in enumerate(context_for_jinja.get('details', {}).get('contentBlocks', [])):
+                    if isinstance(block_item_final_check, dict) and block_item_final_check.get('type') in ('bullet_list', 'numbered_list'):
+                        items_final_check_type = type(block_item_final_check.get('items'))
+                        if not isinstance(block_item_final_check.get('items'), list):
+                            logger.error(f"Project {project_id} PDF Gen: CRITICAL - 'items' in block_item_final_check for block #{block_idx} is STILL NOT A LIST (type: {items_final_check_type}) just before Jinja render.")
+            elif final_cb_type is not None:
+                logger.error(f"Project {project_id} PDF Gen: CRITICAL - context_for_jinja['details']['contentBlocks'] is NOT A LIST (type: {final_cb_type}) just before Jinja render.")
 
 
-        pdf_path = await generate_pdf_from_html_template(pdf_template_file, context_data_for_pdf, unique_output_filename)
+        pdf_path = await generate_pdf_from_html_template(
+            pdf_template_file,
+            context_for_jinja, 
+            unique_output_filename
+        )
         if not os.path.exists(pdf_path):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="PDF file not found after generation.")
         return FileResponse(path=pdf_path, filename=user_friendly_pdf_filename, media_type='application/pdf', headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"})
+    except HTTPException as e:
+        raise e # Re-raise HTTPExceptions to ensure they are handled by FastAPI
     except Exception as e:
-        print(f"Error in PDF endpoint for project {project_id}: {e}"); traceback.print_exc()
+        logger.error(f"Error in PDF endpoint for project {project_id}: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error during PDF generation: {str(e)[:200]}")
 
 @app.post("/api/custom/projects/delete-multiple", status_code=status.HTTP_200_OK)

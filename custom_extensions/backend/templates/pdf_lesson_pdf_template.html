@@ -1,115 +1,314 @@
 <!DOCTYPE html>
-<html lang="{{ details.details.detectedLanguage | default('en') }}">
+<html lang="{{ details.details.detectedLanguage if details and details.details and details.details.detectedLanguage else 'en' }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ details.details.lessonTitle }}</title>
+    <title>{{ details.details.lessonTitle if details and details.details and details.details.lessonTitle else 'PDF Lesson' }}</title>
     <style>
-        body { /* ... same styles as provided in previous full response ... */ }
-        /* ... (all other styles from your refined PDF template) ... */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #ffffff;
+            color: #4B5563; /* Default text color, like text-gray-600 */
+            font-size: 12px;
+            line-height: 1.6;
+            widows: 3; /* Prevent single lines at top of page */
+            orphans: 3; /* Prevent single lines at bottom of page */
+        }
+        .pdf-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 32px 40px;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
 
-        /* Styling for list items that are blocks themselves */
-        .list-item-block-container {
-            margin-left: -1.2em; /* Offset the default list item padding */
-            padding-left: 0;
-        }
-        .list-item-block-container .content-block {
-             margin-bottom: 0.5em; /* Reduce margin for blocks inside lists */
+        .lesson-title-section { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 2px solid #0ea5e9; /* sky-500 */ }
+        .lesson-title-text { font-size: 28px; line-height: 1.25; font-weight: 700; color: #111827; /* gray-900 */ margin-bottom: 8px; }
+        .lesson-time { display: flex; align-items: center; color: #6b7280; /* gray-500 */ font-size: 14px; margin-top: 4px; }
+        .lesson-time .icon-svg { width: 16px; height: 16px; margin-right: 6px; }
+
+        .icon-svg {
+            fill: none; /* Ensure no fill by default */
+            stroke: currentColor; /* Stroke uses the current text color */
+            width: 1.1em;
+            height: 1.1em;
+            flex-shrink: 0;
+            /* Stroke width is set in the symbol definition, 
+               but you could add stroke-width: 2px; here if needed */
         }
 
-         /* Nested lists indentation */
-        .bullet-list-block ul ul, .bullet-list-block ul ol,
-        .numbered-list-block ol ul, .numbered-list-block ol ol {
-            margin-top: 0.25em;
-            margin-bottom: 0.5em;
-            padding-left: 1.25em; /* Further indentation for nested lists */
+        .content-block-wrapper { margin-bottom: 12px; }
+
+        .headline-block { display: flex; align-items: center; color: #1f2937; /* gray-800 default */ }
+        .headline-block .icon-svg {
+            margin-right: 8px;
+            /* fill and stroke are set per icon or inherited */
         }
-        .bullet-list-block .icon-prefix { margin-right: 0.5em; }
+
+        .headline-block.h1 { font-size: 22px; font-weight: 700; color: #111827; margin-bottom: 12px;}
+        .headline-block.h1 .icon-svg { width: 24px; height: 24px; }
+        .headline-block.h2 { font-size: 20px; font-weight: 600; color: #111827; padding-bottom: 8px; border-bottom: 2px solid #0ea5e9; margin-top: 24px; margin-bottom: 20px;}
+        .headline-block.h2 .icon-svg { width: 20px; height: 20px; }
+        .headline-block.h3 { font-size: 17px; font-weight: 600; color: #0369a1; /* sky-700 */ margin-top: 16px; margin-bottom: 8px; }
+        .headline-block.h3 .icon-svg { width: 18px; height: 18px; } /* Match H3 color & fill */
+        .headline-block.h4 { font-size: 15px; font-weight: 500; color: #1f2937; margin-top: 12px; margin-bottom: 6px; }
+        .headline-block.h4 .icon-svg { width: 16px; height: 16px; }
+
+        .list-item-content-wrapper .headline-block.h3 { font-size: 15px; margin-top:8px; margin-bottom:6px; }
+        .list-item-content-wrapper .headline-block.h4 { font-size: 14px; margin-top:8px; margin-bottom:6px; }
+
+        .paragraph-block { color: #374151; /* gray-700 */ font-size: 13px; margin-bottom: 12px; line-height: 1.65; }
+        .list-item-content-wrapper .paragraph-block { margin-bottom: 6px; }
+        .mini-section-box .paragraph-block { margin-bottom: 6px; }
+
+        .list-block-wrapper { margin-bottom: 10px; }
+        .list-block-wrapper ul, .list-block-wrapper ol { padding-left: 0; list-style-type: none; margin-top: 4px; }
+        .list-block-wrapper li { display: flex; align-items: flex-start; font-size: 13px; color: #374151; padding-top: 3px; padding-bottom: 3px; margin-bottom: 3px; }
+        .list-block-wrapper .list-marker { margin-right: 8px; flex-shrink: 0; color: #0369a1; /* accentBlue */ margin-top: 3px; line-height:1; }
+        .list-block-wrapper .list-marker .icon-svg { width: 12px; height:12px; /* For chevronRight etc. */ }
+        .list-block-wrapper .list-marker.number-text { font-weight: 500; }
+
+        .list-block-wrapper.depth-0 > ul, .list-block-wrapper.depth-0 > ol { padding-left: 20px; }
+        .list-item-content-wrapper .list-block-wrapper > ul,
+        .list-item-content-wrapper .list-block-wrapper > ol { padding-left: 20px; }
+
+        .list-item-content-wrapper { margin-top: 4px; margin-bottom: 4px; }
+
+        .alert-block { display: flex; padding: 12px; margin: 16px 0; border-left-width: 4px; border-style: solid; border-radius: 0 6px 6px 0; }
+        .alert-block .icon-container { flex-shrink: 0; padding-top: 2px; margin-right: 10px; }
+        .alert-block .icon-container .icon-svg { width: 18px; height: 18px;}
+        .alert-block .text-container .alert-title { font-size: 14px; font-weight: 600; }
+        .alert-block .text-container .alert-text { font-size: 13px; }
+        .alert-block .text-container .alert-title + .alert-text { margin-top: 2px; }
+
+        .alert-info { background-color: #eff6ff; border-color: #60a5fa; color: #1d4ed8; } .alert-info .icon-svg { fill: #3b82f6; fill: none !important;}
+        .alert-success { background-color: #f0fdf4; border-color: #4ade80; color: #166534; } .alert-success .icon-svg { color: #22c55e; fill: none !important; }
+        .alert-warning { background-color: #fefce8; border-color: #facc15; color: #a16207; } .alert-warning .icon-svg { color: #eab308; fill: none !important;}
+        .alert-danger { background-color: #fef2f2; border-color: #f87171; color: #b91c1c; } .alert-danger .icon-svg { color: #ef4444; fill: none !important;}
+
+        .section-break-block.solid { border: none; border-top: 1px solid #e5e7eb; margin: 40px 0; }
+        .section-break-block.dashed { border: none; border-top: 1px dashed #d1d5db; margin: 40px 0; }
+        .section-break-block.none { height: 32px; }
+
+        .mini-section-box { background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 16px 0; }
+        .mini-section-box > .content-block-wrapper:first-child { margin-top: 0; }
+        .mini-section-box > .content-block-wrapper:first-child > .headline-block { margin-top: 0 !important; margin-bottom: 6px !important; }
+        .mini-section-box > .content-block-wrapper > .list-block-wrapper { margin-bottom: 0 !important; }
+
+        .error-message { color: #c62828; font-weight: bold; }
+        .warning-message { color: #f9a825; }
+
+        /* ----- Page Break Rules ----- */
+        .content-block-wrapper,
+        .alert-block,
+        .mini-section-box,
+        .list-block-wrapper li {
+            page-break-inside: avoid;
+        }
+
+        .headline-block {
+            page-break-after: avoid; /* Don't leave headlines at the bottom */
+            page-break-inside: avoid; /* Don't split headlines (though unlikely) */
+        }
+
+        .list-block-wrapper {
+             page-break-inside: avoid; /* Try to keep lists together */
+        }
+
+        p, .paragraph-block {
+            page-break-inside: auto; /* Allow paragraphs to break, but use widows/orphans */
+            widows: 3;
+            orphans: 3;
+        }
+
+        hr.section-break-block {
+            page-break-after: always; /* Force break *after* a separator */
+        }
+        /* ----- End Page Break Rules ----- */
 
     </style>
 </head>
 <body>
-    <div class="container">
-        {% if details.details.lessonTitle %}
-            <h1 class="lesson-title">{{ details.details.lessonTitle }}</h1>
+    <div class="pdf-container">
+
+    {% set lesson_data = details.details %}
+
+    {% if lesson_data is mapping and lesson_data.lessonTitle is defined %}
+        <div class="lesson-title-section">
+            <h1 class="lesson-title-text">{{ lesson_data.lessonTitle }}</h1>
+            {# Example for lessonTime. Add 'lessonTime' to lesson_data in main.py if needed.
+            {% if lesson_data.lessonTime %}
+                <div class="lesson-time">
+                    <svg class="icon-svg"><use xlink:href="#icon-clock" /></svg>
+                    <span>{{ lesson_data.lessonTime }}</span>
+                </div>
+            {% endif %} #}
+        </div>
+    {% endif %}
+
+    {# ----- SVG Icon Definitions ----- #}
+    <svg width="0" height="0" style="position:absolute;display:none;" aria-hidden="true">
+        <defs>
+            {# Removed fill="none" - We control this with CSS now #}
+            <symbol id="icon-alertCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 8l0 4" /><path d="M12 16l.01 0" /></symbol>
+            <symbol id="icon-checkCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" /></symbol>
+            <symbol id="icon-info" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></symbol>
+            <symbol id="icon-xCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M10 10l4 4m0 -4l-4 4" /></symbol>
+            <symbol id="icon-chevronRight" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></symbol>
+            <symbol id="icon-type" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l-4 -5v-5" /><path d="M4 10l4 -4" /><path d="M12 20h4l-4 -5v-5" /><path d="M12 10l4 -4" /><path d="M21 20h-4l4 -5v-5" /><path d="M21 10l-4 -4" /></symbol>
+            <symbol id="icon-list" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l11 0" /><path d="M9 12l11 0" /><path d="M9 18l11 0" /><path d="M5 6l0 .01" /><path d="M5 12l0 .01" /><path d="M5 18l0 .01" /></symbol>
+            <symbol id="icon-listOrdered" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11 6h9" /><path d="M11 12h9" /><path d="M11 18h9" /><path d="M4 16a2 2 0 1 1 4 0c0 .591 -.5 1 -1.5 1.5s-1.5 .909 -1.5 1.5a2 2 0 1 0 4 0" /><path d="M6 4v-1" /></symbol>
+            <symbol id="icon-award" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0" /><path d="M12 15l3.4 5.89l1.598 -3.233l3.598 .232l-2.5 -2.766l.304 -3.733l-3.4 -1.89l-3.4 1.89l.304 3.733l-2.5 2.766l3.598 -.233l1.598 3.232z" /></symbol>
+            <symbol id="icon-brain" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15.519 15.5m-1.519 0a1.519 1.519 0 1 0 3.038 0a1.519 1.519 0 1 0 -3.038 0" /><path d="M18.526 12.5m-1.526 0a1.526 1.526 0 1 0 3.052 0a1.526 1.526 0 1 0 -3.052 0" /><path d="M18.526 18.5m-1.526 0a1.526 1.526 0 1 0 3.052 0a1.526 1.526 0 1 0 -3.052 0" /><path d="M15.519 10.5m-1.519 0a1.519 1.519 0 1 0 3.038 0a1.519 1.519 0 1 0 -3.038 0" /><path d="M12 15.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0" /><path d="M9 12.5m-1.5 0a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0" /><path d="M12.002 11.509a1.5 1.5 0 1 0-1.068 2.558" /><path d="M12 3c2.481 .744 4.585 2.283 6.022 4.505c1.228 1.893 1.634 4.078 1.208 6.191c-.548 2.72 -2.362 4.994 -5.23 6.304" /><path d="M12 3c-2.481 .744 -4.585 2.283 -6.022 4.505c-1.228 1.893 -1.634 4.078 -1.208 6.191c.548 2.72 2.362 4.994 5.23 6.304" /></symbol>
+            <symbol id="icon-bookOpen" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0" /><path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0" /><path d="M3 6l0 13" /><path d="M12 6l0 13" /><path d="M21 6l0 13" /></symbol>
+            <symbol id="icon-edit3" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 15l8.385 -8.415a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3z" /><path d="M16 5l3 3" /><path d="M9 7.07a7 7 0 0 0 1 13.93a7 7 0 0 0 6.929 -6" /></symbol>
+            <symbol id="icon-lightbulb" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 16a5 5 0 1 0 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3" /><path d="M9.7 17l1.3 -1.3" /><path d="M14.3 17l-1.3 -1.3" /><path d="M12 12l0 -7" /><path d="M7 9l0 -1" /><path d="M17 9l0 -1" /><path d="M9 6l0 -1" /><path d="M15 6l0 -1" /></symbol>
+            <symbol id="icon-search" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></symbol>
+            <symbol id="icon-compass" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M12 3l0 2" /><path d="M12 19l0 2" /><path d="M3 12l2 0" /><path d="M19 12l2 0" /></symbol>
+            <symbol id="icon-cloudDrizzle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-12" /><path d="M11 14v2" /><path d="M7 14v2" /><path d="M15 14v2" /></symbol>
+            <symbol id="icon-eyeOff" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c.927 -2.26 2.504 -4.032 4.5 -5.076" /><path d="M3 3l18 18" /></symbol>
+            <symbol id="icon-clipboardCheck" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /><path d="M15 11l-2 2l-1 -1" /></symbol>
+            <symbol id="icon-alertTriangle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></symbol>
+            <symbol id="icon-clock" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 7l0 5l3 3" /></symbol>
+            <symbol id="icon-star" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.255l3.086 6.255l6.9 1l-5 4.867l1.179 6.873z" /></symbol>
+            <symbol id="icon-arrowRight" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></symbol>
+            <symbol id="icon-circle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></symbol>
+            <symbol id="icon-minus" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l14 0" /></symbol>
+        </defs>
+    </svg>
+    {# ----- END ICON DEFINITIONS ----- #}
+
+    {% macro render_icon_svg_macro(icon_name_str, default_icon_for_type=None, css_class="") %}
+        {% set final_icon_name = icon_name_str %}
+        {% if not final_icon_name %}
+            {% if default_icon_for_type == 'alert-info' %}{% set final_icon_name = 'info' %}
+            {% elif default_icon_for_type == 'alert-success' %}{% set final_icon_name = 'checkCircle' %}
+            {% elif default_icon_for_type == 'alert-warning' %}{% set final_icon_name = 'alertTriangle' %}
+            {% elif default_icon_for_type == 'alert-danger' %}{% set final_icon_name = 'xCircle' %}
+            {% elif default_icon_for_type == 'bullet' %}{% set final_icon_name = 'chevronRight' %}
+            {% elif default_icon_for_type == 'generic-headline' %}{% set final_icon_name = 'type' %} {# Default for unspecified headline icons #}
+            {% endif %}
         {% endif %}
 
-        {# --- Jinja2 Macro for rendering block (can be called recursively) --- #}
-        {% macro render_block_content(block_item) %}
-            {% if block_item.type == 'headline' %}
-                <div class="headline-block headline-block-h{{ block_item.level }}"
-                     style="{% if block_item.backgroundColor %}background-color: {{ block_item.backgroundColor }}; padding: 0.5rem; border-radius: 0.25rem;{% endif %} {% if block_item.textColor %}color: {{ block_item.textColor }};{% endif %}">
-                    {% if block_item.iconName %}<span class="icon-placeholder">[{{ block_item.iconName | upper }}]</span>{% endif %}
-                    {{ block_item.text }}
-                </div>
-            {% elif block_item.type == 'paragraph' %}
-                <p class="paragraph-block">{{ block_item.text }}</p>
-            {% elif block_item.type == 'bullet_list' %}
-                <div class="bullet-list-block">
-                    <ul>
-                        {{ render_list_items(block_item.items, 'bullet', block_item.iconName) }}
-                    </ul>
-                </div>
-            {% elif block_item.type == 'numbered_list' %}
-                <div class="numbered-list-block">
-                    <ol>
-                        {{ render_list_items(block_item.items, 'numbered', None) }}
-                    </ol>
-                </div>
-            {% elif block_item.type == 'alert' %}
-                <div class="alert-block alert-{{ block_item.alertType | default('info') }}"
-                     style="{% if block_item.backgroundColor %}background-color: {{ block_item.backgroundColor }};{% endif %}
-                            {% if block_item.borderColor %}border-color: {{ block_item.borderColor }};{% endif %}
-                            {% if block_item.textColor %}color: {{ block_item.textColor }};{% endif %}">
-                    <span class="icon-placeholder" style="{% if block_item.iconColor %}color: {{ block_item.iconColor }};{% endif %}">
-                        {% if block_item.iconName %}[{{ block_item.iconName | upper }}]
-                        {% elif block_item.alertType == 'success' %}&#10004;
-                        {% elif block_item.alertType == 'warning' %}&#9888;
-                        {% elif block_item.alertType == 'danger' %}&#10060;
-                        {% else %}&#8505;{% endif %}
-                    </span>
-                    <div class="alert-content">
-                        {% if block_item.title %}
-                            <div class="alert-title" style="{% if block_item.textColor %}color: {{ block_item.textColor }};{% endif %}">{{ block_item.title }}</div>
-                        {% endif %}
-                        <div class="alert-text" style="{% if block_item.textColor %}color: {{ block_item.textColor }};{% endif %}">{{ block_item.text }}</div>
-                    </div>
-                </div>
-            {% elif block_item.type == 'section_break' %}
-                 {% if block_item.style == 'none' %}
-                    <div class="section-break-block section-break-none"></div>
-                {% else %}
-                    <hr class="section-break-block section-break-{{ block_item.style | default('solid') }}" />
-                {% endif %}
-            {% else %}
-                <p style="color: red;">Unsupported block type: {{ block_item.type }}</p>
-            {% endif %}
-        {% endmacro %}
+        {% if final_icon_name %}
+            <svg class="icon-svg {{ css_class }}"><use xlink:href="#icon-{{ final_icon_name }}" /></svg>
+        {% elif default_icon_for_type == 'bullet-fallback' %}
+             <span class="list-marker">&bull;</span>
+        {% endif %}
+    {% endmacro %}
 
-        {# --- Jinja2 Macro for rendering list items recursively --- #}
-        {% macro render_list_items(items, list_type, list_icon_name) %}
-            {% for item in items %}
+    {# Macro for list items (unchanged, but relies on new CSS/SVG) #}
+    {% macro render_list_items_recursive_macro(items_list, list_type_str, list_icon_name_str, depth) %}
+        {% if items_list is iterable and items_list is not string %}
+            {% for item_content in items_list %}
                 <li>
-                    {% if item is string %}
-                        {% if list_type == 'bullet' and list_icon_name %}
-                            {# For simplicity, not trying to render complex icons for string items here #}
+                    <div class="list-marker">
+                    {% if item_content is string %}
+                        {% if list_type_str == 'bullet' %}
+                            {{ render_icon_svg_macro(list_icon_name_str if list_icon_name_str else 'chevronRight', 'bullet-fallback', 'bullet-icon') }}
+                        {% else %} {# numbered_list #}
+                            <span class="number-text">{{ loop.index }}.</span>
                         {% endif %}
-                        {{ item }}
-                    {% else %} {# Item is an object (a content block) #}
-                       <div class="list-item-block-container">
-                           {{ render_block_content(item) }}
-                       </div>
                     {% endif %}
+                    </div>
+                    <div class="list-item-text-or-block">
+                    {% if item_content is string %}
+                        <span>{{ item_content }}</span>
+                    {% elif item_content is mapping %}
+                        <div class="list-item-block-container">
+                            {{ render_single_block_recursive_macro(item_content, depth + 1) }}
+                        </div>
+                    {% else %}
+                        <span class="error-message">Item is not string or dict.</span>
+                    {% endif %}
+                    </div>
                 </li>
+            {% else %}
+                 <li class="warning-message">List for "{{list_type_str}}" was empty.</li>
             {% endfor %}
-        {% endmacro %}
-        {# --- End Macros --- #}
+        {% elif items_list is not none %}
+            <li class="error-message">Items list for "{{list_type_str}}" is not iterable.</li>
+        {% else %}
+             <li class="warning-message">Items list for "{{list_type_str}}" is None.</li>
+        {% endif %}
+    {% endmacro %}
 
-        {% for block in details.details.contentBlocks %}
-            <div class="content-block">
-                {{ render_block_content(block) }}
+    {# Macro for single block (unchanged, but relies on new CSS/SVG) #}
+    {% macro render_single_block_recursive_macro(block_data, depth=0) %}
+        {% if block_data is mapping %}
+            {% set block_type = block_data.get('type') %}
+            <div class="content-block-wrapper">
+                {% if block_type == 'headline' %}
+                    <div class="headline-block h{{ block_data.level | default(3) }}"
+                         style="padding-left: {{ depth * 15 }}px;{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }}; padding-right: 0.4em;{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% endif %}">
+                        {{ render_icon_svg_macro(block_data.iconName, 'generic-headline') }}
+                        <span>{{ block_data.text | default('') }}</span>
+                    </div>
+                {% elif block_type == 'paragraph' %}
+                    <p class="paragraph-block" style="padding-left: {{ depth * 15 }}px;">{{ block_data.text | default('') }}</p>
+                {% elif block_type == 'bullet_list' %}
+                    <div class="list-block-wrapper bullet_list depth-{{depth}}" style="padding-left: {{ depth * 5 }}px;"> {# Reduced multiplier for lists #}
+                        <ul>{{ render_list_items_recursive_macro(block_data.get('items'), 'bullet', block_data.iconName, depth) }}</ul>
+                    </div>
+                {% elif block_type == 'numbered_list' %}
+                    <div class="list-block-wrapper numbered_list depth-{{depth}}" style="padding-left: {{ depth * 5 }}px;">  {# Reduced multiplier for lists #}
+                        <ol>{{ render_list_items_recursive_macro(block_data.get('items'), 'numbered', None, depth) }}</ol>
+                    </div>
+                {% elif block_type == 'alert' %}
+                    <div class="alert-block alert-{{ block_data.alertType | default('info') }}"
+                         style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %}{% if block_data.borderColor %}border-color: {{ block_data.borderColor }};{% endif %}{% if block_data.textColor %}color: {{ block_data.textColor }};{% endif %}">
+                        <div class="icon-container" style="{% if block_data.iconColor %}color: {{ block_data.iconColor }}; fill: {{ block_data.iconColor }};{% endif %}">
+                            {{ render_icon_svg_macro(block_data.iconName, 'alert-' + (block_data.alertType|default('info')) ) }}
+                        </div>
+                        <div class="text-container">
+                            {% if block_data.title %}<div class="alert-title">{{ block_data.title }}</div>{% endif %}
+                            <div class="alert-text">{{ block_data.text | default('') }}</div>
+                        </div>
+                    </div>
+                {% elif block_type == 'section_break' %}
+                    <hr class="section-break-block {{ block_data.style | default('solid') }}">
+                {% else %}
+                    <p class="error-message">Unsupported block type: {{ block_type }}</p>
+                {% endif %}
             </div>
+        {% else %}
+            <p class="error-message">Block data is not a dictionary/mapping.</p>
+        {% endif %}
+    {% endmacro %}
+    {# ----- END MACROS ----- #}
+
+    <div class="content-wrapper">
+    {% if lesson_data is mapping and lesson_data.contentBlocks is iterable and lesson_data.contentBlocks is not string %}
+        {% set rendered_next_block = [false] %} {# Using a list to allow modification in loop #}
+        {% for i in range(lesson_data.contentBlocks | length) %}
+            {% if rendered_next_block[0] %}
+                {% set temp = rendered_next_block.pop() %} {# Reset flag #}
+                {% set temp = rendered_next_block.append(false) %}
+                {# This block was rendered as part of a mini-section, skip it #}
+            {% else %}
+                {% set current_block_item = lesson_data.contentBlocks[i] %}
+                {% set next_block_item = lesson_data.contentBlocks[i+1] if (i+1) < (lesson_data.contentBlocks | length) else none %}
+
+                {% set is_important_headline = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
+                {% set is_list_following = next_block_item is mapping and next_block_item.get('type') in ['bullet_list', 'numbered_list'] %}
+
+                {% if is_important_headline and is_list_following %}
+                    <div class="mini-section-box">
+                        {{ render_single_block_recursive_macro(current_block_item, 0) }}
+                        {{ render_single_block_recursive_macro(next_block_item, 0) }}
+                    </div>
+                    {% set temp = rendered_next_block.pop() %} {# Mark next block to be skipped #}
+                    {% set temp = rendered_next_block.append(true) %}
+                {% else %}
+                     {{ render_single_block_recursive_macro(current_block_item, 0) }}
+                {% endif %}
+            {% endif %}
         {% endfor %}
+    {% endif %}
+    </div>
     </div>
 </body>
 </html>

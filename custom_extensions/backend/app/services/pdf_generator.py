@@ -62,6 +62,12 @@ async def generate_pdf_from_html_template(
 
     try:
         template = jinja_env.get_template(template_name)
+        logger.info(f"PDF GEN Context Data Type: {type(context_data)}")
+        logger.info(f"PDF GEN Context Data['details'] Type: {type(context_data.get('details'))}")
+        if isinstance(context_data.get('details'), dict):
+            logger.info(f"PDF GEN Context Data['details']['details'] Type: {type(context_data.get('details', {}).get('details'))}")
+            if isinstance(context_data.get('details', {}).get('details'), dict):
+                logger.info(f"PDF GEN ContentBlocks Type: {type(context_data.get('details', {}).get('details', {}).get('contentBlocks'))}")
         html_content = template.render(details=context_data) # Pass data as 'details' to match template
         logger.info("HTML content rendered from template.")
     except Exception as e:
