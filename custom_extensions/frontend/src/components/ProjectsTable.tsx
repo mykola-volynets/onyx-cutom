@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Link as LinkIcon, FileText, Trash2, Pencil, ChevronDown, ChevronRight } from 'lucide-react';
+import { Eye, FileText, Trash2, Pencil, ChevronDown, ChevronRight } from 'lucide-react'; // Replaced LinkIcon with Eye
 import { ProjectListItem } from '@/types/trainingPlan'; 
 
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
@@ -19,6 +19,7 @@ const ProjectsTable: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  // Groups will be collapsed by default
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
   const router = useRouter();
 
@@ -39,6 +40,15 @@ const ProjectsTable: React.FC = () => {
       }
       const data: ProjectListItem[] = await response.json();
       setProjectsData(data);
+      // Initialize expandedProjects to ensure all are collapsed by default
+      const initialExpansionState: Record<string, boolean> = {};
+      data.forEach(project => {
+        if (initialExpansionState[project.projectName] === undefined) {
+            initialExpansionState[project.projectName] = false; // Collapse all groups initially
+        }
+      });
+      setExpandedProjects(initialExpansionState);
+
     } catch (e: any) {
       setError(e.message || "Failed to load projects.");
     } finally {
@@ -182,14 +192,13 @@ const ProjectsTable: React.FC = () => {
                 </th>
                 <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Project Name</th>
                 <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Instance / Design Name</th>
-                {/* Design Category column REMOVED */}
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">View</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">PDF</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Edit</th>
               </tr>
             </thead>
             {Object.entries(groupedProjects).map(([projectName, entries], groupIndex) => {
-              const isCurrentlyExpanded = expandedProjects[projectName] === undefined ? true : !!expandedProjects[projectName];
+              const isCurrentlyExpanded = !!expandedProjects[projectName]; // Defaults to false if undefined
               const projectIdsInGroup = entries.map(e => e.id).filter(id => typeof id === 'number');
               const areAllInGroupSelected = projectIdsInGroup.length > 0 && projectIdsInGroup.every(id => selectedProjectIds.includes(id));
               
@@ -202,18 +211,20 @@ const ProjectsTable: React.FC = () => {
                   });
               };
 
+              const groupHeaderBg = groupIndex % 2 === 0 ? 'bg-gray-100' : 'bg-gray-50';
+
               return (
                 <tbody className="text-gray-700" key={projectName + groupIndex}>
                   {entries.length > 1 && (
-                    <tr className={`${groupIndex % 2 === 0 ? 'bg-gray-100' : 'bg-gray-50'} border-b border-gray-300 hover:bg-gray-200 cursor-pointer`}
+                    <tr 
+                        className={`${groupHeaderBg} border-b border-gray-300 hover:bg-gray-200 cursor-pointer`}
                         onClick={() => handleToggleExpand(projectName)}>
                       <td className="py-3 px-4 text-center">
                          <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                          checked={areAllInGroupSelected} onChange={handleSelectGroupChange} disabled={projectIdsInGroup.length === 0} 
-                          onClick={(e) => e.stopPropagation()} />
-                      </td>
-                      {/* Adjusted colSpan since Design Category is removed */}
-                      <td colSpan={4} className="text-left py-3 px-4 font-semibold"> 
+                           checked={areAllInGroupSelected} onChange={handleSelectGroupChange} disabled={projectIdsInGroup.length === 0} 
+                           onClick={(e) => e.stopPropagation()} />
+                       </td>
+                      <td colSpan={5} className="text-left py-3 px-4 font-semibold"> {/* Adjusted colSpan */}
                         <div className="flex items-center">
                           {isCurrentlyExpanded ? <ChevronDown size={18} className="mr-2 expand-collapse-icon" /> : <ChevronRight size={18} className="mr-2 expand-collapse-icon" />}
                           {projectName} ({entries.length} instances)
@@ -226,35 +237,34 @@ const ProjectsTable: React.FC = () => {
                     const detailPageUrl = `/projects/view/${item.id}`; 
                     const isRowSelected = typeof item.id === 'number' && selectedProjectIds.includes(item.id);
                     
-                    const rowVisibleClass = entries.length > 1 ? (isCurrentlyExpanded ? 'expanded-group-item-visible' : 'expanded-group-item-hidden') : '';
-                    const itemRowBackground = itemIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50';
-                    const itemClasses = `
-                      project-item-row ${rowVisibleClass}
-                      ${entries.length === 1 && (groupIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white')}
-                      ${entries.length > 1 && itemRowBackground}
+                    // Apply consistent background for single-entry groups
+                    const singleItemGroupBg = entries.length === 1 ? (groupIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white') : (itemIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50');
+                    const itemRowClasses = `
+                      project-item-row 
+                      ${entries.length > 1 ? (isCurrentlyExpanded ? 'expanded-group-item-visible' : 'expanded-group-item-hidden') : ''}
+                      ${singleItemGroupBg}
                       hover:bg-gray-100 border-b border-gray-200
                     `;
                     
                     return (
-                      <tr key={item.id || `project-row-${groupIndex}-${itemIndex}`} className={itemClasses}>
+                      <tr key={item.id || `project-row-${groupIndex}-${itemIndex}`} className={itemRowClasses}>
                         <td className="py-3 px-4 text-center">
                           <input type="checkbox" className="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                              checked={isRowSelected} disabled={typeof item.id !== 'number'}
-                              onChange={(e) => {if (typeof item.id === 'number') handleRowCheckboxChange(item.id, e.target.checked)}} />
+                                  checked={isRowSelected} disabled={typeof item.id !== 'number'}
+                                  onChange={(e) => {if (typeof item.id === 'number') handleRowCheckboxChange(item.id, e.target.checked)}} />
                         </td>
                         <td className={`text-left py-3 px-4 ${entries.length > 1 ? 'pl-10' : ''}`}>
                           {entries.length === 1 ? item.projectName : ""}
                         </td>
                         <td className="text-left py-3 px-4">{item.microproduct_name || item.design_template_name || 'N/A'}</td>
-                        {/* Design Category cell REMOVED */}
                         <td className="text-center py-3 px-4">
                           <Link href={detailPageUrl} className="text-blue-500 hover:text-blue-700 inline-block">
-                            <LinkIcon size={18} />
+                            <Eye size={18} /> {/* Replaced LinkIcon with Eye */}
                           </Link>
                         </td>
                         <td className="text-center py-3 px-4">
-                           <button onClick={() => handlePdfClick(item.id, item.microproduct_name || item.design_template_name)}
-                             className="text-red-500 hover:text-red-700 inline-block">
+                            <button onClick={() => handlePdfClick(item.id, item.microproduct_name || item.design_template_name)}
+                              className="text-red-500 hover:text-red-700 inline-block">
                             <FileText size={18} />
                           </button>
                         </td>
@@ -284,18 +294,13 @@ const ProjectsTable: React.FC = () => {
         .expanded-group-item-visible {
           display: table-row; 
         }
-        tr.project-item-row-expanded { 
-            display: table-row !important;
-        }
-        tr.project-item-row-collapsed { 
-            display: none !important;
-        }
-        .expanded-group-item-even {
-            background-color: #f9fafb; 
-        }
-        .expanded-group-item-odd {
-            background-color: #ffffff; 
-        }
+        // Ensure these styles don't override display: table-row if you use them
+        // tr.project-item-row-expanded { 
+        //     display: table-row !important;
+        // }
+        // tr.project-item-row-collapsed { 
+        //     display: none !important;
+        // }
       `}</style>
     </div>
   );

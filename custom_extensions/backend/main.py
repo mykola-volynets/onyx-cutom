@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
-from typing import List, Optional, Dict, Any, Union, Type, ForwardRef
+from typing import List, Optional, Dict, Any, Union, Type, ForwardRef, Set
 from pydantic import BaseModel, Field, RootModel
 import re
 import os
@@ -1022,6 +1022,35 @@ Return ONLY the JSON object.
     except Exception as e:
         print(f"Error inserting project: {e}"); traceback.print_exc()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"DB error on project insert: {str(e)}")
+
+@app.get("/api/custom/projects/names", response_model=List[str], summary="Get unique project names for the user")
+async def get_distinct_project_names_for_user(
+    onyx_user_id: str = Depends(get_current_onyx_user_id),
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    """
+    Retrieves a list of unique project names associated with the current Onyx user.
+    """
+    query = """
+        SELECT DISTINCT project_name
+        FROM projects
+        WHERE onyx_user_id = $1
+        ORDER BY project_name ASC;
+    """
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(query, onyx_user_id)
+        # Extract project names, ensuring they are not None and are strings
+        project_names: List[str] = [
+            str(row["project_name"]) for row in rows if row["project_name"] is not None
+        ]
+        return project_names
+    except Exception as e:
+        logger.error(f"Error fetching distinct project names for user {onyx_user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error while fetching project names: {str(e)}"
+        )
 
 @app.get("/api/custom/projects/{project_id}/edit", response_model=ProjectDetailForEditResponse)
 async def get_project_details_for_edit(project_id: int, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):

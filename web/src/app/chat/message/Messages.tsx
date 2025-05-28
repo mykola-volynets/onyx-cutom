@@ -1,3 +1,4 @@
+// web/src/app/chat/message/Messages.tsx
 "use client";
 
 import {
@@ -6,8 +7,10 @@ import {
   FiChevronLeft,
   FiTool,
   FiGlobe,
-  FiShuffle, // Added for the new button icon
+  // FiFlask was removed as it's not available
 } from "react-icons/fi";
+import { TbWand } from "react-icons/tb";
+import { FlaskConical } from "lucide-react"; // Added for the "Make into Product" lab icon
 import { FeedbackType } from "../types";
 import React, {
   useCallback,
@@ -85,7 +88,7 @@ import {
 import { FileResponse } from "../my-documents/DocumentsContext";
 
 // Import the new modal
-import MakeIntoProductModal from "@/components/chat/MakeIntoProductModal"; 
+import MakeIntoProductModal from "@/components/chat/MakeIntoProductModal";
 
 const TOOLS_WITH_CUSTOM_HANDLING = [
   SEARCH_TOOL_NAME,
@@ -247,7 +250,7 @@ export const AIMessage = ({
   index,
   documentSidebarVisible,
   removePadding,
-  onApplyProductPrompts, // New prop
+  onApplyProductPrompts,
 }: {
   userKnowledgeFiles?: FileResponse[];
   index?: number;
@@ -278,7 +281,7 @@ export const AIMessage = ({
   regenerate?: (modelOverRide: LlmDescriptor) => Promise<void>;
   setPresentingDocument: (document: MinimalOnyxDocument) => void;
   removePadding?: boolean;
-  onApplyProductPrompts?: (prompts: string[]) => void; // New prop
+  onApplyProductPrompts?: (prompts: string[]) => void;
 }) => {
   const toolCallGenerating = toolCall && !toolCall.tool_result;
 
@@ -288,7 +291,7 @@ export const AIMessage = ({
     );
   }, [content]);
 
-  const [makeIntoProductModalOpen, setMakeIntoProductModalOpen] = useState(false); // State for new modal
+  const [makeIntoProductModalOpen, setMakeIntoProductModalOpen] = useState(false);
 
   const handleAddToProjects = () => {
     let messageText = "";
@@ -314,7 +317,7 @@ export const AIMessage = ({
       return;
     }
 
-    const customProjectsUiDomain = process.env.NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN || 'https://ml.contentbuilder.ai'; 
+    const customProjectsUiDomain = process.env.NEXT_PUBLIC_CUSTOM_PROJECTS_UI_DOMAIN || 'https://ml.contentbuilder.ai';  
     const targetUrl = `${customProjectsUiDomain}/custom-projects-ui/add-to-project?responseKey=${encodeURIComponent(storageKey)}`;
     console.log('Using customProjectsUiDomain from env:', customProjectsUiDomain);
     console.log('Constructed targetUrl:', targetUrl);
@@ -755,7 +758,7 @@ export const AIMessage = ({
                             flex md:flex-row gap-x-0.5 mt-1
                             transition-transform duration-300 ease-in-out
                             transform opacity-100 "
-                      `}
+                        `}
                         >
                           <TooltipGroup>
                             <div className="flex justify-start w-full gap-x-0.5">
@@ -822,24 +825,18 @@ export const AIMessage = ({
                                 />
                               </CustomTooltip>
                             )}
-                             <button
-                               onClick={handleAddToProjects}
-                               title="Add to projects" // Tooltip via title attribute
-                               className="p-1.5 rounded-lg hover:bg-background-strong cursor-pointer" // Basic styling to somewhat match others
-                               style={{ // More explicit styling if needed
-                                 marginLeft: '4px', // Adjust spacing as needed
-                                 padding: '6px 8px',
-                                 fontSize: '12px',
-                                 border: '1px solid #ccc', // Example border
-                                 borderRadius: '4px',
-                               }}
-                             >
-                               Add to projects
-                             </button>
-                            {/* New "Make into Product" button */}
+                             {/* "Add to Projects" button with TbWand icon and CustomTooltip */}
+                             <CustomTooltip showTick line content="Create Project">
+                                <HoverableIcon
+                                  icon={<TbWand size={18} />} 
+                                  onClick={handleAddToProjects}
+                                />
+                              </CustomTooltip>
+
+                            {/* "Make into Product" button with FlaskConical icon from lucide-react */}
                             <CustomTooltip showTick line content="Make into Product">
                               <HoverableIcon
-                                icon={<FiShuffle />} 
+                                icon={<FlaskConical size={17} />} 
                                 onClick={handleOpenMakeIntoProductModal}
                               />
                             </CustomTooltip>
@@ -926,10 +923,17 @@ export const AIMessage = ({
                                 />
                               </CustomTooltip>
                             )}
-                             {/* New "Make into Product" button - also for hover state if desired */}
-                             <CustomTooltip showTick line content="Make into Product">
+                             {/* "Add to Projects" button with TbWand icon and CustomTooltip - also for hover state */}
+                             <CustomTooltip showTick line content="Create Project">
+                                <HoverableIcon
+                                  icon={<TbWand size={18} />} 
+                                  onClick={handleAddToProjects}
+                                />
+                              </CustomTooltip>
+                            {/* "Make into Product" button - also for hover state */}
+                            <CustomTooltip showTick line content="Make into Product">
                               <HoverableIcon
-                                icon={<FiShuffle />}
+                                icon={<FlaskConical size={17} />}
                                 onClick={handleOpenMakeIntoProductModal}
                               />
                             </CustomTooltip>
@@ -1118,17 +1122,17 @@ export const HumanMessage = ({
                   <div className="w-full">
                     <div
                       className={`
-                      opacity-100
-                      w-full
-                      flex
-                      flex-col
-                      border 
-                      border-border 
-                      rounded-lg 
-                      pb-2
-                      [&:has(textarea:focus)]::ring-1
-                      [&:has(textarea:focus)]::ring-black
-                    `}
+                        opacity-100
+                        w-full
+                        flex
+                        flex-col
+                        border 
+                        border-border 
+                        rounded-lg 
+                        pb-2
+                        [&:has(textarea:focus)]::ring-1
+                        [&:has(textarea:focus)]::ring-black
+                      `}
                     >
                       <textarea
                         ref={textareaRef}
