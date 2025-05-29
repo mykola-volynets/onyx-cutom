@@ -553,14 +553,23 @@ LANG_CONFIG = {
            'LESSONS_HEADER_KEYWORD': "Уроки", 'TOTAL_TIME_KEYWORD': "Общее время", 'TIME_KEYWORD': "время"},
     'en': {'MODULE_KEYWORD': "Module",
            'TIME_UNIT_SINGULAR': "hour",'TIME_UNIT_DECIMAL_PLURAL': "hours",'TIME_UNIT_GENERAL_PLURAL': "hours",
-           'LESSONS_HEADER_KEYWORD': "Lessons", 'TOTAL_TIME_KEYWORD': "Total time", 'TIME_KEYWORD': "time"}
+           'LESSONS_HEADER_KEYWORD': "Lessons", 'TOTAL_TIME_KEYWORD': "Total time", 'TIME_KEYWORD': "time"},
+    'uk': {'MODULE_KEYWORD': "Модуль",  # Shared with RU, but contextually Ukrainian
+           'TIME_UNIT_SINGULAR': "година",
+           'TIME_UNIT_DECIMAL_PLURAL': "години", # for 2,3,4 and decimals
+           'TIME_UNIT_GENERAL_PLURAL': "годин", # for 5+ or 0
+           'LESSONS_HEADER_KEYWORD': "Уроки", # Shared with RU
+           'TOTAL_TIME_KEYWORD': "Загальний час",
+           'TIME_KEYWORD': "час"}
 }
 
 def detect_language(text: str, configs: Dict[str, Dict[str, str]] = LANG_CONFIG) -> str:
-    en_score = 0; ru_score = 0
+    en_score = 0; ru_score = 0; uk_score = 0
     en_config = configs.get('en', {})
     ru_config = configs.get('ru', {})
+    uk_config = configs.get('uk', {})
 
+    # Check for primary keywords for more reliable detection
     if en_config.get('MODULE_KEYWORD') and en_config.get('LESSONS_HEADER_KEYWORD') and en_config.get('TOTAL_TIME_KEYWORD'):
         if en_config['MODULE_KEYWORD'] in text and \
            en_config['LESSONS_HEADER_KEYWORD'] in text and \
@@ -572,32 +581,63 @@ def detect_language(text: str, configs: Dict[str, Dict[str, str]] = LANG_CONFIG)
            ru_config['LESSONS_HEADER_KEYWORD'] in text and \
            ru_config['TOTAL_TIME_KEYWORD'] in text:
             ru_score += 3
+            
+    if uk_config.get('MODULE_KEYWORD') and uk_config.get('LESSONS_HEADER_KEYWORD') and uk_config.get('TOTAL_TIME_KEYWORD'):
+        if uk_config['MODULE_KEYWORD'] in text and \
+           uk_config['LESSONS_HEADER_KEYWORD'] in text and \
+           uk_config['TOTAL_TIME_KEYWORD'] in text:
+            uk_score += 3
 
-    if en_score == 0 and ru_score == 0: 
+    # If primary keywords didn't yield a strong match, try secondary keywords
+    if en_score == 0 and ru_score == 0 and uk_score == 0:
         if en_config.get('MODULE_KEYWORD') and en_config['MODULE_KEYWORD'] in text: en_score +=1
         if ru_config.get('MODULE_KEYWORD') and ru_config['MODULE_KEYWORD'] in text: ru_score +=1
+        if uk_config.get('MODULE_KEYWORD') and uk_config['MODULE_KEYWORD'] in text: uk_score +=1
         
         if en_config.get('TIME_KEYWORD') and en_config['TIME_KEYWORD'] in text: en_score +=1
         if ru_config.get('TIME_KEYWORD') and ru_config['TIME_KEYWORD'] in text: ru_score +=1
+        if uk_config.get('TIME_KEYWORD') and uk_config['TIME_KEYWORD'] in text: uk_score +=1
         
-        if en_score == 0 and ru_score == 0:
+        # Basic character scoring as a last resort if keywords are ambiguous
+        if en_score == 0 and ru_score == 0 and uk_score == 0:
             en_chars = sum(1 for char_ in text if 'a' <= char_.lower() <= 'z')
-            ru_chars = sum(1 for char_ in text if 'а' <= char_.lower() <= 'я')
-            if en_chars > ru_chars and en_chars > 10:
-                en_score += 0.1 
-            elif ru_chars > en_chars and ru_chars > 10:
-                ru_score += 0.1
+            # General Cyrillic check (covers both Russian and Ukrainian)
+            cyrillic_chars = sum(1 for char_ in text if 'а' <= char_.lower() <= 'я' or char_.lower() in ['і', 'ї', 'є', 'ґ'])
+            
+            # Simple heuristic: if many Cyrillic chars and few Latin, lean towards ru/uk
+            # This part is less precise and might need refinement if many Cyrillic-based languages are added.
+            # For now, we'll prioritize keyword matches.
+            # A more robust solution would involve specific character frequency analysis for each language.
+            if en_chars > cyrillic_chars and en_chars > 10 :
+                 en_score += 0.1
+            elif cyrillic_chars > en_chars and cyrillic_chars > 10:
+                # Could attempt to differentiate ru/uk here based on unique chars,
+                # but for minimal change, let keyword scores decide if possible.
+                # If uk_config keywords were found earlier, uk_score would be > 0.
+                # If only ru_config keywords, ru_score > 0.
+                # If both (due to shared keywords), their scores would be similar.
+                # For simplicity, if uk_score is still 0 but ru_score is also 0, this won't help differentiate.
+                # Let's slightly boost based on general Cyrillic if keyword scores are all zero for ru/uk.
+                if uk_score == 0: uk_score += 0.05 # Small boost if any uk keywords matched
+                if ru_score == 0: ru_score += 0.05 # Small boost if any ru keywords matched
+                # if specific Ukrainian chars are more prevalent:
+                ukrainian_specific_chars = sum(1 for char_ in text if char_.lower() in ['і', 'ї', 'є', 'ґ'])
+                if ukrainian_specific_chars > 0:
+                    uk_score += 0.05 * ukrainian_specific_chars
 
-    if en_score > ru_score: return 'en'
-    if ru_score > en_score: return 'ru'
+
+    if en_score > ru_score and en_score > uk_score: return 'en'
+    if ru_score > en_score and ru_score > uk_score: return 'ru'
+    if uk_score > en_score and uk_score > ru_score: return 'uk'
     
-    if en_score == ru_score and en_score == 0:
-        print("Warning: detect_language could not reliably determine language based on keywords/heuristics. Defaulting to 'ru'.")
-        return 'ru' 
-    elif en_score >= ru_score :
-        return 'en'
-    else: 
-        return 'ru'
+    # Handle ties or no strong signal - prioritizing based on score then falling back
+    if uk_score > 0 and uk_score >= ru_score and uk_score >= en_score: return 'uk'
+    if ru_score > 0 and ru_score >= en_score : return 'ru' # ru as a common Cyrillic fallback if uk is not clear
+    if en_score > 0 : return 'en'
+
+    # Default fallback if no language could be reliably determined
+    print("Warning: detect_language could not reliably determine language. Defaulting to 'en'.")
+    return 'en' 
 
 def parse_training_plan_from_string(original_content_str: str, main_table_title: str) -> Optional[TrainingPlanDetails]:
     print("WARNING: Old 'parse_training_plan_from_string' called. Ensure this is intended for legacy data.")

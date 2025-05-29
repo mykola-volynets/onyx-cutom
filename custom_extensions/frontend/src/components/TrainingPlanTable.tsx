@@ -92,9 +92,9 @@ const localizationConfig = {
     contentAvailability: "Наличие контента",
     source: "Источник информации",
     time: "Время",
-    timeUnitSingular: "ч",
-    timeUnitDecimalPlural: "ч", 
-    timeUnitGeneralPlural: "ч", 
+    timeUnitSingular: "ч", // Abbreviation
+    timeUnitDecimalPlural: "ч", // Abbreviation
+    timeUnitGeneralPlural: "ч", // Abbreviation
   },
   en: {
     moduleAndLessons: "Module and Lessons",
@@ -102,9 +102,19 @@ const localizationConfig = {
     contentAvailability: "Content Availability",
     source: "Information Source",
     time: "Time",
-    timeUnitSingular: "h",
-    timeUnitDecimalPlural: "h",
-    timeUnitGeneralPlural: "h",
+    timeUnitSingular: "h", // Abbreviation
+    timeUnitDecimalPlural: "h", // Abbreviation
+    timeUnitGeneralPlural: "h", // Abbreviation
+  },
+  uk: {
+    moduleAndLessons: "Модуль та уроки",
+    knowledgeCheck: "Перевірка знань",
+    contentAvailability: "Наявність контенту",
+    source: "Джерело інформації",
+    time: "Час",
+    timeUnitSingular: "год",
+    timeUnitDecimalPlural: "год", // for 2,3,4 hours or decimal values like 1.5
+    timeUnitGeneralPlural: "год", // for 0, 5-20 etc.
   },
 };
 
@@ -113,19 +123,56 @@ const getRussianHourUnit = (hours: number, units: typeof localizationConfig['ru'
   const h_mod10 = h_int % 10;
   const h_mod100 = h_int % 100;
 
-  if (hours !== h_int) { 
-    return units.timeUnitDecimalPlural;
-  }
-  if (h_mod100 >= 11 && h_mod100 <= 14) {
-    return units.timeUnitGeneralPlural;
-  }
-  if (h_mod10 === 1) {
+  // If all units are 'ч', this detailed logic isn't strictly necessary for 'ч'
+  // but kept for structural consistency if full words were used.
+  if (units.timeUnitSingular === "ч" && units.timeUnitDecimalPlural === "ч" && units.timeUnitGeneralPlural === "ч") {
     return units.timeUnitSingular;
   }
-  if (h_mod10 >= 2 && h_mod10 <= 4) {
-    return units.timeUnitDecimalPlural;
+
+  if (hours !== h_int) {  
+    return units.timeUnitDecimalPlural; // часа
   }
-  return units.timeUnitGeneralPlural;
+  if (h_mod100 >= 11 && h_mod100 <= 14) {
+    return units.timeUnitGeneralPlural; // часов
+  }
+  if (h_mod10 === 1) {
+    return units.timeUnitSingular; // час
+  }
+  if (h_mod10 >= 2 && h_mod10 <= 4) {
+    return units.timeUnitDecimalPlural; // часа
+  }
+  return units.timeUnitGeneralPlural; // часов
+};
+
+const getUkrainianHourUnit = (hours: number, units: typeof localizationConfig['uk']) => {
+  const h_int = Math.floor(hours);
+  const h_mod10 = h_int % 10;
+  const h_mod100 = h_int % 100;
+
+  if (hours !== h_int && hours > 0) { // For decimal numbers like 1.5, 2.5, 0.5
+    // Decimals usually take genitive singular "години" if value is not 1.
+    // Or genitive plural "годин" if it's like 0.X or X.0 where X > 1 and leads to plural.
+    // For simplicity, if timeUnitDecimalPlural is "години", it should cover most cases.
+    // If the number ends in 1 (e.g. 1.1, 2.1, but not 11.1), it might take singular.
+    // This can be complex. Let's use a simpler rule for decimals.
+    // For 1.X use singular "година"
+    // For others (0.X, 2.X, etc.) use "години" (timeUnitDecimalPlural)
+    if (h_int === 1 || (h_int === 0 && hours * 10 % 10 === 1 && hours * 100 % 100 !== 11) ) { // 1.X or 0.1 (but not 0.11)
+        return units.timeUnitSingular; // година
+    }
+    return units.timeUnitDecimalPlural; // години (covers 0.2-0.9, 2.X, etc.)
+  }
+
+  if (h_mod100 >= 11 && h_mod100 <= 14) {
+    return units.timeUnitGeneralPlural; // годин
+  }
+  if (h_mod10 === 1) {
+    return units.timeUnitSingular;    // година
+  }
+  if (h_mod10 >= 2 && h_mod10 <= 4) {
+    return units.timeUnitDecimalPlural; // години
+  }
+  return units.timeUnitGeneralPlural; // годин
 };
 
 
@@ -135,21 +182,31 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ initialData }) =>
   const sections = dataToDisplay?.sections;
   const mainTitle = dataToDisplay?.mainTitle;
 
-  const lang = dataToDisplay?.detectedLanguage === 'en' ? 'en' : 'ru';
+  const lang = dataToDisplay?.detectedLanguage === 'en' 
+    ? 'en' 
+    : dataToDisplay?.detectedLanguage === 'uk' 
+    ? 'uk' 
+    : 'ru';
   const localized = localizationConfig[lang];
 
 
   if (!dataToDisplay || !sections || sections.length === 0) {
-     return <div className="p-8 text-center">No training plan data available.</div>;
+      return <div className="p-8 text-center">No training plan data available.</div>;
   }
 
-  const formatHoursDisplay = (hours: number, language: 'ru' | 'en') => {
+  const formatHoursDisplay = (hours: number, language: 'ru' | 'en' | 'uk') => {
     if (hours <= 0) return '-';
     const currentUnits = localizationConfig[language];
     if (language === 'en') {
-      return `${hours}${hours === 1 ? currentUnits.timeUnitSingular : currentUnits.timeUnitGeneralPlural}`;
+      // Assuming 'h' for all English cases as per original structure
+      return `${hours}${currentUnits.timeUnitSingular}`; // or currentUnits.timeUnitGeneralPlural based on number
     }
-    return `${hours}${getRussianHourUnit(hours, currentUnits as typeof localizationConfig['ru'])}`;
+    if (language === 'ru') {
+      // Assuming 'ч' for all Russian cases
+      return `${hours}${getRussianHourUnit(hours, currentUnits as typeof localizationConfig['ru'])}`;
+    }
+    // Ukrainian
+    return `${hours} ${getUkrainianHourUnit(hours, currentUnits as typeof localizationConfig['uk'])}`;
   };
 
 
