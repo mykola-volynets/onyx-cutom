@@ -4,7 +4,16 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, FileText, Trash2, Pencil, ChevronDown, ChevronRight } from 'lucide-react'; // Replaced LinkIcon with Eye
+import { 
+  Eye, 
+  FileText, 
+  Trash2, 
+  Pencil, 
+  ChevronDown, 
+  ChevronRight, 
+  ArrowDownToLine, 
+  ListOrdered 
+} from 'lucide-react';
 import { ProjectListItem } from '@/types/trainingPlan'; 
 
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
@@ -19,7 +28,6 @@ const ProjectsTable: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
-  // Groups will be collapsed by default
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
   const router = useRouter();
 
@@ -40,11 +48,10 @@ const ProjectsTable: React.FC = () => {
       }
       const data: ProjectListItem[] = await response.json();
       setProjectsData(data);
-      // Initialize expandedProjects to ensure all are collapsed by default
       const initialExpansionState: Record<string, boolean> = {};
       data.forEach(project => {
         if (initialExpansionState[project.projectName] === undefined) {
-            initialExpansionState[project.projectName] = false; // Collapse all groups initially
+            initialExpansionState[project.projectName] = false; 
         }
       });
       setExpandedProjects(initialExpansionState);
@@ -86,8 +93,9 @@ const ProjectsTable: React.FC = () => {
       .replace(/--+/g, '-'); 
   }
 
-  const handlePdfClick = (projectId: number, microProductName: string | null | undefined) => {
-    const docNameSlug = slugify(microProductName);
+  const handlePdfClick = (projectId: number, item: ProjectListItem) => {
+    const nameForSlug = item.microproduct_name || item.design_template_name;
+    const docNameSlug = slugify(nameForSlug);
     const fullProxiedPdfUrl = `${CUSTOM_BACKEND_URL}/pdf/${projectId}/${docNameSlug}`;
     window.open(fullProxiedPdfUrl, '_blank');
   };
@@ -190,15 +198,15 @@ const ProjectsTable: React.FC = () => {
                     disabled={projectsData.length === 0}
                   />
                 </th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Project Name</th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm">Instance / Design Name</th>
+                <th className="w-full text-left py-3 px-4 uppercase font-semibold text-sm">Project Name / Instance</th>
+                {/* Action column headers with px-4 for more space */}
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">View</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">PDF</th>
+                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Download</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Edit</th>
               </tr>
             </thead>
             {Object.entries(groupedProjects).map(([projectName, entries], groupIndex) => {
-              const isCurrentlyExpanded = !!expandedProjects[projectName]; // Defaults to false if undefined
+              const isCurrentlyExpanded = !!expandedProjects[projectName]; 
               const projectIdsInGroup = entries.map(e => e.id).filter(id => typeof id === 'number');
               const areAllInGroupSelected = projectIdsInGroup.length > 0 && projectIdsInGroup.every(id => selectedProjectIds.includes(id));
               
@@ -224,7 +232,7 @@ const ProjectsTable: React.FC = () => {
                            checked={areAllInGroupSelected} onChange={handleSelectGroupChange} disabled={projectIdsInGroup.length === 0} 
                            onClick={(e) => e.stopPropagation()} />
                        </td>
-                      <td colSpan={5} className="text-left py-3 px-4 font-semibold"> {/* Adjusted colSpan */}
+                      <td colSpan={4} className="text-left py-3 px-4 font-semibold">
                         <div className="flex items-center">
                           {isCurrentlyExpanded ? <ChevronDown size={18} className="mr-2 expand-collapse-icon" /> : <ChevronRight size={18} className="mr-2 expand-collapse-icon" />}
                           {projectName} ({entries.length} instances)
@@ -237,7 +245,6 @@ const ProjectsTable: React.FC = () => {
                     const detailPageUrl = `/projects/view/${item.id}`; 
                     const isRowSelected = typeof item.id === 'number' && selectedProjectIds.includes(item.id);
                     
-                    // Apply consistent background for single-entry groups
                     const singleItemGroupBg = entries.length === 1 ? (groupIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white') : (itemIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50');
                     const itemRowClasses = `
                       project-item-row 
@@ -253,22 +260,42 @@ const ProjectsTable: React.FC = () => {
                                   checked={isRowSelected} disabled={typeof item.id !== 'number'}
                                   onChange={(e) => {if (typeof item.id === 'number') handleRowCheckboxChange(item.id, e.target.checked)}} />
                         </td>
-                        <td className={`text-left py-3 px-4 ${entries.length > 1 ? 'pl-10' : ''}`}>
-                          {entries.length === 1 ? item.projectName : ""}
+                        <td className={`w-full text-left py-3 px-4 ${entries.length > 1 ? 'pl-10' : ''}`}>
+                          {(() => {
+                            if (entries.length === 1) {
+                              return item.projectName;
+                            } else {
+                              const instanceDisplayName = item.microproduct_name || item.design_template_name || 'N/A';
+                              let typeIcon = null;
+
+                              if (item.design_microproduct_type === "Training Plan" || item.design_microproduct_type === "Course Module") {
+                                typeIcon = <ListOrdered size={16} className="mr-2 text-gray-500 flex-shrink-0" />;
+                              } else if (item.design_microproduct_type === "PDF Lesson") {
+                                typeIcon = <FileText size={16} className="mr-2 text-gray-500 flex-shrink-0" />;
+                              }
+                              
+                              return (
+                                <div className="flex items-center">
+                                  {typeIcon}
+                                  <span>{instanceDisplayName}</span>
+                                </div>
+                              );
+                            }
+                          })()}
                         </td>
-                        <td className="text-left py-3 px-4">{item.microproduct_name || item.design_template_name || 'N/A'}</td>
-                        <td className="text-center py-3 px-4">
+                         {/* Action cells with px-3 for a bit more space than px-2 */}
+                        <td className="text-center py-3 px-3">
                           <Link href={detailPageUrl} className="text-blue-500 hover:text-blue-700 inline-block">
-                            <Eye size={18} /> {/* Replaced LinkIcon with Eye */}
+                            <Eye size={18} />
                           </Link>
                         </td>
-                        <td className="text-center py-3 px-4">
-                            <button onClick={() => handlePdfClick(item.id, item.microproduct_name || item.design_template_name)}
+                        <td className="text-center py-3 px-3">
+                            <button onClick={() => handlePdfClick(item.id, item)}
                               className="text-red-500 hover:text-red-700 inline-block">
-                            <FileText size={18} />
+                            <ArrowDownToLine size={18} /> 
                           </button>
                         </td>
-                        <td className="text-center py-3 px-4">
+                        <td className="text-center py-3 px-3">
                             <button
                                 onClick={() => router.push(`/projects/edit/${item.id}`)}
                                 disabled={typeof item.id !== 'number'}
@@ -287,20 +314,13 @@ const ProjectsTable: React.FC = () => {
           </table>
         </div>
       )}
-       <style jsx>{`
+      <style jsx>{`
         .expanded-group-item-hidden {
           display: none;
         }
         .expanded-group-item-visible {
           display: table-row; 
         }
-        // Ensure these styles don't override display: table-row if you use them
-        // tr.project-item-row-expanded { 
-        //     display: table-row !important;
-        // }
-        // tr.project-item-row-collapsed { 
-        //     display: none !important;
-        // }
       `}</style>
     </div>
   );

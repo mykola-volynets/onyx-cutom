@@ -247,7 +247,7 @@ const AddToProjectPageComponent = () => {
                   <h3 className="text-md font-semibold text-gray-800 text-center truncate" title={template.template_name}>
                     {template.template_name}
                   </h3>
-                  <p className="text-xs text-gray-500 text-center">({template.component_name})</p>
+                  
                   {selectedDesignTemplateId === template.id.toString() && (
                      <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full p-0.5"> {/* Adjusted padding for smaller icon */}
                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"> {/* Adjusted size */}

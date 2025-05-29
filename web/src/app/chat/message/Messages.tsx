@@ -7,9 +7,8 @@ import {
   FiChevronLeft,
   FiTool,
   FiGlobe,
-  // FiFlask was removed as it's not available
 } from "react-icons/fi";
-import { TbWand } from "react-icons/tb";
+import { HiOutlineSparkles } from "react-icons/hi2"; // Changed from TbWand
 import { FlaskConical } from "lucide-react"; // Added for the "Make into Product" lab icon
 import { FeedbackType } from "../types";
 import React, {
@@ -527,7 +526,7 @@ export const AIMessage = ({
         id={isComplete ? "onyx-ai-message" : undefined}
         ref={trackedElementRef}
         className={`py-5  ml-4 lg:px-5 relative flex
-         
+          
           ${removePadding && "!pl-24 -mt-12"}`}
       >
         <div
@@ -758,7 +757,7 @@ export const AIMessage = ({
                             flex md:flex-row gap-x-0.5 mt-1
                             transition-transform duration-300 ease-in-out
                             transform opacity-100 "
-                        `}
+                          `}
                         >
                           <TooltipGroup>
                             <div className="flex justify-start w-full gap-x-0.5">
@@ -825,10 +824,10 @@ export const AIMessage = ({
                                 />
                               </CustomTooltip>
                             )}
-                             {/* "Add to Projects" button with TbWand icon and CustomTooltip */}
-                             <CustomTooltip showTick line content="Create Project">
+                              {/* "Add to Projects" button with HiOutlineSparkles icon and CustomTooltip */}
+                              <CustomTooltip showTick line content="Create Project">
                                 <HoverableIcon
-                                  icon={<TbWand size={18} />} 
+                                  icon={<HiOutlineSparkles size={18} />} 
                                   onClick={handleAddToProjects}
                                 />
                               </CustomTooltip>
@@ -923,10 +922,10 @@ export const AIMessage = ({
                                 />
                               </CustomTooltip>
                             )}
-                             {/* "Add to Projects" button with TbWand icon and CustomTooltip - also for hover state */}
-                             <CustomTooltip showTick line content="Create Project">
+                              {/* "Add to Projects" button with HiOutlineSparkles icon and CustomTooltip - also for hover state */}
+                              <CustomTooltip showTick line content="Create Project">
                                 <HoverableIcon
-                                  icon={<TbWand size={18} />} 
+                                  icon={<HiOutlineSparkles size={18} />} 
                                   onClick={handleAddToProjects}
                                 />
                               </CustomTooltip>
