@@ -990,7 +990,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             * `1`: Reserved for the main title of a document, usually handled by `lessonTitle`. If the input text contains a clear main title that is also part of the body, use level 1.
             * `2`: Major Section Header (e.g., "Understanding X", "Typical Mistakes"). These should use `iconName: "info"`.
             * `3`: Sub-section Header or Mini-Title. When used as a mini-title inside a numbered list item (see `numbered_list` instruction below), it should not have an icon.
-            * `4`: Special Call-outs (e.g., "Module Goal", "Important Note"). Typically use `iconName: "target"` for goals, or lesson objectives..
+            * `4`: Special Call-outs (e.g., "Module Goal", "Important Note"). Typically use `iconName: "target"` for goals, or lesson objectives.
         * `text` (string): Headline text.
         * `iconName` (string, optional): Based on level and context as described above.
         * `isImportant` (boolean, optional): Set to `true` for Level 4 headlines like "Module Goal" or "Important Note". If `true`, this headline AND its *immediately following single block* (typically a `bullet_list` or `paragraph`) will be grouped into a visually distinct highlighted box.
@@ -1024,14 +1024,8 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
     * Ensure correct `level` for headlines. Section headers are `level: 2`. Mini-titles in lists are `level: 3`.
     * Icons: `info` for H2. `target` or `award` for H4 `isImportant`. `chevronRight` for general bullet lists. No icons for H3 mini-titles.
     * Permissible Icon Names: `info`, `target`, `award`, `chevronRight`, `bullet-circle`, `compass`.
-    ---
-    CRUCIAL JSON Format Example:
-    (Your `DEFAULT_PDF_LESSON_JSON_EXAMPLE_FOR_LLM` should be updated to reflect a structure that would render like your target. **Include an example of a headline with `isImportant: true` followed by a list, and bullet lists using the `check` icon.**)
-    ---
-    Raw text to parse:
-    (Raw text is appended here)
-    ---
-    Return ONLY the JSON object.
+
+    Return ONLY the JSON object. 
             """
         elif selected_design_template.component_name == COMPONENT_NAME_TRAINING_PLAN:
             target_content_model = TrainingPlanDetails

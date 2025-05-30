@@ -290,20 +290,33 @@
             <symbol id="icon-info" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></symbol>
             <symbol id="icon-award" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0" /><path d="M12 15l3.4 5.89l1.598 -3.233l3.598 .232l-2.5 -2.766l.304 -3.733l-3.4 -1.89l-3.4 1.89l.304 3.733l-2.5 2.766l3.598 -.233l1.598 3.232z" /></symbol>
             <symbol id="icon-target" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"> <path stroke="none" d="M0 0h24v24H0z" fill="none"></path> <circle cx="12" cy="12" r="1"></circle> <circle cx="12" cy="12" r="5"></circle> <circle cx="12" cy="12" r="9"></circle> </symbol>
-            <symbol id="icon-check" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"> <path stroke="none" d="M0 0h24v24H0z" fill="none"/> <path d="M5 12l5 5l10 -10" /> </symbol>
+            <symbol id="icon-check" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"> <path stroke="none" d="M0 0h24v24H0z" fill="none"/> <path d="M9 6l6 6l-6 6" /> </symbol>
             <symbol id="icon-chevronRight" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></symbol>
         </defs>
     </svg>
 
     <div class="pdf-container">
         {% set lesson_data = details.details %}
+        
+        {# MODIFIED: More general check for first block duplication #}
         {% set first_block_is_title_duplicate = false %}
-        {% if lesson_data is mapping and lesson_data.contentBlocks and lesson_data.contentBlocks|length > 0 %}
+        {# Ensure lesson_data and lessonTitle exist to avoid errors and pointless checks #}
+        {% if lesson_data is mapping and lesson_data.lessonTitle and lesson_data.contentBlocks and lesson_data.contentBlocks|length > 0 %}
             {% set first_block = lesson_data.contentBlocks[0] %}
-            {% if first_block.type == 'headline' and first_block.level == 1 and first_block.text|trim == lesson_data.lessonTitle|trim %}
-                {% set first_block_is_title_duplicate = true %}
+            {# Check if the first block is a dictionary (mapping) #}
+            {% if first_block is mapping %}
+                {# Safely get the 'text' attribute from the first block #}
+                {% set first_block_text = first_block.get('text') %}
+                {# Proceed if 'text' field exists and is not None #}
+                {% if first_block_text is not none %}
+                    {# Compare case-insensitively, ensuring both values are treated as strings #}
+                    {% if (first_block_text|string)|trim|lower == (lesson_data.lessonTitle|string)|trim|lower %}
+                        {% set first_block_is_title_duplicate = true %}
+                    {% endif %}
+                {% endif %}
             {% endif %}
         {% endif %}
+        {# End of MODIFIED section #}
 
         {% if lesson_data is mapping and lesson_data.lessonTitle is defined %}
             <div class="lesson-title-section">
@@ -378,9 +391,9 @@
                     {% if block_type == 'headline' %}
                         <div class="headline-block h{{ level }}"
                              style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% endif %}">
-                             {% if level == 4 and is_important %}
-                                  {{ render_icon_svg_macro(block_data.iconName, 'h4-important' ) }}
-                             {% endif %}
+                            {% if level == 4 and is_important %}
+                                 {{ render_icon_svg_macro(block_data.iconName, 'h4-important' ) }}
+                            {% endif %}
                             <span>{{ block_data.text | default('') }}</span>
                         </div>
                     {% elif block_type == 'paragraph' %}
@@ -428,7 +441,9 @@
                 {% set is_last_block_overall = loop_index == (lesson_data.contentBlocks | length) - 1 %}
 
                 {% if loop_index == 0 and first_block_is_title_duplicate %}
+                    {# This block is intentionally left empty to skip rendering the first block if it's a duplicate #}
                 {% elif next_block_in_box_content[0] %}
+                    {# This block was already rendered as part of a mini-section-box with its preceding H4 #}
                     {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(false) %}
                 {% else %}
                     {% set is_important_headline = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
