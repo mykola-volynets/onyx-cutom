@@ -1,9 +1,12 @@
 // custom_extensions/frontend/src/components/TrainingPlanTable.tsx
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react'; // Added useEffect for potential logging
+import Link from 'next/link';
 import { HelpCircle } from 'lucide-react';
-import { TrainingPlanData, Section as SectionType, Lesson as LessonType, StatusInfo } from '@/types/trainingPlan';
+import { TrainingPlanData, Section as SectionType, Lesson as LessonType } from '@/types/trainingPlan';
+import { ProjectListItem, StatusInfo as ProductStatusInfo } from '@/types/products'; 
+
 
 // --- Custom SVG Icons ---
 const NewPieChartIcon = ({ color = '#FF1414', className = '' }) => (
@@ -28,12 +31,12 @@ const editingInputTitleClass = `${editingInputClassBase} text-base font-semibold
 const editingInputMainTitleClass = `${editingInputClassBase} text-xl md:text-2xl font-bold bg-gray-700 text-white`;
 
 const StatusBadge = ({
-    type, text, columnContext, isEditing, onTextChange, path
+  type, text, columnContext, isEditing, onTextChange, path
 }: {
-    type: string; text: string; columnContext?: 'check' | 'contentAvailable';
-    isEditing?: boolean;
-    onTextChange?: (path: (string | number)[], newValue: string | number | boolean) => void;
-    path?: (string | number)[];
+  type: string; text: string; columnContext?: 'check' | 'contentAvailable';
+  isEditing?: boolean;
+  onTextChange?: (path: (string | number)[], newValue: string | number | boolean) => void;
+  path?: (string | number)[];
 }) => {
   const iconColor = '#FF1414';
   const defaultIconSize = "w-4 h-4";
@@ -63,6 +66,8 @@ interface TrainingPlanTableProps {
   dataToDisplay?: TrainingPlanData | null;
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newValue: string | number | boolean) => void;
+  allUserMicroproducts?: ProjectListItem[]; 
+  parentProjectName?: string;                
 }
 
 const localizationConfig = {
@@ -93,8 +98,8 @@ const formatHoursDisplay = (hours: number | string, language: 'ru' | 'en' | 'uk'
     const numHours = Number(hours);
     if (isNaN(numHours)) return isEditingContext ? "" : "-";
     if (numHours <= 0 && !isEditingContext) return '-';
-    if (isEditingContext && numHours === 0 && (typeof hours === 'number' || hours === "0")) return "0"; // Show "0" in input
-    if (isEditingContext && hours === "") return ""; // Allow empty string in input
+    if (isEditingContext && numHours === 0 && (typeof hours === 'number' || hours === "0")) return "0"; 
+    if (isEditingContext && hours === "") return ""; 
 
     const numStr = numHours % 1 === 0 ? numHours.toFixed(0) : numHours.toFixed(1);
     if (language === 'en') { return `${numStr}${localized.timeUnitSingular}`; }
@@ -102,10 +107,73 @@ const formatHoursDisplay = (hours: number | string, language: 'ru' | 'en' | 'uk'
     return `${numStr} ${getUkrainianHourUnit(numHours, localized as typeof localizationConfig['uk'])}`;
 };
 
-// Define a maximum length for the source text before truncating
-const MAX_SOURCE_LENGTH = 25; // You can adjust this value as needed
+const MAX_SOURCE_LENGTH = 25;
 
-const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ dataToDisplay, isEditing, onTextChange }) => {
+const findMicroproductByTitle = (
+  titleToMatch: string | undefined | null, 
+  parentProjectName: string | undefined,   
+  allUserMicroproducts: ProjectListItem[] | undefined 
+): ProjectListItem | undefined => {
+  
+  // Uncomment these logs in your browser's developer console if links are still not working.
+  // console.log(`[findMicroproductByTitle] INPUTS -> lessonTitle: "${titleToMatch}", parentProjectName: "${parentProjectName}"`);
+  // if (allUserMicroproducts) {
+  //   console.log(`[findMicroproductByTitle] Searching in ${allUserMicroproducts.length} microproducts:`, JSON.parse(JSON.stringify(allUserMicroproducts)));
+  // } else {
+  //   console.log(`[findMicroproductByTitle] allUserMicroproducts is undefined.`);
+  // }
+
+  if (!allUserMicroproducts || !parentProjectName || !titleToMatch) {
+    // console.log(`[findMicroproductByTitle] EXIT: Missing one or more required parameters.`);
+    return undefined;
+  }
+
+  const trimmedTitleToMatch = titleToMatch.trim();
+  const trimmedParentProjectName = parentProjectName.trim();
+
+  const found = allUserMicroproducts.find(
+    (mp) => {
+      // The ProjectListItem type defines 'microProductName' (camelCase).
+      // However, your logs showed the data arriving with 'microproduct_name' (snake_case).
+      // We will robustly check the camelCase version first, then the snake_case version.
+      const mpMicroName = (mp.microProductName !== undefined && mp.microProductName !== null)
+                          ? mp.microProductName 
+                          : (mp as any)["microproduct_name"]; // Accessing snake_case as a fallback
+
+      const projectMatch = mp.projectName?.trim() === trimmedParentProjectName;
+      const nameMatch = mpMicroName?.trim() === trimmedTitleToMatch;
+      
+      // Uncomment for detailed per-item checking:
+      // if (projectMatch) { 
+      //   console.log(`  [findMicroproductByTitle] Checking item in project "${mp.projectName}": ID=${mp.id}, MicroProdName="${mpMicroName}" vs LessonTitle="${trimmedTitleToMatch}" -> NameMatch=${nameMatch}`);
+      // }
+      return projectMatch && nameMatch;
+    }
+  );
+
+  // console.log(`[findMicroproductByTitle] RESULT for "${trimmedTitleToMatch}":`, found ? `Found ID ${found.id}` : 'Not found');
+  return found;
+};
+
+
+const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ 
+  dataToDisplay, 
+  isEditing, 
+  onTextChange,
+  allUserMicroproducts, 
+  parentProjectName     
+}) => {
+  
+  // Uncomment this useEffect to see the props when the component (re)renders.
+  // useEffect(() => {
+  //   console.log("[TrainingPlanTableComponent] PROPS RECEIVED:");
+  //   console.log("  > dataToDisplay (mainTitle):", dataToDisplay?.mainTitle);
+  //   console.log("  > isEditing:", isEditing);
+  //   console.log("  > allUserMicroproducts (count):", allUserMicroproducts?.length);
+  //   console.log("  > parentProjectName:", parentProjectName);
+  // }, [dataToDisplay, isEditing, allUserMicroproducts, parentProjectName]);
+
+
   const iconBaseColor = '#FF1414';
   const sections = dataToDisplay?.sections;
   const mainTitle = dataToDisplay?.mainTitle;
@@ -119,13 +187,13 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ dataToDisplay, is
   const handleNumericInputChange = (
     path: (string|number)[],
     event: React.ChangeEvent<HTMLInputElement>,
-    autoCalcPath?: (string|number)[] // Path to autoCalculateHours field
+    autoCalcPath?: (string|number)[] 
   ) => {
     if (onTextChange) {
         const valueStr = event.target.value;
         const numValue = parseFloat(valueStr);
-        onTextChange(path, valueStr === "" ? "" : (isNaN(numValue) ? 0 : numValue)); // Send string for empty, or number
-        if (autoCalcPath && valueStr !== "") { // If user types, assume manual override
+        onTextChange(path, valueStr === "" ? "" : (isNaN(numValue) ? 0 : numValue)); 
+        if (autoCalcPath && valueStr !== "") { 
             onTextChange(autoCalcPath, false);
         }
     }
@@ -189,17 +257,17 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ dataToDisplay, is
                 <div className="col-span-10 sm:col-span-1 flex items-center justify-start space-x-2 font-semibold px-2">
                   <div className="w-4 flex justify-center"> <NewClockIcon color={iconBaseColor} className="w-4 h-4"/> </div>
                   {isEditing && onTextChange ? (
-                       <input
-                         type="number" step="0.1"
-                         value={section.totalHours === null || section.totalHours === undefined ? '' : section.totalHours}
-                         onChange={(e) => handleNumericInputChange(
-                             ['sections', sectionIdx, 'totalHours'], e,
-                             ['sections', sectionIdx, 'autoCalculateHours']
-                         )}
-                         className={`${editingInputSmallClass} w-16 text-right`}
-                         placeholder="Hrs"
-                         title={section.autoCalculateHours ? "Auto-calculated. Editing sets to manual." : "Manual hours"}
-                       />
+                      <input
+                        type="number" step="0.1"
+                        value={section.totalHours === null || section.totalHours === undefined ? '' : section.totalHours}
+                        onChange={(e) => handleNumericInputChange(
+                            ['sections', sectionIdx, 'totalHours'], e,
+                            ['sections', sectionIdx, 'autoCalculateHours']
+                        )}
+                        className={`${editingInputSmallClass} w-16 text-right`}
+                        placeholder="Hrs"
+                        title={section.autoCalculateHours ? "Auto-calculated. Editing sets to manual." : "Manual hours"}
+                      />
                   ) : (
                     <span style={{ color: iconBaseColor }} className="flex-grow text-left">
                       {formatHoursDisplay(section.totalHours, lang, localized, false)}
@@ -207,31 +275,46 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ dataToDisplay, is
                   )}
                 </div>
               </div>
-              {(section.lessons || []).map((lesson: LessonType, lessonIndex: number) => (
-                <div key={lesson.id || `lesson-${sectionIdx}-${lessonIndex}`} className="grid grid-cols-10 gap-0 p-4 items-center border-t border-gray-300 hover:bg-gray-50 transition-colors duration-150 min-h-[50px]">
-                  <div className="col-span-10 sm:col-span-4 text-gray-800 pr-2 border-r border-gray-400">
-                    {isEditing && onTextChange ? (<input type="text" value={lesson.title} onChange={(e) => handleGenericInputChange(['sections', sectionIdx, 'lessons', lessonIndex, 'title'], e)} className={editingInputClass} placeholder="Lesson Title"/>) : lesson.title }
-                  </div>
-                  <div className="col-span-5 sm:col-span-2 flex justify-start px-2 border-r border-gray-400">
-                    <StatusBadge type={lesson.check.type} text={lesson.check.text} columnContext="check" isEditing={isEditing} onTextChange={onTextChange} path={['sections', sectionIdx, 'lessons', lessonIndex, 'check', 'text']}/>
-                  </div>
-                  <div className="col-span-5 sm:col-span-1 flex justify-start px-2 border-r border-gray-400">
-                    <StatusBadge type={lesson.contentAvailable.type} text={lesson.contentAvailable.text} columnContext="contentAvailable" isEditing={isEditing} onTextChange={onTextChange} path={['sections', sectionIdx, 'lessons', lessonIndex, 'contentAvailable', 'text']}/>
-                  </div>
-                  <div className="col-span-10 sm:col-span-2 text-gray-600 px-2 border-r border-gray-400">
+              {(section.lessons || []).map((lesson: LessonType, lessonIndex: number) => {
+                const matchingMicroproduct = findMicroproductByTitle(lesson.title, parentProjectName, allUserMicroproducts);
+                
+                // Uncomment this log to see the result for each lesson directly before rendering
+                // console.log(`[TrainingPlanTable] For lesson: "${lesson.title}" (in parent "${parentProjectName}") - Matching Product:`, matchingMicroproduct ? `ID ${matchingMicroproduct.id}, Name: "${(matchingMicroproduct as any).microproduct_name || matchingMicroproduct.microProductName}"` : "None");
+
+                return (
+                  <div key={lesson.id || `lesson-${sectionIdx}-${lessonIndex}`} className="grid grid-cols-10 gap-0 p-4 items-center border-t border-gray-300 hover:bg-gray-50 transition-colors duration-150 min-h-[50px]">
+                    <div className="col-span-10 sm:col-span-4 text-gray-800 pr-2 border-r border-gray-400">
                       {isEditing && onTextChange ? (
-                          <input type="text" value={lesson.source} onChange={(e) => handleGenericInputChange(['sections', sectionIdx, 'lessons', lessonIndex, 'source'], e)} className={editingInputSmallClass} placeholder="Source"/>
+                        <input type="text" value={lesson.title} onChange={(e) => handleGenericInputChange(['sections', sectionIdx, 'lessons', lessonIndex, 'title'], e)} className={editingInputClass} placeholder="Lesson Title"/>
+                      ) : matchingMicroproduct ? (
+                        <Link href={`/projects/view/${matchingMicroproduct.id}`} className="text-blue-600 hover:underline">
+                          {lesson.title}
+                        </Link>
                       ) : (
-                          <span title={lesson.source || ''}>{truncateText(lesson.source, MAX_SOURCE_LENGTH)}</span>
+                        lesson.title 
                       )}
+                    </div>
+                    <div className="col-span-5 sm:col-span-2 flex justify-start px-2 border-r border-gray-400">
+                      <StatusBadge type={lesson.check.type} text={lesson.check.text} columnContext="check" isEditing={isEditing} onTextChange={onTextChange} path={['sections', sectionIdx, 'lessons', lessonIndex, 'check', 'text']}/>
+                    </div>
+                    <div className="col-span-5 sm:col-span-1 flex justify-start px-2 border-r border-gray-400">
+                      <StatusBadge type={lesson.contentAvailable.type} text={lesson.contentAvailable.text} columnContext="contentAvailable" isEditing={isEditing} onTextChange={onTextChange} path={['sections', sectionIdx, 'lessons', lessonIndex, 'contentAvailable', 'text']}/>
+                    </div>
+                    <div className="col-span-10 sm:col-span-2 text-gray-600 px-2 border-r border-gray-400">
+                        {isEditing && onTextChange ? (
+                            <input type="text" value={lesson.source} onChange={(e) => handleGenericInputChange(['sections', sectionIdx, 'lessons', lessonIndex, 'source'], e)} className={editingInputSmallClass} placeholder="Source"/>
+                        ) : (
+                            <span title={lesson.source || ''}>{truncateText(lesson.source, MAX_SOURCE_LENGTH)}</span>
+                        )}
+                    </div>
+                    <div className="col-span-10 sm:col-span-1 flex items-center justify-start space-x-2 text-gray-500 px-2">
+                      <div className="w-4 flex justify-center"> <NewClockIcon color={iconBaseColor} className="w-4 h-4" /> </div>
+                      {isEditing && onTextChange ? (<input type="number" step="0.1" value={lesson.hours || 0} onChange={(e) => handleNumericInputChange(['sections', sectionIdx, 'lessons', lessonIndex, 'hours'], e)} className={`${editingInputSmallClass} w-16 text-right`} placeholder="Hrs"/>
+                      ) : ( <span className="flex-grow text-left">{formatHoursDisplay(lesson.hours, lang, localized, false)}</span> )}
+                    </div>
                   </div>
-                  <div className="col-span-10 sm:col-span-1 flex items-center justify-start space-x-2 text-gray-500 px-2">
-                    <div className="w-4 flex justify-center"> <NewClockIcon color={iconBaseColor} className="w-4 h-4" /> </div>
-                    {isEditing && onTextChange ? (<input type="number" step="0.1" value={lesson.hours || 0} onChange={(e) => handleNumericInputChange(['sections', sectionIdx, 'lessons', lessonIndex, 'hours'], e)} className={`${editingInputSmallClass} w-16 text-right`} placeholder="Hrs"/>
-                    ) : ( <span className="flex-grow text-left">{formatHoursDisplay(lesson.hours, lang, localized, false)}</span> )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </React.Fragment>
           ))}
         </div>
