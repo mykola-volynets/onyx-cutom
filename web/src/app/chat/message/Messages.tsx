@@ -9,7 +9,7 @@ import {
   FiGlobe,
 } from "react-icons/fi";
 import { HiOutlineSparkles } from "react-icons/hi2"; // Changed from TbWand
-import { FlaskConical } from "lucide-react"; // Added for the "Make into Product" lab icon
+import { LayoutTemplate } from "lucide-react"; // Changed from FlaskConical for the "Make into Product" lab icon
 import { FeedbackType } from "../types";
 import React, {
   useCallback,
@@ -835,7 +835,7 @@ export const AIMessage = ({
                             {/* "Make into Product" button with FlaskConical icon from lucide-react */}
                             <CustomTooltip showTick line content="Make into Product">
                               <HoverableIcon
-                                icon={<FlaskConical size={17} />} 
+                                icon={<LayoutTemplate size={17} />}
                                 onClick={handleOpenMakeIntoProductModal}
                               />
                             </CustomTooltip>
@@ -932,7 +932,7 @@ export const AIMessage = ({
                             {/* "Make into Product" button - also for hover state */}
                             <CustomTooltip showTick line content="Make into Product">
                               <HoverableIcon
-                                icon={<FlaskConical size={17} />}
+                                icon={<LayoutTemplate size={17} />}
                                 onClick={handleOpenMakeIntoProductModal}
                               />
                             </CustomTooltip>

@@ -8,7 +8,7 @@ import {
   Eye, 
   FileText, 
   Trash2, 
-  Pencil, 
+  // Pencil, // Removed as the Edit column is gone
   ChevronDown, 
   ChevronRight, 
   ArrowDownToLine, 
@@ -29,7 +29,7 @@ const ProjectsTable: React.FC = () => {
   const [selectedProjectIds, setSelectedProjectIds] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
-  const router = useRouter();
+  const router = useRouter(); // Keep router if other navigation is used, or remove if not needed
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -199,10 +199,9 @@ const ProjectsTable: React.FC = () => {
                   />
                 </th>
                 <th className="w-full text-left py-3 px-4 uppercase font-semibold text-sm">Project Name / Instance</th>
-                {/* Action column headers with px-4 for more space */}
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">View</th>
                 <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Download</th>
-                <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Edit</th>
+                {/* <th className="text-center py-3 px-4 uppercase font-semibold text-sm">Edit</th> Removed Edit Header */}
               </tr>
             </thead>
             {Object.entries(groupedProjects).map(([projectName, entries], groupIndex) => {
@@ -232,7 +231,8 @@ const ProjectsTable: React.FC = () => {
                            checked={areAllInGroupSelected} onChange={handleSelectGroupChange} disabled={projectIdsInGroup.length === 0} 
                            onClick={(e) => e.stopPropagation()} />
                        </td>
-                      <td colSpan={4} className="text-left py-3 px-4 font-semibold">
+                       {/* Adjusted colSpan from 4 to 3 */}
+                      <td colSpan={3} className="text-left py-3 px-4 font-semibold"> 
                         <div className="flex items-center">
                           {isCurrentlyExpanded ? <ChevronDown size={18} className="mr-2 expand-collapse-icon" /> : <ChevronRight size={18} className="mr-2 expand-collapse-icon" />}
                           {projectName} ({entries.length} instances)
@@ -283,7 +283,6 @@ const ProjectsTable: React.FC = () => {
                             }
                           })()}
                         </td>
-                         {/* Action cells with px-3 for a bit more space than px-2 */}
                         <td className="text-center py-3 px-3">
                           <Link href={detailPageUrl} className="text-blue-500 hover:text-blue-700 inline-block">
                             <Eye size={18} />
@@ -295,9 +294,10 @@ const ProjectsTable: React.FC = () => {
                             <ArrowDownToLine size={18} /> 
                           </button>
                         </td>
+                        {/* Removed Edit cell 
                         <td className="text-center py-3 px-3">
                             <button
-                                onClick={() => router.push(`/projects/edit/${item.id}`)}
+                                onClick={() => router.push(`/projects/edit/${item.id}`)} // router is still defined if needed elsewhere
                                 disabled={typeof item.id !== 'number'}
                                 className={`text-blue-600 hover:text-blue-800 ${typeof item.id !== 'number' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 title="Edit Project Instance"
@@ -305,6 +305,7 @@ const ProjectsTable: React.FC = () => {
                                 <Pencil size={18} />
                             </button>
                         </td>
+                        */}
                       </tr>
                     );
                   })}

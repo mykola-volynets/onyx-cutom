@@ -6,7 +6,7 @@ import React, {
   forwardRef,
   useContext,
   useCallback,
-  useState,
+  useState, // Keep useState
 } from "react";
 import Link from "next/link";
 import {
@@ -22,7 +22,7 @@ import { Folder } from "../folders/interfaces";
 import { SettingsContext } from "@/components/settings/SettingsProvider";
 
 import {
-  DocumentIcon2,
+  // DocumentIcon2, // No longer needed here if Prompt Shortcuts moves
   KnowledgeGroupIcon,
   NewChatIcon,
 } from "@/components/icons/icons";
@@ -53,11 +53,11 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CircleX, PinIcon, ChevronDown, ChevronRight, Settings2, UserCog } from "lucide-react";
+import { CircleX, PinIcon, ChevronDown, ChevronRight } from "lucide-react"; // Removed Settings2, UserCog
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { TruncatedText } from "@/components/ui/truncatedText";
 
-import { FiPackage, FiSliders } from "react-icons/fi";
+import { FiPackage } from "react-icons/fi"; // Removed FiSliders
 
 interface HistorySidebarProps {
   liveAssistant?: Persona | null;
@@ -180,7 +180,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
       reset = () => null,
       setShowAssistantsModal = () => null,
       toggled,
-      page,
+      page, // page prop is still used for handleNewChat and LogoWithText
       existingChats,
       currentChatSession,
       folders,
@@ -195,11 +195,12 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
   ) => {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const { user, toggleAssistantPinnedStatus } = useUser();
+    const { toggleAssistantPinnedStatus } = useUser(); // user object is not directly used here anymore for preferences
     const { refreshAssistants, pinnedAssistants, setPinnedAssistants } =
       useAssistants();
 
-    const [isAdminOpen, setIsAdminOpen] = useState(false);
+    // New state for Assistants collapsible section
+    const [isAssistantsOpen, setIsAssistantsOpen] = useState(true); // Default to open
 
     const currentChatId = currentChatSession?.id;
 
@@ -252,11 +253,16 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
       router.push(newChatUrl);
     }, [reset, page, currentChatSession, router]);
 
-    const renderAssistantsSection = (isNested: boolean) => (
+    // renderAssistantsSection now takes one argument for styling, or could be refactored
+    // For simplicity, assuming isNested=true styling (compact) is desired within its own collapsible
+    const renderAssistantsSection = (isCompactStyle: boolean) => (
         <>
-            <div className={`flex font-normal text-sm gap-x-2 leading-normal text-text-500/80 dark:text-[#D4D4D4] items-center font-normal leading-normal ${isNested ? "px-1 mb-1" : "px-4"}`}>
-            Assistants
-            </div>
+            {/* Title styling will now be part of the collapsible toggle, not here.
+                Or, if this function provides its own title, adjust padding:
+            */}
+            {/* <div className={`flex font-normal text-sm gap-x-2 leading-normal text-text-500/80 dark:text-[#D4D4D4] items-center font-normal leading-normal ${isCompactStyle ? "px-1 mb-1" : "px-4 mb-1"}`}>
+                Assistants
+            </div> */}
             <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -269,7 +275,8 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 )}
                 strategy={verticalListSortingStrategy}
             >
-                <div className={`flex flex-col gap-y-1 ${isNested ? "px-0" : "px-0 mr-4 mt-1"}`}>
+                {/* Apply compact styling for content within the new collapsible */}
+                <div className={`flex flex-col gap-y-1 ${isCompactStyle ? "px-0" : "px-0 mr-4 mt-1"}`}>
                 {pinnedAssistants.map((assistant: Persona) => (
                     <SortableAssistant
                     key={assistant.id === 0 ? "assistant-0" : assistant.id}
@@ -296,7 +303,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             </DndContext>
             {!pinnedAssistants.some((a) => a.id === liveAssistant?.id) &&
             liveAssistant && (
-                <div className={`w-full mt-1 ${isNested ? "" : "pr-4"}`}>
+                <div className={`w-full mt-1 ${isCompactStyle ? "" : "pr-4"}`}>
                 <SortableAssistant
                     pinned={false}
                     assistant={liveAssistant}
@@ -319,11 +326,11 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 </div>
             )}
 
-            <div className={`w-full mt-1 ${isNested ? "" : "px-4"}`}>
+            <div className={`w-full mt-1 ${isCompactStyle ? "px-0" : "px-4"}`}>
             <button
                 aria-label="Explore Assistants"
                 onClick={() => setShowAssistantsModal(true)}
-                className={`w-full cursor-pointer text-black dark:text-[#D4D4D4] hover:bg-background-chat-hover flex items-center gap-x-2 py-1 px-2 rounded-md ${isNested ? "text-sm" : "text-base"}`}
+                className={`w-full cursor-pointer text-black dark:text-[#D4D4D4] hover:bg-background-chat-hover flex items-center gap-x-2 py-1 px-2 rounded-md ${isCompactStyle ? "text-sm" : "text-base"}`}
             >
                 Explore Assistants
             </button>
@@ -359,7 +366,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             />
           </div>
 
-          {/* Top-level navigation items */}
+          {/* Top-level navigation items & new Assistants collapsible */}
           <div className="px-4 px-1 -mx-2 gap-y-1 flex-col text-text-history-sidebar-button flex pt-4"> {/* Added pt-4 for spacing from logo */}
             <Link
               className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
@@ -406,84 +413,42 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
               </p>
             </Link>
             
-            {/* Admin toggle section - only shown on "chat" page */}
-            {page === "chat" && (
-              <div className="mt-1">
-                <button
-                  onClick={() => setIsAdminOpen(!isAdminOpen)}
-                  className="w-full flex items-center justify-between px-2 py-1 group rounded-md hover:bg-accent-background-hovered cursor-pointer transition-all duration-150"
-                  aria-expanded={isAdminOpen}
-                >
-                  <div className="flex items-center gap-x-2">
-                    <UserCog size={18} className="flex-none text-text-history-sidebar-button" />
-                    <p className="my-auto flex font-normal items-center text-base">
-                      Admin
-                    </p>
-                  </div>
-                  {isAdminOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                </button>
+            {/* New Assistants Collapsible Section */}
+            <div className="mt-1">
+              <button
+                onClick={() => setIsAssistantsOpen(!isAssistantsOpen)}
+                className="w-full flex items-center justify-between px-2 py-1 group rounded-md hover:bg-accent-background-hovered cursor-pointer transition-all duration-150"
+                aria-expanded={isAssistantsOpen}
+              >
+                <div className="flex items-center gap-x-2">
+                  {/* You might want an icon for Assistants here, e.g., a generic 'list' or 'star' icon */}
+                  {/* <UserCog size={18} className="flex-none text-text-history-sidebar-button" />  Re-purpose or add new icon */}
+                  <p className="my-auto flex font-normal items-center text-base">
+                    Assistants
+                  </p>
+                </div>
+                {isAssistantsOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+              </button>
 
-                {isAdminOpen && (
-                  <div className="pl-3 mt-1 space-y-1">
-                    <Link
-                      className="w-full pl-2 pr-1 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
-                      href="/custom-projects-ui/pipelines"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <FiSliders size={18} className="flex-none text-text-history-sidebar-button" />
-                      <p className="my-auto flex font-normal items-center text-sm">
-                        Products
-                      </p>
-                    </Link>
-
-                    <Link
-                      className="w-full pl-2 pr-1 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
-                      href="/custom-projects-ui/admin/design-templates"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Settings2 size={18} className="flex-none text-text-history-sidebar-button" /> 
-                      <p className="my-auto flex font-normal items-center text-sm">
-                        Templates (Designs)
-                      </p>
-                    </Link>
-                    
-                    {user?.preferences?.shortcut_enabled && (
-                      <Link
-                        className="w-full pl-2 pr-1 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
-                        href="/chat/input-prompts" 
-                      >
-                        <DocumentIcon2
-                          size={18}
-                          className="flex-none text-text-history-sidebar-button"
-                        />
-                        <p className="my-auto flex font-normal items-center text-sm">
-                          Prompt Shortcuts
-                        </p>
-                      </Link>
-                    )}
-                    {/* Assistants section rendered inside Admin when open and on chat page */}
-                    <div className="pt-2">
-                         {renderAssistantsSection(true)}
-                    </div>
+              {isAssistantsOpen && (
+                <div className="pl-3 mt-1 space-y-1"> {/* Padding for nested content */}
+                  {/* Render assistants section with compact styling (isNested=true equivalent) */}
+                  <div className="pt-2">
+                       {renderAssistantsSection(true)} {/* Pass true for compact styling */}
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
+
+            {/* Old Admin toggle section - REMOVED */}
+            {/* {page === "chat" && ( ... )} */}
           </div>
           
-          {/* Main content area for Assistants (if not in Admin toggle) and PagesTab */}
+          {/* Main content area for PagesTab */}
           {/* This div will take up remaining vertical space */}
           <div className="flex-grow relative overflow-x-hidden overflow-y-auto pt-4"> {/* Added pt-4 for spacing */}
-            {/* Conditionally render the Assistants section here ONLY if:
-              1. We are NOT on the "chat" page (Assistants always visible on other pages)
-            */}
-            { page !== "chat" && (
-                <div className="mb-4"> 
-                     {renderAssistantsSection(false)}
-                </div>
-            )}
+            {/* Conditional rendering of Assistants section directly here is REMOVED */}
+            {/* { page !== "chat" && ( ... renderAssistantsSection(false) ... ) } */}
             
             <PagesTab
               toggleChatSessionSearchModal={toggleChatSessionSearchModal}
