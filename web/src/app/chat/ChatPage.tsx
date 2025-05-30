@@ -2382,7 +2382,6 @@ export function ChatPage({
                     setIsChatSearchModalOpen((open) => !open)
                   }
                   liveAssistant={liveAssistant}
-                  setShowAssistantsModal={setShowAssistantsModal}
                   explicitlyUntoggle={explicitlyUntoggle}
                   reset={reset}
                   page="chat"

@@ -102,7 +102,6 @@ export default function SidebarWrapper<T extends object>({
         <div className="w-full relative">
           {" "}
           <HistorySidebar
-            setShowAssistantsModal={setShowAssistantsModal}
             page={"chat"}
             explicitlyUntoggle={explicitlyUntoggle}
             ref={sidebarElementRef}

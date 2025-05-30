@@ -3,11 +3,11 @@
 
 import React, { Suspense, useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { 
-  ProjectInstanceDetail, 
-  TrainingPlanData, 
+import {
+  ProjectInstanceDetail,
+  TrainingPlanData,
   PdfLessonData,
-} from '@/types/projectSpecificTypes'; 
+} from '@/types/projectSpecificTypes';
 import TrainingPlanTableComponent from '@/components/TrainingPlanTable';
 import PdfLessonDisplayComponent from '@/components/PdfLessonDisplay';
 import { Save, Edit } from 'lucide-react';
@@ -44,32 +44,32 @@ export default function ProjectInstanceViewPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editableData, setEditableData] = useState<TrainingPlanData | PdfLessonData | null>(null); 
+  const [editableData, setEditableData] = useState<TrainingPlanData | PdfLessonData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const fetchProjectInstanceData = useCallback(async (currentProjectId: string) => {
-    setPageState('fetching'); 
+    setPageState('fetching');
     setErrorMessage(null);
-    setProjectInstanceData(null); 
-    setIsEditing(false); 
+    setProjectInstanceData(null);
+    setIsEditing(false);
 
     const apiUrl = `${CUSTOM_BACKEND_URL}/projects/view/${currentProjectId}`;
     try {
       const headers: HeadersInit = {};
-      const devUserId = "dummy-onyx-user-id-for-testing"; 
+      const devUserId = "dummy-onyx-user-id-for-testing";
       if (devUserId && process.env.NODE_ENV === 'development') headers['X-Dev-Onyx-User-ID'] = devUserId;
       const res = await fetch(apiUrl, { cache: 'no-store', headers });
-      if (!res.ok) { 
+      if (!res.ok) {
         const errorText = await res.text(); console.error("Fetch error:", res.status, errorText);
         let errorDetail = `HTTP error ${res.status}`;
-        try { const jsonError = JSON.parse(errorText); errorDetail = jsonError.detail || errorDetail; } 
+        try { const jsonError = JSON.parse(errorText); errorDetail = jsonError.detail || errorDetail; }
         catch { errorDetail = `${errorDetail} - ${errorText.substring(0, 150)}`;}
         throw new Error(errorDetail);
       }
       const data: ProjectInstanceDetail = await res.json();
       setProjectInstanceData(data);
-      
+
       if (data.component_name === COMPONENT_NAME_PDF_LESSON) {
         if (data.details) {
           setEditableData(JSON.parse(JSON.stringify(data.details as PdfLessonData)));
@@ -85,7 +85,7 @@ export default function ProjectInstanceViewPage() {
       } else {
         setEditableData(null);
       }
-      setPageState(data ? 'success' : 'nodata'); 
+      setPageState(data ? 'success' : 'nodata');
     } catch (err: any) {
       console.error("Error fetching project instance data for", currentProjectId, ":", err);
       setErrorMessage(err.message || "An unknown error occurred while fetching project data.");
@@ -93,10 +93,10 @@ export default function ProjectInstanceViewPage() {
     }
   }, []);
 
-  useEffect(() => { 
+  useEffect(() => {
     if (projectId) {
-      if (pageState === 'initial_loading' || 
-          (projectId !== projectInstanceData?.project_id?.toString() && (pageState === 'error' || pageState === 'nodata'))) { 
+      if (pageState === 'initial_loading' ||
+          (projectId !== projectInstanceData?.project_id?.toString() && (pageState === 'error' || pageState === 'nodata'))) {
         fetchProjectInstanceData(projectId);
       }
     } else if (params && Object.keys(params).length > 0 && !projectId) {
@@ -130,14 +130,14 @@ export default function ProjectInstanceViewPage() {
         }
       } catch (e: any) {
         console.error("Error updating editableData at path:", path, e.message);
-        return currentData; 
+        return currentData;
       }
       return newData;
     });
   }, []);
 
   const handleSave = async () => {
-    if (!projectId || !editableData ) { 
+    if (!projectId || !editableData ) {
       setSaveError("Project ID or editable data is missing. Cannot save.");
       alert("Error: Project ID or data is missing.");
       return;
@@ -151,22 +151,22 @@ export default function ProjectInstanceViewPage() {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const payload = { microProductContent: editableData }; 
+      const payload = { microProductContent: editableData };
       const response = await fetch(`${CUSTOM_BACKEND_URL}/projects/update/${projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!response.ok) { 
+      if (!response.ok) {
         const errorDataText = await response.text();
         let errorDetail = `HTTP error ${response.status}`;
-        try { const errorJson = JSON.parse(errorDataText); errorDetail = errorJson.detail || errorDetail; } 
+        try { const errorJson = JSON.parse(errorDataText); errorDetail = errorJson.detail || errorDetail; }
         catch(e) { /* ignore */ }
         throw new Error(errorDetail);
       }
       setIsEditing(false);
-      window.location.reload(); 
-    } catch (err: any) { 
+      window.location.reload();
+    } catch (err: any) {
         console.error("Failed to save data:", err);
         setSaveError(err.message || "Could not save data.");
         alert(`Save failed: ${err.message}`);
@@ -177,7 +177,7 @@ export default function ProjectInstanceViewPage() {
 
   const handleToggleEdit = () => {
     if (!projectInstanceData) { alert("Project data not loaded yet."); return; }
-    if (projectInstanceData.component_name !== COMPONENT_NAME_PDF_LESSON && 
+    if (projectInstanceData.component_name !== COMPONENT_NAME_PDF_LESSON &&
         projectInstanceData.component_name !== COMPONENT_NAME_TRAINING_PLAN) {
         alert("Content editing is only supported for PDF Lesson or Training Plan types on this page.");
         return;
@@ -204,26 +204,26 @@ export default function ProjectInstanceViewPage() {
   if (pageState === 'error') {
     return <div className="p-8 text-center text-red-500">Error: {errorMessage || "Failed to load data."}</div>;
   }
-  if (!projectInstanceData && pageState !== 'nodata') { 
+  if (!projectInstanceData && pageState !== 'nodata') {
     return <div className="p-8 text-center text-orange-500">Project data could not be loaded or found.</div>;
   }
 
   const displayContent = () => {
-    if (!projectInstanceData) { 
+    if (!projectInstanceData) {
       return <div className="p-4 text-center text-gray-500">Project data is not available.</div>;
     }
-    
+
     const currentDataForDisplay = isEditing ? editableData : projectInstanceData.details;
 
     switch (projectInstanceData.component_name) {
       case COMPONENT_NAME_TRAINING_PLAN:
-        const tpData = currentDataForDisplay as TrainingPlanData | null ?? 
-                           { mainTitle: projectInstanceData.name || "New Training Plan", sections: [], detectedLanguage: "en" };
+        const tpData = currentDataForDisplay as TrainingPlanData | null ??
+                         { mainTitle: projectInstanceData.name || "New Training Plan", sections: [], detectedLanguage: "en" };
         return <TrainingPlanTableComponent dataToDisplay={tpData} isEditing={isEditing} onTextChange={handleTextChange}/>;
-      
+
       case COMPONENT_NAME_PDF_LESSON:
-        const pdfData = currentDataForDisplay as PdfLessonData | null ?? 
-                            { lessonTitle: projectInstanceData.name || "New PDF Lesson", contentBlocks: [], detectedLanguage: "en" };
+        const pdfData = currentDataForDisplay as PdfLessonData | null ??
+                          { lessonTitle: projectInstanceData.name || "New PDF Lesson", contentBlocks: [], detectedLanguage: "en" };
         return <PdfLessonDisplayComponent dataToDisplay={pdfData} isEditing={isEditing} onTextChange={handleTextChange}/>;
       default:
         return <DefaultDisplayComponent instanceData={projectInstanceData} />;
@@ -232,7 +232,7 @@ export default function ProjectInstanceViewPage() {
 
   const displayName = projectInstanceData?.name || `Project ${projectId}`;
 
-  return ( 
+  return (
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto">
         <div className="mb-4 flex justify-between items-center">
@@ -245,16 +245,14 @@ export default function ProjectInstanceViewPage() {
               disabled={isSaving}
               className="px-3 py-1.5 text-sm font-medium rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 flex items-center"
             >
-              {isEditing ? (<> <Save size={16} className="mr-1.5" /> {isSaving ? 'Saving...' : 'Save Content'} </>) 
+              {isEditing ? (<> <Save size={16} className="mr-1.5" /> {isSaving ? 'Saving...' : 'Save Content'} </>)
                          : (<> <Edit size={16} className="mr-1.5" /> Edit Content </>)}
             </button>
           )}
         </div>
         {saveError && <div className="mb-4 p-2 bg-red-100 text-red-700 border border-red-300 rounded text-xs">{saveError}</div>}
         <h1 className="text-3xl font-bold text-gray-800 mb-2">{displayName}</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          Design Slug: {projectInstanceData?.slug} (Component: {projectInstanceData?.component_name || 'Default Viewer'})
-        </p>
+        {/* The <p> tag that previously displayed slug and component has been removed */}
         <Suspense fallback={<div className="p-8 text-center">Loading content display...</div>}>
           {displayContent()}
         </Suspense>

@@ -72,7 +72,7 @@ interface HistorySidebarProps {
   showShareModal?: (chatSession: ChatSession) => void;
   showDeleteModal?: (chatSession: ChatSession) => void;
   explicitlyUntoggle: () => void;
-  setShowAssistantsModal: (show: boolean) => void;
+  // setShowAssistantsModal: (show: boolean) => void; // Removed: No longer needed here
   toggleChatSessionSearchModal?: () => void;
 }
 
@@ -178,9 +178,9 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
     {
       liveAssistant,
       reset = () => null,
-      setShowAssistantsModal = () => null,
+      // setShowAssistantsModal = () => null, // Removed
       toggled,
-      page, // page prop is still used for handleNewChat and LogoWithText
+      page,
       existingChats,
       currentChatSession,
       folders,
@@ -195,12 +195,11 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
   ) => {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const { toggleAssistantPinnedStatus } = useUser(); // user object is not directly used here anymore for preferences
+    const { toggleAssistantPinnedStatus } = useUser();
     const { refreshAssistants, pinnedAssistants, setPinnedAssistants } =
       useAssistants();
 
-    // New state for Assistants collapsible section
-    const [isAssistantsOpen, setIsAssistantsOpen] = useState(true); // Default to open
+    const [isAssistantsOpen, setIsAssistantsOpen] = useState(true);
 
     const currentChatId = currentChatSession?.id;
 
@@ -253,16 +252,8 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
       router.push(newChatUrl);
     }, [reset, page, currentChatSession, router]);
 
-    // renderAssistantsSection now takes one argument for styling, or could be refactored
-    // For simplicity, assuming isNested=true styling (compact) is desired within its own collapsible
     const renderAssistantsSection = (isCompactStyle: boolean) => (
         <>
-            {/* Title styling will now be part of the collapsible toggle, not here.
-                Or, if this function provides its own title, adjust padding:
-            */}
-            {/* <div className={`flex font-normal text-sm gap-x-2 leading-normal text-text-500/80 dark:text-[#D4D4D4] items-center font-normal leading-normal ${isCompactStyle ? "px-1 mb-1" : "px-4 mb-1"}`}>
-                Assistants
-            </div> */}
             <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -275,7 +266,6 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 )}
                 strategy={verticalListSortingStrategy}
             >
-                {/* Apply compact styling for content within the new collapsible */}
                 <div className={`flex flex-col gap-y-1 ${isCompactStyle ? "px-0" : "px-0 mr-4 mt-1"}`}>
                 {pinnedAssistants.map((assistant: Persona) => (
                     <SortableAssistant
@@ -326,15 +316,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 </div>
             )}
 
-            <div className={`w-full mt-1 ${isCompactStyle ? "px-0" : "px-4"}`}>
-            <button
-                aria-label="Explore Assistants"
-                onClick={() => setShowAssistantsModal(true)}
-                className={`w-full cursor-pointer text-black dark:text-[#D4D4D4] hover:bg-background-chat-hover flex items-center gap-x-2 py-1 px-2 rounded-md ${isCompactStyle ? "text-sm" : "text-base"}`}
-            >
-                Explore Assistants
-            </button>
-            </div>
+            {/* "Explore Assistants" button REMOVED from here */}
         </>
     );
 
@@ -366,8 +348,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             />
           </div>
 
-          {/* Top-level navigation items & new Assistants collapsible */}
-          <div className="px-4 px-1 -mx-2 gap-y-1 flex-col text-text-history-sidebar-button flex pt-4"> {/* Added pt-4 for spacing from logo */}
+          <div className="px-4 px-1 -mx-2 gap-y-1 flex-col text-text-history-sidebar-button flex pt-4">
             <Link
               className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
               href={
@@ -413,7 +394,6 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
               </p>
             </Link>
             
-            {/* New Assistants Collapsible Section */}
             <div className="mt-1">
               <button
                 onClick={() => setIsAssistantsOpen(!isAssistantsOpen)}
@@ -421,8 +401,6 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 aria-expanded={isAssistantsOpen}
               >
                 <div className="flex items-center gap-x-2">
-                  {/* You might want an icon for Assistants here, e.g., a generic 'list' or 'star' icon */}
-                  {/* <UserCog size={18} className="flex-none text-text-history-sidebar-button" />  Re-purpose or add new icon */}
                   <p className="my-auto flex font-normal items-center text-base">
                     Assistants
                   </p>
@@ -431,25 +409,16 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
               </button>
 
               {isAssistantsOpen && (
-                <div className="pl-3 mt-1 space-y-1"> {/* Padding for nested content */}
-                  {/* Render assistants section with compact styling (isNested=true equivalent) */}
+                <div className="pl-3 mt-1 space-y-1"> 
                   <div className="pt-2">
-                       {renderAssistantsSection(true)} {/* Pass true for compact styling */}
+                      {renderAssistantsSection(true)} 
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Old Admin toggle section - REMOVED */}
-            {/* {page === "chat" && ( ... )} */}
           </div>
           
-          {/* Main content area for PagesTab */}
-          {/* This div will take up remaining vertical space */}
-          <div className="flex-grow relative overflow-x-hidden overflow-y-auto pt-4"> {/* Added pt-4 for spacing */}
-            {/* Conditional rendering of Assistants section directly here is REMOVED */}
-            {/* { page !== "chat" && ( ... renderAssistantsSection(false) ... ) } */}
-            
+          <div className="flex-grow relative overflow-x-hidden overflow-y-auto pt-4"> 
             <PagesTab
               toggleChatSessionSearchModal={toggleChatSessionSearchModal}
               showDeleteModal={showDeleteModal}
