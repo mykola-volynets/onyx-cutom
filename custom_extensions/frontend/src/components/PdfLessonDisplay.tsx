@@ -181,7 +181,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
     case 'paragraph': { 
       const isTopLevelParagraph = depth === 0;
       let paragraphClasses = `${THEME_COLORS.primaryText} text-[10px] leading-normal`; 
-      if (isTopLevelParagraph) paragraphClasses += ` w-[55%]`; 
+      if (isTopLevelParagraph) paragraphClasses += ` w-[75%]`; 
       const defaultMb = depth > 0 ? 'mb-1' : 'mb-2';
       const finalMb = isLastInBox ? 'mb-0' : defaultMb;
       
@@ -190,7 +190,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
             <textarea 
               value={(block as ParagraphBlock).text}
               onChange={(e) => handleInputChangeEvent(fieldPath('text'), e)}
-              className={`${editingTextareaClass} ${isTopLevelParagraph ? 'w-[55%]' : 'w-full'} ${finalMb} text-[10px] leading-normal`}
+              className={`${editingTextareaClass} ${isTopLevelParagraph ? 'w-[75%]' : 'w-full'} ${finalMb} text-[10px] leading-normal`}
             />
         );
       }
