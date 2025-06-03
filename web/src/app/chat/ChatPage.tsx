@@ -74,6 +74,7 @@ import { FiArrowDown } from "react-icons/fi";
 import { ChatIntro } from "./ChatIntro";
 import { AIMessage, HumanMessage } from "./message/Messages";
 import { StarterMessages } from "../../components/assistants/StarterMessage";
+import MakeIntoProductModal from "@/components/chat/MakeIntoProductModal";
 import {
   AnswerPiecePacket,
   OnyxDocument,
@@ -258,6 +259,8 @@ export function ChatPage({
     (chatSession) => chatSession.id === existingChatSessionId
   );
 
+  const [showProductSelectionModal, setShowProductSelectionModal] = useState(false);
+
   useEffect(() => {
     if (user?.is_anonymous_user) {
       Cookies.set(
@@ -425,10 +428,11 @@ export function ChatPage({
       filterManager.setTimeRange(null);
       setCurrentMessageFiles([]);
       if (chatSessionIdRef.current !== null) {
-        clearSelectedDocuments(); 
+        clearSelectedDocuments();
         setHasPerformedInitialScroll(false);
       }
     }
+
 
     async function initialSessionFetch() {
       if (existingChatSessionId === null) {
@@ -440,6 +444,10 @@ export function ChatPage({
         }
         updateCompleteMessageDetail(null, new Map());
         setChatSessionSharedStatus(ChatSessionSharedStatus.Private);
+
+        if (!shouldSubmitOnLoad(searchParams) && !searchParams?.get(SEARCH_PARAM_NAMES.SEEDED)) {
+          setShowProductSelectionModal(true);
+        }
 
         if (
           shouldSubmitOnLoad(searchParams) &&
@@ -1103,8 +1111,7 @@ export function ChatPage({
     setLoadingError(null);
   };
 
-  // NEW/MODIFIED CODE START: handleApplyProductPrompts to combine prompts
-  const handleApplyProductPrompts = async (prompts: string[]) => {
+  const handleApplyProductPrompts = async (messageContent: string) => { // Changed parameter type from string[] to string
     if (!liveAssistant) {
       setPopup({
         type: "error",
@@ -1112,43 +1119,38 @@ export function ChatPage({
       });
       return;
     }
-  
+
+    // Stop ongoing generation if any, to prepare for the new message
     if (currentChatState() !== "input") {
       console.log(`ChatPage: Current chat state is ${currentChatState()}, stopping generation before applying prompts.`);
       stopGenerating();
-      // Wait for generation to fully stop. A simple timeout might be needed
-      // if stopGenerating() doesn't immediately set chatState to "input".
-      await new Promise(resolve => setTimeout(resolve, 300)); // Small delay
+      // Add a small delay to allow state to settle, if stopGenerating is asynchronous
+      await new Promise(resolve => setTimeout(resolve, 300));
       if (currentChatState() !== "input") {
         console.warn("ChatPage: Chat state did not return to 'input' after stopGenerating. Proceeding cautiously.");
-        // Potentially add a more robust check or longer wait here if needed
       } else {
-        console.log("ChatPage: Chat state is now 'input', proceeding with combined prompt.");
+        console.log("ChatPage: Chat state is now 'input', proceeding with chosen product prompt.");
       }
     }
-  
-    if (prompts && prompts.length > 0) {
-      const combinedPrompt = prompts
-        .map((prompt, index) => `Prompt ${index + 1}: ${prompt.trim()}`)
-        .join("\n\n"); // Separate prompts by two newlines
 
-      if (combinedPrompt.trim() !== "") {
-        console.log(`ChatPage: Submitting combined prompt:\n"${combinedPrompt}"`);
-        await onSubmit({ 
-          messageOverride: combinedPrompt,
-          messageIdToResend: undefined, 
-          queryOverride: undefined, 
-          forceSearch: undefined,
-          isSeededChat: false, 
-          alternativeAssistantOverride: null, 
-          modelOverride: undefined,
-          regenerationRequest: undefined, 
-        });
-      }
+    if (messageContent.trim() !== "") {
+      console.log(`ChatPage: Submitting chosen product prompt:\n"${messageContent}"`);
+      await onSubmit({
+        messageOverride: messageContent, // Use the passed messageContent directly
+        messageIdToResend: undefined,
+        queryOverride: undefined,
+        forceSearch: undefined,
+        isSeededChat: false,
+        alternativeAssistantOverride: null,
+        modelOverride: undefined,
+        regenerationRequest: undefined,
+        overrideFileDescriptors: undefined, // Ensure this is explicitly undefined or omitted
+      });
     }
-    console.log("ChatPage: Combined product prompts processed.");
+    console.log("ChatPage: Chosen product prompt processed.");
+    setShowProductSelectionModal(false); // Close the modal after sending the message
   };
-  // NEW/MODIFIED CODE END
+
 
 
   const onSubmit = async ({
@@ -2214,6 +2216,12 @@ export function ChatPage({
     <>
       <HealthCheckBanner />
 
+      <MakeIntoProductModal
+        isOpen={showProductSelectionModal}
+        onClose={() => setShowProductSelectionModal(false)}
+        onApply={handleApplyProductPrompts}
+      />
+
       {showApiKeyModal && !shouldShowWelcomeModal && (
         <ApiKeyModal
           hide={() => setShowApiKeyModal(false)}
@@ -2927,7 +2935,7 @@ export function ChatPage({
                                       }
                                     >
                                       <AIMessage
-                                        onApplyProductPrompts={handleApplyProductPrompts}
+                                        onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent[0])}
                                         userKnowledgeFiles={userFiles}
                                         docs={
                                           message?.documents &&
@@ -3092,7 +3100,7 @@ export function ChatPage({
                                 return (
                                   <div key={messageReactComponentKey}>
                                     <AIMessage
-                                      onApplyProductPrompts={handleApplyProductPrompts} 
+                                      onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent[0])} 
                                       setPresentingDocument={
                                         setPresentingDocument
                                       }
@@ -3136,7 +3144,7 @@ export function ChatPage({
                                 key={`${messageHistory.length}-${chatSessionIdRef.current}`}
                               >
                                 <AIMessage
-                                  onApplyProductPrompts={handleApplyProductPrompts} 
+                                  onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent[0])}
                                   setPresentingDocument={setPresentingDocument}
                                   key={-3}
                                   currentPersona={liveAssistant}
@@ -3162,7 +3170,7 @@ export function ChatPage({
                             {loadingError && (
                               <div key={-1}>
                                 <AIMessage
-                                  onApplyProductPrompts={handleApplyProductPrompts} 
+                                  onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent[0])}
                                   setPresentingDocument={setPresentingDocument}
                                   currentPersona={liveAssistant}
                                   messageId={-1}

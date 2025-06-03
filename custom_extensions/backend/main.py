@@ -1013,11 +1013,11 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             * `4`: Special Call-outs (e.g., "Module Goal", "Important Note"). Typically use `iconName: "target"` for goals, or lesson objectives.
         * `text` (string): Headline text.
         * `iconName` (string, optional): Based on level and context as described above.
-        * `isImportant` (boolean, optional): Set to `true` for Level 4 headlines like "Module Goal" or "Important Note". If `true`, this headline AND its *immediately following single block* (typically a `bullet_list` or `paragraph`) will be grouped into a visually distinct highlighted box.
+        * `isImportant` (boolean, optional): Set to `true` for Level 3 and 4 headlines like "Lesson Goal" or "Lesson Target". If `true`, this headline AND its *immediately following single block* will be grouped into a visually distinct highlighted box. Do NOT set this to 'true' for sections like 'Conclusion' or any other section that comes in the very end of the lesson.
 
     2.  **`type: "paragraph"`**
         * `text` (string): Full paragraph text.
-        * `isRecommendation` (boolean, optional): If this paragraph functions as a "Recommendation" (often prefixed with "Рекомендация:" or "Recommendation:") and appears within a structured item (like inside a numbered list box, usually after a mini-title and description), set this to `true`. Or set this to true if it is a small concluding thoght in the very end of the lesson.
+        * `isRecommendation` (boolean, optional): If this paragraph functions as a "Recommendation" (often prefixed with "Рекомендация:" or "Recommendation:"), set this to `true`. Or set this to true if it is a concluding thoght in the very end of the lesson (this case applies only to one VERY last thought). Cannot be 'true' for ALL the elements in one list.
 
     3.  **`type: "bullet_list"`**
         * `items` (array of `ListItem`): Can be strings or other nested content blocks.
@@ -1032,13 +1032,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
                     1. A `headline` block (e.g., `level: 3`, `text: "Mini-Title Text"`, no icon).
                     2. A `paragraph` block (for the main descriptive text).
                     3. Optionally, another `paragraph` block with `isRecommendation: true`.
-
-    5.  **`type: "alert"`**
-        * `alertType` (string): "info", "success", "warning", "danger".
-        * `title` (string, optional). `text` (string). `iconName` (string, optional).
-
-    6.  **`type: "section_break"`**
-        * `style` (string, optional): "solid", "dashed", or "none".
+            * Only use round numbers in this list, no a1, a2 or 1.1, 1.2.
 
     **General Parsing Rules & Icon Names:**
     * Ensure correct `level` for headlines. Section headers are `level: 2`. Mini-titles in lists are `level: 3`.

@@ -1,14 +1,14 @@
 // custom_extensions/frontend/src/types/designTemplates.ts
 
 export interface DesignTemplateResponse {
-    id: number;
-    template_name: string;
-    template_structuring_prompt: string;
-    design_image_path: string | null;
-    microproduct_type: string | null; // Kept for now
-    component_name: string | null;    // Key for frontend rendering
-    date_created: string; // ISO date string
-  }
+  id: number;
+  template_name: string;
+  template_structuring_prompt: string;
+  design_image_path: string | null;
+  microproduct_type: string;
+  component_name: string;
+  date_created: string;
+}
 
 export interface DesignTemplate {
   id: number;
