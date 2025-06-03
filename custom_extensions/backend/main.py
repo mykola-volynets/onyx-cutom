@@ -997,7 +997,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
 
     2.  **`type: "paragraph"`**
         * `text` (string): Full paragraph text.
-        * `isRecommendation` (boolean, optional): If this paragraph functions as a "Recommendation" (often prefixed with "Рекомендация:" or "Recommendation:") and appears within a structured item (like inside a numbered list box, usually after a mini-title and description), set this to `true`.
+        * `isRecommendation` (boolean, optional): If this paragraph functions as a "Recommendation" (often prefixed with "Рекомендация:" or "Recommendation:") and appears within a structured item (like inside a numbered list box, usually after a mini-title and description), set this to `true`. Or set this to true if it is a small concluding thoght in the very end of the lesson.
 
     3.  **`type: "bullet_list"`**
         * `items` (array of `ListItem`): Can be strings or other nested content blocks.

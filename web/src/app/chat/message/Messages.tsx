@@ -8,8 +8,8 @@ import {
   FiTool,
   FiGlobe,
 } from "react-icons/fi";
-import { HiOutlineSparkles } from "react-icons/hi2"; // Changed from TbWand
-import { LayoutTemplate } from "lucide-react"; // Changed from FlaskConical for the "Make into Product" lab icon
+import { HiOutlineSparkles } from "react-icons/hi2";
+// import { LayoutTemplate } from "lucide-react"; // Keep this commented out
 import { FeedbackType } from "../types";
 import React, {
   useCallback,
@@ -86,8 +86,7 @@ import {
 } from "../utils/thinkingTokens";
 import { FileResponse } from "../my-documents/DocumentsContext";
 
-// Import the new modal
-import MakeIntoProductModal from "@/components/chat/MakeIntoProductModal";
+// import MakeIntoProductModal from "@/components/chat/MakeIntoProductModal"; // Keep this commented out
 
 const TOOLS_WITH_CUSTOM_HANDLING = [
   SEARCH_TOOL_NAME,
@@ -95,6 +94,7 @@ const TOOLS_WITH_CUSTOM_HANDLING = [
   IMAGE_GENERATION_TOOL_NAME,
 ];
 
+// ... (FileDisplay and FileResponseDisplay components remain the same)
 function FileDisplay({
   files,
   alignBubble,
@@ -219,6 +219,7 @@ function FileResponseDisplay({
   );
 }
 
+
 export const AIMessage = ({
   userKnowledgeFiles = [],
   regenerate,
@@ -249,7 +250,7 @@ export const AIMessage = ({
   index,
   documentSidebarVisible,
   removePadding,
-  onApplyProductPrompts,
+  onApplyProductPrompts, // MODIFIED: Added prop back
 }: {
   userKnowledgeFiles?: FileResponse[];
   index?: number;
@@ -280,7 +281,7 @@ export const AIMessage = ({
   regenerate?: (modelOverRide: LlmDescriptor) => Promise<void>;
   setPresentingDocument: (document: MinimalOnyxDocument) => void;
   removePadding?: boolean;
-  onApplyProductPrompts?: (prompts: string[]) => void;
+  onApplyProductPrompts?: (prompts: string[]) => void; // MODIFIED: Added prop type back (adjust Promise<void> if needed based on ChatPage.tsx)
 }) => {
   const toolCallGenerating = toolCall && !toolCall.tool_result;
 
@@ -290,7 +291,7 @@ export const AIMessage = ({
     );
   }, [content]);
 
-  const [makeIntoProductModalOpen, setMakeIntoProductModalOpen] = useState(false);
+  // const [makeIntoProductModalOpen, setMakeIntoProductModalOpen] = useState(false); // Keep this commented out
 
   const handleAddToProjects = () => {
     let messageText = "";
@@ -324,10 +325,9 @@ export const AIMessage = ({
     window.open(targetUrl, "_blank");
   };
 
-  const handleOpenMakeIntoProductModal = () => {
-    setMakeIntoProductModalOpen(true);
-  };
-
+  // const handleOpenMakeIntoProductModal = () => { // Keep this commented out
+  // setMakeIntoProductModalOpen(true);
+  // };
 
   const thinkingContent = useMemo(() => {
     if (!hasThinkingTokens) return "";
@@ -525,7 +525,7 @@ export const AIMessage = ({
       <div
         id={isComplete ? "onyx-ai-message" : undefined}
         ref={trackedElementRef}
-        className={`py-5  ml-4 lg:px-5 relative flex
+        className={`py-5   ml-4 lg:px-5 relative flex
           
           ${removePadding && "!pl-24 -mt-12"}`}
       >
@@ -832,13 +832,14 @@ export const AIMessage = ({
                                 />
                               </CustomTooltip>
 
-                            {/* "Make into Product" button with FlaskConical icon from lucide-react */}
+                            {/* "Make into Product" button commented out
                             <CustomTooltip showTick line content="Make into Product">
                               <HoverableIcon
                                 icon={<LayoutTemplate size={17} />}
                                 onClick={handleOpenMakeIntoProductModal}
                               />
                             </CustomTooltip>
+                            */}
                           </TooltipGroup>
                         </div>
                       ) : (
@@ -922,20 +923,21 @@ export const AIMessage = ({
                                 />
                               </CustomTooltip>
                             )}
-                              {/* "Add to Projects" button with HiOutlineSparkles icon and CustomTooltip - also for hover state */}
+                              {/* "Add to Projects" button - also for hover state */}
                               <CustomTooltip showTick line content="Create Project">
                                 <HoverableIcon
                                   icon={<HiOutlineSparkles size={18} />} 
                                   onClick={handleAddToProjects}
                                 />
                               </CustomTooltip>
-                            {/* "Make into Product" button - also for hover state */}
+                            {/* "Make into Product" button commented out
                             <CustomTooltip showTick line content="Make into Product">
                               <HoverableIcon
                                 icon={<LayoutTemplate size={17} />}
                                 onClick={handleOpenMakeIntoProductModal}
                               />
                             </CustomTooltip>
+                            */}
                           </TooltipGroup>
                         </div>
                       ))}
@@ -951,13 +953,13 @@ export const AIMessage = ({
             )}
         </div>
       </div>
-      {/* Modal Render */}
+      {/* Modal Render commented out
       {makeIntoProductModalOpen && (
         <MakeIntoProductModal
           isOpen={makeIntoProductModalOpen}
           onClose={() => setMakeIntoProductModalOpen(false)}
           onApply={(discoveryPrompts) => {
-            if (onApplyProductPrompts) {
+            if (onApplyProductPrompts) { // This check would still be here but onApplyProductPrompts would be available from props
               onApplyProductPrompts(discoveryPrompts);
             } else {
               console.warn(
@@ -968,10 +970,12 @@ export const AIMessage = ({
           }}
         />
       )}
+      */}
     </>
   );
 };
 
+// ... (MessageSwitcher and HumanMessage components remain unchanged)
 function MessageSwitcher({
   currentPage,
   totalPages,
