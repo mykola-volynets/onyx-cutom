@@ -1,6 +1,6 @@
 // custom_extensions/frontend/src/types/projectSpecificTypes.ts
-import { 
-  PdfLessonData as PdfLessonDataType, // Import with an alias if needed to avoid naming conflicts before re-export
+import {
+  PdfLessonData as PdfLessonDataType,
   type AnyContentBlock as ContentBlockType,
   type HeadlineBlock as HeadlineBlockType,
   type ParagraphBlock as ParagraphBlockType,
@@ -9,6 +9,7 @@ import {
   type AlertBlock as AlertBlockType,
   type SectionBreakBlock as SectionBreakBlockType
 } from './pdfLesson';
+import { VideoLessonData } from './videoLessonTypes'; // <-- Import the new VideoLessonData type
 
 // --- TrainingPlan Specific Types (existing) ---
 export interface StatusInfo {
@@ -42,8 +43,8 @@ export interface TrainingPlanData {
 
 
 // Generic Content Type for MicroProducts
-// Use the aliased import for PdfLessonData if you aliased it
-export type MicroProductContentData = TrainingPlanData | PdfLessonDataType | null;
+// UPDATED to include VideoLessonData
+export type MicroProductContentData = TrainingPlanData | PdfLessonDataType | VideoLessonData | null;
 
 
 // For fetching project details for the edit page
@@ -52,7 +53,7 @@ export interface ProjectDetailDataForEdit {
   projectName: string;
   microProductName?: string | null;
   design_template_id?: number | null;
-  microProductContent?: MicroProductContentData; 
+  microProductContent?: MicroProductContentData;
   createdAt?: string | Date | null;
   design_template_name?: string | null;
   design_component_name?: string | null;
@@ -80,7 +81,8 @@ export interface ProjectInstanceDetail {
   component_name: string;
   webLinkPath?: string | null;
   pdfLinkPath?: string | null;
-  details?: MicroProductContentData; 
+  details?: MicroProductContentData; // This now implicitly includes VideoLessonData
+  detectedLanguage?: string; // Added to match other data structures if needed at this level
 }
 
 // Type for Design Template API Response
@@ -94,8 +96,8 @@ export interface DesignTemplateResponse {
   date_created: string | Date;
 }
 
-// MODIFIED: Re-export PdfLessonData and its supporting types using "export type"
-export type { 
+// Re-export PdfLessonData and its supporting types using "export type"
+export type {
   PdfLessonDataType as PdfLessonData, // Re-export with the original name
   ContentBlockType as ContentBlock,
   HeadlineBlockType as HeadlineBlock,
@@ -105,3 +107,9 @@ export type {
   AlertBlockType as AlertBlock,
   SectionBreakBlockType as SectionBreakBlock
 };
+
+// It's good practice to also export VideoLesson types if they are only defined in videoLessonTypes.ts
+// and used by MicroProductContentData here.
+// However, if videoLessonTypes.ts already exports them, this isn't strictly necessary
+// but makes projectSpecificTypes.ts a more complete "aggregator" if desired.
+export type { VideoLessonData, VideoLessonSlideData } from './videoLessonTypes';

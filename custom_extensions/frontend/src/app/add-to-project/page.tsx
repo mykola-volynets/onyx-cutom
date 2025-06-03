@@ -6,7 +6,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { DesignTemplateResponse } from '@/types/designTemplates';
 // import { ProjectApiResponse } from '@/types/projectSpecificTypes'; // Not strictly needed if only fetching names as string[]
 
-
 const CUSTOM_API_BASE_URL = '/api/custom-projects-backend';
 const CUSTOM_BACKEND_ROOT_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_ROOT_URL || '';
 
@@ -33,11 +32,11 @@ const AddToProjectPageComponent = () => {
   // Project States
   const [existingProjectNames, setExistingProjectNames] = useState<string[]>([]);
   const [isLoadingProjectNames, setIsLoadingProjectNames] = useState(false);
-  const [selectedProjectOption, setSelectedProjectOption] = useState<string>(''); 
+  const [selectedProjectOption, setSelectedProjectOption] = useState<string>('');
   const [newProjectNameInput, setNewProjectNameInput] = useState('');
 
   // Instance States
-  const [instanceNameInput, setInstanceNameInput] = useState('');
+  const [instanceNameInput, setInstanceNameInput] = useState(''); // Initialized as empty
   const [aiResponse, setAiResponse] = useState('');
 
   // UI States
@@ -112,16 +111,44 @@ const AddToProjectPageComponent = () => {
       try {
         const storedResponse = sessionStorage.getItem(decodeURIComponent(responseKey));
         if (storedResponse !== null) {
-          setAiResponse(storedResponse);
+          setAiResponse(storedResponse); // Store the full AI response
+
+          // ---- MODIFIED LOGIC TO EXTRACT TITLE AND SET INSTANCE NAME ----
+          if (storedResponse.trim() !== '') {
+            const newlineIndex = storedResponse.indexOf('\n');
+            if (newlineIndex !== -1) { // Check if a newline character exists
+              const extractedTitle = storedResponse.substring(0, newlineIndex).trim();
+              if (extractedTitle) { // Ensure the extracted title is not just whitespace
+                setInstanceNameInput(extractedTitle);
+              }
+              // If extractedTitle is empty after trimming, instanceNameInput remains empty here (from its useState default or previous reset),
+              // allowing it to fallback to product name later if user doesn't input anything.
+            } else {
+              // Optional: if no newline, you could decide to use the whole storedResponse as title.
+              // For example:
+              // const singleLineTitle = storedResponse.trim();
+              // if (singleLineTitle) {
+              //   setInstanceNameInput(singleLineTitle);
+              // }
+              // If you want to strictly adhere to "text before first newline", do nothing here.
+            }
+          }
+          // ---- END OF MODIFIED LOGIC ----
+
         } else {
           console.warn("AI response key found, but no data in sessionStorage.");
+          // setInstanceNameInput(''); // Explicitly clear if needed, though reset on template change might cover this
         }
       } catch (e) {
-        console.error("Error reading from sessionStorage:", e);
+        console.error("Error reading from sessionStorage or parsing title:", e);
         setAiResponse("Error: Could not retrieve AI response.");
+        // setInstanceNameInput(''); // Explicitly clear on error if needed
       }
+    } else {
+        // No responseKey found in URL, so no AI response to get a title from.
+        // setInstanceNameInput(''); // Explicitly clear if needed
     }
-  }, [searchParams]);
+  }, [searchParams]); // Dependency array correctly remains [searchParams]
 
   const handleSubmit = async () => {
     if (!selectedDesignTemplateId) {
@@ -148,6 +175,7 @@ const AddToProjectPageComponent = () => {
 
     const selectedTemplateName = selectedTemplate?.template_name || 'Default MicroProduct Name';
     // Logic for finalInstanceName: user input OR selected product name OR (if product name also blank) the project name.
+    // This logic remains the same and correctly uses the pre-filled instanceNameInput if available.
     const finalInstanceName = instanceNameInput.trim() || selectedTemplateName || finalProjectName;
 
 
@@ -155,7 +183,7 @@ const AddToProjectPageComponent = () => {
       projectName: finalProjectName,
       design_template_id: parseInt(selectedDesignTemplateId, 10),
       microProductName: finalInstanceName,
-      aiResponse,
+      aiResponse, // The full AI response is sent
     };
 
     const API_ENDPOINT = `${CUSTOM_API_BASE_URL}/projects/add`;
@@ -178,8 +206,8 @@ const AddToProjectPageComponent = () => {
         console.error('Submission error details:', errorData);
         throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
-      await response.json();
-      router.push('/projects');
+      await response.json(); // Assuming the successful response might also be JSON
+      router.push('/projects'); // Navigate to projects page on success
     } catch (err) {
       console.error('Failed to submit project:', err);
       setError(err instanceof Error ? err.message : "An unknown error occurred during submission.");
@@ -188,10 +216,10 @@ const AddToProjectPageComponent = () => {
       setIsSubmitting(false);
     }
   };
-  
+
   const canSubmit = selectedDesignTemplateId &&
-                    (selectedProjectOption && selectedProjectOption !== "CREATE_NEW_PROJECT") ||
-                    (selectedProjectOption === "CREATE_NEW_PROJECT" && newProjectNameInput.trim() !== '');
+                    ( (selectedProjectOption && selectedProjectOption !== "CREATE_NEW_PROJECT") ||
+                      (selectedProjectOption === "CREATE_NEW_PROJECT" && newProjectNameInput.trim() !== '') );
 
   return (
     <main className="p-4 md:p-8 bg-gray-100 min-h-screen font-['Inter',_sans-serif]">
@@ -224,7 +252,7 @@ const AddToProjectPageComponent = () => {
                     setSelectedDesignTemplateId(template.id.toString());
                     setSelectedProjectOption('');
                     setNewProjectNameInput('');
-                    setInstanceNameInput(''); 
+                    setInstanceNameInput(''); // Reset instance name when product type changes
                   }}
                   className={`
                     relative border-2 rounded-lg p-4 shadow-md hover:shadow-lg transition-all duration-200
@@ -240,7 +268,7 @@ const AddToProjectPageComponent = () => {
                     alt={template.template_name}
                     className="w-full h-32 object-contain mb-3 rounded"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/images/placeholder-image.png'; 
+                      (e.target as HTMLImageElement).src = '/images/placeholder-image.png';
                       (e.target as HTMLImageElement).alt = 'Placeholder Image';
                     }}
                   />
@@ -249,11 +277,11 @@ const AddToProjectPageComponent = () => {
                   </h3>
                   
                   {selectedDesignTemplateId === template.id.toString() && (
-                     <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full p-0.5"> {/* Adjusted padding for smaller icon */}
-                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"> {/* Adjusted size */}
-                         <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                       </svg>
-                     </div>
+                      <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full p-0.5"> {/* Adjusted padding for smaller icon */}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"> {/* Adjusted size */}
+                          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                        </svg>
+                      </div>
                   )}
                 </button>
               ))}
@@ -275,7 +303,7 @@ const AddToProjectPageComponent = () => {
                   onChange={(e) => {
                     setSelectedProjectOption(e.target.value);
                     if (e.target.value !== "CREATE_NEW_PROJECT") {
-                      setNewProjectNameInput(''); 
+                      setNewProjectNameInput('');
                     }
                   }}
                   className="block w-full p-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-gray-900"
@@ -336,13 +364,13 @@ const AddToProjectPageComponent = () => {
                     <input
                       type="text"
                       id="instanceNameInput"
-                      value={instanceNameInput}
+                      value={instanceNameInput} // Value is now managed by state, including auto-fill
                       onChange={(e) => setInstanceNameInput(e.target.value)}
                       className="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900"
-                      placeholder={`Defaults to "${selectedTemplate?.template_name || 'Product Name'}"`}
+                      placeholder={`Defaults to "${selectedTemplate?.template_name || 'Product Name'}" or AI response title`}
                     />
                     <p className="mt-1 text-xs text-gray-500">
-                      If left blank, the Product's name will be used.
+                      If left blank, the Product's name (or AI title) will be used.
                     </p>
                   </div>
                 )}

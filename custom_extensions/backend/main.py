@@ -19,7 +19,7 @@ import logging
 
 # --- CONTROL VARIABLE FOR PRODUCTION LOGGING ---
 # SET THIS TO True FOR PRODUCTION, False FOR DEVELOPMENT
-IS_PRODUCTION = True  # Or True for production
+IS_PRODUCTION = False  # Or True for production
 
 # --- Logger ---
 logger = logging.getLogger(__name__)
@@ -354,7 +354,26 @@ class PdfLessonDetails(BaseModel):
     detectedLanguage: Optional[str] = None
     model_config = {"from_attributes": True}
 
-MicroProductContentType = Union[TrainingPlanDetails, PdfLessonDetails, None]
+class VideoLessonSlideData(BaseModel):
+    slideId: str
+    slideNumber: int
+    slideTitle: str
+    displayedText: Optional[str] = None
+    imagePath: Optional[str] = None
+    videoPath: Optional[str] = None
+    voiceoverText: Optional[str] = None
+    displayedPictureDescription: Optional[str] = None
+    displayedVideoDescription: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+class VideoLessonData(BaseModel):
+    mainPresentationTitle: str
+    slides: List[VideoLessonSlideData] = Field(default_factory=list)
+    currentSlideId: Optional[str] = None # To store the active slide from frontend
+    detectedLanguage: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+MicroProductContentType = Union[TrainingPlanDetails, PdfLessonDetails, VideoLessonData, None]
 
 class DesignTemplateBase(BaseModel):
     template_name: str
@@ -943,6 +962,7 @@ ALLOWED_MICROPRODUCT_TYPES_FOR_DESIGNS = [
 ]
 COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanTable"
 COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay"
+COMPONENT_NAME_VIDEO_LESSON = "VideoLessonDisplay"
 
 @app.get("/api/custom/microproduct_types", response_model=List[str])
 async def get_allowed_microproduct_types_list_for_design_templates():
@@ -1041,6 +1061,81 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             - Ensure all module numbers, titles, lesson details, hours, and source texts are extracted in their original language.
             - Ensure 'detectedLanguage' field is present (e.g., "en", "ru").
             """
+        elif selected_design_template.component_name == COMPONENT_NAME_VIDEO_LESSON: # New case
+            target_content_model = VideoLessonData
+            default_error_instance = VideoLessonData(
+                mainPresentationTitle=f"LLM Parsing Error for {project_data.projectName}",
+                slides=[]
+            )
+            llm_json_example = selected_design_template.template_structuring_prompt or """
+            {
+  "mainPresentationTitle": "Курс: Обучение для рекрутера",
+  "slides": [
+    {
+      "slideId": "slide_1_znakomstvo",
+      "slideNumber": 1,
+      "slideTitle": "Знакомство",
+      "displayedText": "Знакомимся с основами рекрутинга и ключевыми обязанностями.",
+      "displayedPictureDescription": "Улыбающиеся профессионалы в современном офисе.",
+      "displayedVideoDescription": "Анимация воронки рекрутинга: поиск, отбор, интервью, оффер.",
+      "voiceoverText": "Приветствую вас на курсе 'Обучение для рекрутера'! Начнем с основ. Этот модуль посвящен ключевым аспектам профессии."
+    },
+    {
+      "slideId": "slide_2_instrumenty",
+      "slideNumber": 2,
+      "slideTitle": "Инструменты Рекрутера",
+      "displayedText": "Рассматриваем основные инструменты для современного рекрутера.",
+      "displayedPictureDescription": "Коллаж логотипов: LinkedIn, ATS, GitHub, поиск, календарь.",
+      "displayedVideoDescription": "Анимация кликов по иконкам инструментов с краткими пояснениями их функций.",
+      "voiceoverText": "Для успеха рекрутеру нужен арсенал инструментов. Рассмотрим основные категории и их назначение. Эффективное использование повысит вашу производительность."
+    }
+  ],
+  "detectedLanguage": "ru"
+}
+            """
+            component_specific_instructions = """
+            You are an expert text-to-JSON parsing assistant. Your task is to convert the provided presentation slide content, which is in a specific structured text format, into a perfectly structured JSON object.
+
+Your output MUST be a single, valid JSON object, and it must strictly adhere to the exact structure provided in the example JSON you have been given separately. Do not include any additional text, explanations, or conversational fillers outside the JSON object.
+
+Input Text Structure and Extraction Rules:
+The input text will describe a presentation or video lesson. The content within the fields (like slide titles, descriptions) can be in various languages (e.g., Ukrainian, Russian, English). You must extract the content exactly as it appears, preserving its original language, including any original formatting like line breaks within the content where present (e.g., in "Відображуваний Текст").
+
+Overall Presentation Title:
+
+This will be identified by a header like "Загальний Заголовок Курсу:" (or its equivalent in other languages like "ОБЩИЙ ЗАГОЛОВОК КУРСА:" or "Overall Course Title:").
+Extract the text that immediately follows this bolded header as the value for the mainPresentationTitle field.
+Individual Slides:
+
+Each slide's information is clearly marked by consistently bolded headers.
+slideNumber (integer): Look for "Номер Слайда:" (or equivalent, e.g., "Номер Слайда:", "Slide Number:"). Extract the numerical value that immediately follows this bolded header.
+slideTitle (string): Look for "Заголовок Слайда:" (or equivalent, e.g., "Заголовок Слайда:", "Slide Title:"). Extract the text that immediately follows this bolded header.
+displayedText (string): Look for "Відображуваний Текст:" (or equivalent, e.g., "Відображуваний Текст:", "Displayed Text:"). Extract all text that immediately follows this bolded header, up until the next bolded header. Preserve any internal line breaks or numbering.
+displayedPictureDescription (string): Look for "Опис Зображення:" (or equivalent, e.g., "Опис Зображення:", "Image Description:"). Extract the text that immediately follows this bolded header, up until the next bolded header.
+displayedVideoDescription (string): Look for "Опис Відео:" (or equivalent, e.g., "Опис Відео:", "Video Description:"). Extract the text that immediately follows this bolded header, up until the next bolded header.
+voiceoverText (string): Look for "Текст Озвучення:" (or equivalent, e.g., "Текст Озвучення:", "Voiceover Text:"). Extract the text that immediately follows this bolded header, up until the next bolded header or the end of the slide's content block.
+slideId Generation:
+
+For each slide, you must generate a unique slideId.
+This ID should be a concatenation of the literal string "slide_", the slideNumber, and a simplified, lowercase version of the slideTitle.
+To simplify the slideTitle for the ID, convert it to lowercase and replace all spaces with underscores (_). Remove any punctuation or special characters from the simplified title part of the ID. If the title is very long, consider using only the first few words to keep the ID concise, but ensure uniqueness. For example:
+slideNumber: 1, slideTitle: "Вступ" -> slideId: "slide_1_вступ"
+slideNumber: 2, slideTitle: "Питання 1" -> slideId: "slide_2_питання_1"
+slideNumber: 3, slideTitle: "Варіанти відповіді" -> slideId: "slide_3_варіанти_відповіді"
+slideNumber: 4, slideTitle: "Пояснення до Питання 1" -> slideId: "slide_4_пояснення_до_питання_1"
+detectedLanguage (string):
+
+This will be identified by a header like "Language of Content:" (or its equivalent, e.g., "Язык Контента:", "Мова Контенту:").
+Extract the two-letter ISO 639-1 language code (e.g., "uk", "ru", "en") that immediately follows this label.
+If this "Language of Content:" label is missing from the input, infer the primary language from the majority of the content (specifically the mainPresentationTitle and slideTitle fields) and use the appropriate two-letter ISO 639-1 code.
+Key Parsing Rules & Constraints for 100% Reliability:
+
+Header Recognition: Always identify fields by their bolded headers (e.g., "Номер Слайда:", "Заголовок Слайда:"). These bolded headers consistently precede the data you need to extract.
+Exact Text Extraction: All extracted text content must be preserved exactly as it appears in the input, including its original capitalization, punctuation, and line breaks within the content block for a given field.
+Field Presence: If a field's bolded header is present in the input but the text following it is empty before the next header, the corresponding JSON field should be an empty string (""). Do not use null or omit fields that are defined as strings in the target schema if their labels are present in the input.
+Sequential Parsing: Process the text sequentially, extracting content associated with each bolded header until the next bolded header is encountered.
+Return ONLY the JSON object.
+            """
         else:
             logger.warning(f"Unknown component_name '{selected_design_template.component_name}' for DT ID {selected_design_template.id}. Defaulting to TrainingPlanDetails for parsing.")
             target_content_model = TrainingPlanDetails
@@ -1061,9 +1156,14 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             target_json_example=llm_json_example
         )
 
+        logger.info(f"LLM Parsing Result Type: {type(parsed_content_model_instance).__name__}")
+        logger.info(f"LLM Parsed Content (first 200 chars): {str(parsed_content_model_instance.model_dump_json())[:200]}") # Use model_dump_json()
+
         content_to_store_for_db = parsed_content_model_instance.model_dump(mode='json', exclude_none=True)
         derived_product_type = selected_design_template.microproduct_type
         derived_microproduct_type = selected_design_template.template_name
+
+        logger.info(f"Content prepared for DB storage (first 200 chars of JSON): {str(content_to_store_for_db)[:200]}")
 
         insert_query = "INSERT INTO projects (onyx_user_id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, design_template_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id, onyx_user_id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, design_template_id, created_at;"
 
@@ -1079,9 +1179,15 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             try:
                 if component_name_from_db == COMPONENT_NAME_PDF_LESSON:
                     final_content_for_response = PdfLessonDetails(**db_content_dict)
+                    logger.info("Re-parsed as PdfLessonDetails.")
                 elif component_name_from_db == COMPONENT_NAME_TRAINING_PLAN:
                     final_content_for_response = TrainingPlanDetails(**db_content_dict)
+                    logger.info("Re-parsed as TrainingPlanDetails.")
+                elif component_name_from_db == COMPONENT_NAME_VIDEO_LESSON:
+                    final_content_for_response = VideoLessonData(**db_content_dict)
+                    logger.info("Re-parsed as VideoLessonData.")
                 else:
+                    logger.warning(f"Unknown component_name '{component_name_from_db}' when re-parsing content from DB on add. Attempting generic TrainingPlanDetails fallback.")
                     final_content_for_response = TrainingPlanDetails(**db_content_dict)
             except Exception as e_parse:
                 logger.error(f"Error parsing content from DB on add (proj ID {row['id']}): {e_parse}", exc_info=not IS_PRODUCTION)
@@ -1147,6 +1253,8 @@ async def get_project_details_for_edit(project_id: int, onyx_user_id: str = Depe
                     parsed_content_for_response = PdfLessonDetails(**db_content_json)
                 elif component_name == COMPONENT_NAME_TRAINING_PLAN:
                     parsed_content_for_response = TrainingPlanDetails(**db_content_json)
+                elif component_name == COMPONENT_NAME_VIDEO_LESSON:
+                    parsed_content_for_response = VideoLessonData(**db_content_json)
                 else:
                     logger.warning(f"Unknown component_name '{component_name}' for project {project_id}. Attempting fallbacks.", exc_info=not IS_PRODUCTION)
                     try: parsed_content_for_response = TrainingPlanDetails(**db_content_json)
@@ -1223,6 +1331,8 @@ async def update_project_in_db(project_id: int, project_update_data: ProjectUpda
                     final_content_for_model = PdfLessonDetails(**db_content)
                 elif current_component_name == COMPONENT_NAME_TRAINING_PLAN:
                     final_content_for_model = TrainingPlanDetails(**db_content)
+                elif current_component_name == COMPONENT_NAME_VIDEO_LESSON:
+                    final_content_for_model = VideoLessonData(**db_content)
                 else:
                     final_content_for_model = TrainingPlanDetails(**db_content)
             except Exception as e_parse:
@@ -1297,6 +1407,8 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
                     details_data = PdfLessonDetails(**microproduct_content_json)
                 elif component_name == COMPONENT_NAME_TRAINING_PLAN:
                     details_data = TrainingPlanDetails(**microproduct_content_json)
+                elif component_name == COMPONENT_NAME_VIDEO_LESSON:
+                    details_data = VideoLessonData(**microproduct_content_json)
                 else:
                     logger.warning(f"Unknown component_name '{component_name}' for project {project_id} view. Trying fallbacks.", exc_info=not IS_PRODUCTION)
                     try: details_data = TrainingPlanDetails(**microproduct_content_json)
@@ -1399,6 +1511,23 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
             data_for_template_render['time_unit_singular'] = current_lang_cfg.get('TIME_UNIT_SINGULAR', 'h')
             data_for_template_render['time_unit_decimal_plural'] = current_lang_cfg.get('TIME_UNIT_DECIMAL_PLURAL', 'h')
             data_for_template_render['time_unit_general_plural'] = current_lang_cfg.get('TIME_UNIT_GENERAL_PLURAL', 'h')
+        elif component_name == COMPONENT_NAME_VIDEO_LESSON:
+            pdf_template_file = "video_lesson_pdf_template.html"
+            if content_json and isinstance(content_json, dict):
+                data_for_template_render = json.loads(json.dumps(content_json))
+                if not data_for_template_render.get('detectedLanguage'):
+                    # Fallback language detection
+                    try:
+                        parsed_model = VideoLessonData(**content_json)
+                        if parsed_model.detectedLanguage:
+                            detected_lang_for_pdf = parsed_model.detectedLanguage
+                    except Exception: pass # Ignore parsing errors for fallback
+                    data_for_template_render['detectedLanguage'] = detected_lang_for_pdf
+            else:
+                data_for_template_render = {
+                    "mainPresentationTitle": f"Content Error: {mp_name_for_pdf_context}",
+                    "slides": [], "detectedLanguage": detected_lang_for_pdf
+                }
         else:
             logger.warning(f"PDF: Unknown component_name '{component_name}' for project {project_id}. Defaulting to simple PDF Lesson structure.")
             pdf_template_file = "pdf_lesson_pdf_template.html"
