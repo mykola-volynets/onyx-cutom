@@ -1013,7 +1013,8 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             * `4`: Special Call-outs (e.g., "Module Goal", "Important Note"). Typically use `iconName: "target"` for goals, or lesson objectives.
         * `text` (string): Headline text.
         * `iconName` (string, optional): Based on level and context as described above.
-        * `isImportant` (boolean, optional): Set to `true` for Level 3 and 4 headlines like "Lesson Goal" or "Lesson Target". If `true`, this headline AND its *immediately following single block* will be grouped into a visually distinct highlighted box. Do NOT set this to 'true' for sections like 'Conclusion', 'Key Takeaways' or any other section that comes in the very end of the lesson.
+        * `isImportant` (boolean, optional): Set to `true` for Level 3 and 4 headlines like "Lesson Goal" or "Lesson Target". If `true`, this headline AND its *immediately following single block* will be grouped into a visually distinct highlighted box. Do NOT set this to 'true' for sections like 'Conclusion', 'Key Takeaways' or any other section that comes in the very end of the lesson. Do not use this as 'true' for more than 1 section.
+
 
     2.  **`type: "paragraph"`**
         * `text` (string): Full paragraph text.
@@ -1038,6 +1039,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
     * Ensure correct `level` for headlines. Section headers are `level: 2`. Mini-titles in lists are `level: 3`.
     * Icons: `info` for H2. `target` or `award` for H4 `isImportant`. `chevronRight` for general bullet lists. No icons for H3 mini-titles.
     * Permissible Icon Names: `info`, `target`, `award`, `chevronRight`, `bullet-circle`, `compass`.
+    * Make sure to not have any tags in '<>' brackets (e.g. '<u>') in the list elements, UNLESS it is logically a part of the lesson.
 
     Return ONLY the JSON object. 
             """
@@ -1048,14 +1050,14 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             component_specific_instructions = """
             For 'Training Plan' content:
             - Extract the 'mainTitle'.
-            - Each module becomes a 'section' object with 'id' (e.g., '№1'), 'title', 'totalHours', and 'lessons' array.
+            - Each module becomes a 'section' object with 'id' (e.g., '№1'. It shouldn't be 'Module 1', strictly format it as '№X'), 'title', 'totalHours', and 'lessons' array.
             - Each lesson in a module becomes a 'lesson' object with 'title', 'check', 'contentAvailable', 'source', and 'hours'.
-            - For 'check' object: 'type' (e.g., 'test', 'practice', 'none') and 'text'. 'text' must be original language, default to 'Test' if no 'text' but the type is 'test'.
+            - For 'check' object: 'type' (e.g., 'test', 'practice', 'none') and 'text'. 'text' must be original language, default to 'Test' if no 'text' but the type is 'test'. If the 'raw text' has mentions of the knowlage assesment and it is not none, then you cannot leave this field blank.
             - For 'contentAvailable' object: 'type' ('yes', 'no', 'percentage') and 'text'. 'text' must be original language. Default to {"type": "yes", "text": "100%"} if not mentioned.
             - Ensure all module numbers, titles, lesson details, hours, and source texts are extracted in their original language.
             - Ensure 'detectedLanguage' field is present (e.g., "en", "ru").
             """
-        elif selected_design_template.component_name == COMPONENT_NAME_VIDEO_LESSON: # New case
+        elif selected_design_template.component_name == COMPONENT_NAME_VIDEO_LESSON:
             target_content_model = VideoLessonData
             default_error_instance = VideoLessonData(
                 mainPresentationTitle=f"LLM Parsing Error for {project_data.projectName}",

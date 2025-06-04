@@ -1151,6 +1151,17 @@ export function ChatPage({
     setLoadingError(null);
   };
 
+  const handleProductSelectionFromModal = (productName: string) => {
+    if (!productName) return;
+
+    const message = productName;
+  
+    onSubmit({ messageOverride: message });
+
+    setShowProductSelectionModal(false); // Close the modal after submitting
+  };
+
+
   const handleApplyProductPrompts = async (fullAIMessage: string) => {
     // ADDED: Log the full AI message received
     console.log("AI_MESSAGE_DEBUG: Full AI message received:", JSON.stringify(fullAIMessage));
@@ -2416,7 +2427,7 @@ export function ChatPage({
       <MakeIntoProductModal
         isOpen={showProductSelectionModal}
         onClose={() => setShowProductSelectionModal(false)}
-        onApply={handleApplyProductPrompts}
+        onApply={handleProductSelectionFromModal}
       />
 
       {showApiKeyModal && !shouldShowWelcomeModal && (
