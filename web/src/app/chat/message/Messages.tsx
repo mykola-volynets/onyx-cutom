@@ -94,6 +94,14 @@ const TOOLS_WITH_CUSTOM_HANDLING = [
   IMAGE_GENERATION_TOOL_NAME,
 ];
 
+interface ActionButtonProps {
+  icon: React.ElementType;
+  onClick?: () => void;
+  text: string;
+  subtle?: boolean;
+  className?: string;
+}
+
 // ... (FileDisplay and FileResponseDisplay components remain the same)
 function FileDisplay({
   files,
@@ -281,7 +289,7 @@ export const AIMessage = ({
   regenerate?: (modelOverRide: LlmDescriptor) => Promise<void>;
   setPresentingDocument: (document: MinimalOnyxDocument) => void;
   removePadding?: boolean;
-  onApplyProductPrompts?: (prompts: string[]) => void; // MODIFIED: Added prop type back (adjust Promise<void> if needed based on ChatPage.tsx)
+  onApplyProductPrompts?: (rawMessageContent: string) => void;
 }) => {
   const toolCallGenerating = toolCall && !toolCall.tool_result;
 
@@ -824,13 +832,38 @@ export const AIMessage = ({
                                 />
                               </CustomTooltip>
                             )}
-                              {/* "Add to Projects" button with HiOutlineSparkles icon and CustomTooltip */}
-                              <CustomTooltip showTick line content="Create Project">
-                                <HoverableIcon
-                                  icon={<HiOutlineSparkles size={18} />} 
-                                  onClick={handleAddToProjects}
-                                />
-                              </CustomTooltip>
+                              {onApplyProductPrompts && isComplete && ( // Ensure onApplyProductPrompts and isComplete are true
+  <CustomTooltip showTick line content="Make a Product (Direct)">
+    <HoverableIcon
+      icon={<HiOutlineSparkles size={18} />} 
+      onClick={() => {
+        let messageForProduct = "";
+        if (typeof finalContentProcessed === 'string') {
+          messageForProduct = finalContentProcessed;
+        } else if (typeof content === 'string') {
+          messageForProduct = content;
+        } else {
+          // Helper to get text from ReactNode if content is complex
+          const getTextFromNode = (node: React.ReactNode): string => {
+            if (typeof node === 'string') return node;
+            if (Array.isArray(node)) return node.map(getTextFromNode).join('');
+            if (React.isValidElement(node) && node.props.children) {
+              return getTextFromNode(node.props.children);
+            }
+            return '';
+          };
+          messageForProduct = getTextFromNode(content);
+        }
+        if (onApplyProductPrompts && messageForProduct.trim()) {
+          onApplyProductPrompts(messageForProduct.trim());
+        } else if (onApplyProductPrompts) {
+           onApplyProductPrompts(""); 
+           console.warn("Could not extract usable string for 'Make a Product'. Passing empty string.");
+        }
+      }}
+    />
+  </CustomTooltip>
+)}
 
                             {/* "Make into Product" button commented out
                             <CustomTooltip showTick line content="Make into Product">
@@ -923,13 +956,37 @@ export const AIMessage = ({
                                 />
                               </CustomTooltip>
                             )}
-                              {/* "Add to Projects" button - also for hover state */}
-                              <CustomTooltip showTick line content="Create Project">
-                                <HoverableIcon
-                                  icon={<HiOutlineSparkles size={18} />} 
-                                  onClick={handleAddToProjects}
-                                />
-                              </CustomTooltip>
+                              {onApplyProductPrompts && isComplete && (
+  <CustomTooltip showTick line content="Make a Product (Direct)">
+    <HoverableIcon
+      icon={<HiOutlineSparkles size={18} />} 
+      onClick={() => {
+        let messageForProduct = "";
+        if (typeof finalContentProcessed === 'string') {
+          messageForProduct = finalContentProcessed;
+        } else if (typeof content === 'string') {
+          messageForProduct = content;
+        } else {
+          const getTextFromNode = (node: React.ReactNode): string => {
+            if (typeof node === 'string') return node;
+            if (Array.isArray(node)) return node.map(getTextFromNode).join('');
+            if (React.isValidElement(node) && node.props.children) {
+              return getTextFromNode(node.props.children);
+            }
+            return '';
+          };
+          messageForProduct = getTextFromNode(content);
+        }
+        if (onApplyProductPrompts && messageForProduct.trim()) {
+          onApplyProductPrompts(messageForProduct.trim());
+        } else if (onApplyProductPrompts) {
+           onApplyProductPrompts("");
+           console.warn("Could not extract usable string for 'Make a Product'. Passing empty string.");
+        }
+      }}
+    />
+  </CustomTooltip>
+)}
                             {/* "Make into Product" button commented out
                             <CustomTooltip showTick line content="Make into Product">
                               <HoverableIcon

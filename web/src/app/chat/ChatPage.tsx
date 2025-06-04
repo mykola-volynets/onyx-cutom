@@ -138,6 +138,8 @@ import { ChatSearchModal } from "./chat_search/ChatSearchModal";
 import { ErrorBanner } from "./message/Resubmit";
 import MinimalMarkdown from "@/components/chat/MinimalMarkdown";
 
+import { DesignTemplateResponse } from '@/types/designTemplates';
+
 const TEMP_USER_MESSAGE_ID = -1;
 const TEMP_ASSISTANT_MESSAGE_ID = -2;
 const SYSTEM_MESSAGE_ID = -3;
@@ -164,6 +166,10 @@ export function ChatPage({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const [designTemplates, setDesignTemplates] = useState<DesignTemplateResponse[]>([]);
+  const [isLoadingDesignTemplates, setIsLoadingDesignTemplates] = useState<boolean>(false);
+  const { popup, setPopup } = usePopup();
 
   const {
     chatSessions,
@@ -196,6 +202,33 @@ export function ChatPage({
   const defaultAssistantId = defaultAssistantIdRaw
     ? parseInt(defaultAssistantIdRaw)
     : undefined;
+
+  const ensureDesignTemplatesFetched = async (): Promise<DesignTemplateResponse[]> => {
+    if (designTemplates.length > 0 && !isLoadingDesignTemplates) { // Also check isLoading to prevent race conditions
+      return designTemplates;
+    }
+
+    setIsLoadingDesignTemplates(true);
+    try {
+      const response = await fetch("/api/custom-projects-backend/design_templates");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Failed to fetch design templates" }));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+      // Explicitly type the data from the JSON response
+      const data: DesignTemplateResponse[] = await response.json();
+      setDesignTemplates(data);
+      setIsLoadingDesignTemplates(false);
+      return data;
+    } catch (error) {
+      console.error("Error fetching design templates:", error);
+      const errorMessage = error instanceof Error ? error.message : "Could not load product types.";
+      setPopup({ type: "error", message: "Could not load product types to proceed: " + errorMessage });
+      setIsLoadingDesignTemplates(false);
+      setDesignTemplates([]); // Clear templates on error
+      return []; // Return empty array on error
+    }
+  };  
 
   function useScreenSize() {
     const [screenSize, setScreenSize] = useState({
@@ -392,8 +425,6 @@ export function ChatPage({
     useState<Persona | null>(null);
 
   const submitOnLoadPerformed = useRef<boolean>(false);
-
-  const { popup, setPopup } = usePopup();
 
   const [isFetchingChatMessages, setIsFetchingChatMessages] = useState(
     existingChatSessionId !== null
@@ -1111,47 +1142,151 @@ export function ChatPage({
     setLoadingError(null);
   };
 
-  const handleApplyProductPrompts = async (messageContent: string) => { // Changed parameter type from string[] to string
-    if (!liveAssistant) {
+  const handleApplyProductPrompts = async (fullAIMessage: string) => {
+    // ADDED: Log the full AI message received
+    console.log("AI_MESSAGE_DEBUG: Full AI message received:", JSON.stringify(fullAIMessage));
+
+    if (!fullAIMessage || typeof fullAIMessage !== 'string') {
+      // ADDED: Log invalid message content
+      console.error("AI_MESSAGE_DEBUG: Invalid AI message content. Message:", fullAIMessage);
+      setPopup({ type: "error", message: "Invalid AI message content for product creation." });
+      return;
+    }
+
+    const lines = fullAIMessage.split('\n');
+    const headerLine = lines[0];
+    const strippedAiResponse = lines.slice(1).join('\n');
+
+    // ADDED: Log the extracted header and the rest of the response
+    console.log("AI_MESSAGE_DEBUG: Extracted Header Line:", JSON.stringify(headerLine));
+    console.log("AI_MESSAGE_DEBUG: Stripped AI Response:", JSON.stringify(strippedAiResponse));
+
+    const headerRegex = /^\*\*(.*?)\*\* *: *\*\*(.*?)\*\* *: *\*\*(.*?)\*\*$/;
+    const match = headerLine.match(headerRegex);
+
+    // ADDED: Log the result of the regex match
+    console.log("AI_MESSAGE_DEBUG: Regex match result:", match);
+
+    if (!match || match.length < 4) {
+      // ADDED: Log detailed parsing failure information
+      console.error(
+        "AI_MESSAGE_DEBUG: Header parsing failed. Expected format: **Project Name** : **Product** : **Instance Name**. Received Header:",
+        JSON.stringify(headerLine),
+        "Regex Match:", match
+      );
       setPopup({
         type: "error",
-        message: "No assistant selected to send prompts.",
+        message: "AI message does not have the expected format for product creation. Expected: **Project Name** : **Product** : **Instance Name**",
       });
       return;
     }
 
-    // Stop ongoing generation if any, to prepare for the new message
-    if (currentChatState() !== "input") {
-      console.log(`ChatPage: Current chat state is ${currentChatState()}, stopping generation before applying prompts.`);
-      stopGenerating();
-      // Add a small delay to allow state to settle, if stopGenerating is asynchronous
-      await new Promise(resolve => setTimeout(resolve, 300));
-      if (currentChatState() !== "input") {
-        console.warn("ChatPage: Chat state did not return to 'input' after stopGenerating. Proceeding cautiously.");
-      } else {
-        console.log("ChatPage: Chat state is now 'input', proceeding with chosen product prompt.");
-      }
+    const parsedProjectName = match[1].trim();
+    const parsedProductName = match[2].trim();
+    let parsedInstanceName = match[3].trim();
+
+    // ADDED: Log parsed values
+    console.log("AI_MESSAGE_DEBUG: Parsed Project Name:", parsedProjectName);
+    console.log("AI_MESSAGE_DEBUG: Parsed Product Name:", parsedProductName);
+    console.log("AI_MESSAGE_DEBUG: Parsed Instance Name:", parsedInstanceName);
+
+
+    if (!parsedProjectName || !parsedProductName) {
+        // ADDED: Log failure to extract essential names
+        console.error("AI_MESSAGE_DEBUG: Could not extract critical Project Name or Product from header after regex match. Header:", JSON.stringify(headerLine));
+        setPopup({
+            type: "error",
+            message: "Could not extract Project Name or Product from the AI message.",
+        });
+        return;
+    }
+    
+    const currentDesignTemplates: DesignTemplateResponse[] = await ensureDesignTemplatesFetched();
+
+    if (isLoadingDesignTemplates){
+         setPopup({type: "info", message: "Loading product types, please try again shortly."});
+        return;
+    }
+    
+    if (currentDesignTemplates.length === 0 ) {
+      console.error("AI_MESSAGE_DEBUG: No design templates available or fetch failed.");
+      setPopup({ type: "error", message: "No product types available. Please configure them or check for loading errors." });
+      return;
     }
 
-    if (messageContent.trim() !== "") {
-      console.log(`ChatPage: Submitting chosen product prompt:\n"${messageContent}"`);
-      await onSubmit({
-        messageOverride: messageContent, // Use the passed messageContent directly
-        messageIdToResend: undefined,
-        queryOverride: undefined,
-        forceSearch: undefined,
-        isSeededChat: false,
-        alternativeAssistantOverride: null,
-        modelOverride: undefined,
-        regenerationRequest: undefined,
-        overrideFileDescriptors: undefined, // Ensure this is explicitly undefined or omitted
+    const matchedTemplate = currentDesignTemplates.find(
+      (template: DesignTemplateResponse) => 
+        template.template_name.trim().toLowerCase() === parsedProductName.toLowerCase()
+    );
+
+    // ADDED: Log template matching result
+    console.log("AI_MESSAGE_DEBUG: Matched Template:", matchedTemplate);
+
+    if (!matchedTemplate) {
+      // ADDED: Log if no template was found
+      console.error(`AI_MESSAGE_DEBUG: Product type "${parsedProductName}" not found in fetched templates. Available templates:`, currentDesignTemplates.map(t => t.template_name));
+      setPopup({
+        type: "error",
+        message: `Product type "${parsedProductName}" not found. Please ensure it's a valid and existing product design.`,
+      });
+      return;
+    }
+
+    if (!parsedInstanceName) {
+      parsedInstanceName = matchedTemplate.template_name;
+      // ADDED: Log if instance name was defaulted
+      console.log("AI_MESSAGE_DEBUG: Instance Name defaulted to product name:", parsedInstanceName);
+    }
+
+    const payload = {
+      projectName: parsedProjectName,
+      design_template_id: matchedTemplate.id,
+      microProductName: parsedInstanceName,
+      aiResponse: strippedAiResponse,
+    };
+
+    console.log("AI_MESSAGE_DEBUG: Submitting to /api/custom-projects-backend/projects/add with payload:", payload);
+    setPopup({type: "info", message: `Creating product "${parsedInstanceName}" in project "${parsedProjectName}"...`})
+
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      const devUserId = "dummy-onyx-user-id-for-testing"; 
+      if (devUserId && process.env.NODE_ENV === 'development') {
+        headers['X-Dev-Onyx-User-ID'] = devUserId;
+      }
+
+      const response = await fetch(`/api/custom-projects-backend/projects/add`, { // Ensure this path is correct for your setup
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP error! status: ${response.status}` }));
+        // ADDED: Log API error response
+        console.error("AI_MESSAGE_DEBUG: API Error Data:", errorData);
+        throw new Error(errorData.detail || `Failed to create product instance.`);
+      }
+      
+      const result = await response.json(); 
+      // ADDED: Log API success response
+      console.log("AI_MESSAGE_DEBUG: API Success Result:", result);
+      setPopup({
+        type: "success",
+        message: `Successfully created product "${payload.microProductName}" in project "${payload.projectName}".`,
+      });
+      
+      router.push('/projects'); 
+
+    } catch (err: any) {
+      // ADDED: Log caught error during API call
+      console.error('AI_MESSAGE_DEBUG: Failed to create product instance (catch block):', err);
+      setPopup({
+        type: "error",
+        message: err.message || "An unknown error occurred during product creation.",
       });
     }
-    console.log("ChatPage: Chosen product prompt processed.");
-    setShowProductSelectionModal(false); // Close the modal after sending the message
   };
-
-
 
   const onSubmit = async ({
     messageIdToResend,
@@ -2935,7 +3070,7 @@ export function ChatPage({
                                       }
                                     >
                                       <AIMessage
-                                        onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent[0])}
+                                        onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent)}
                                         userKnowledgeFiles={userFiles}
                                         docs={
                                           message?.documents &&
@@ -3100,7 +3235,7 @@ export function ChatPage({
                                 return (
                                   <div key={messageReactComponentKey}>
                                     <AIMessage
-                                      onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent[0])} 
+                                      onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent)} 
                                       setPresentingDocument={
                                         setPresentingDocument
                                       }
@@ -3144,7 +3279,7 @@ export function ChatPage({
                                 key={`${messageHistory.length}-${chatSessionIdRef.current}`}
                               >
                                 <AIMessage
-                                  onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent[0])}
+                                  onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent)}
                                   setPresentingDocument={setPresentingDocument}
                                   key={-3}
                                   currentPersona={liveAssistant}
@@ -3170,7 +3305,7 @@ export function ChatPage({
                             {loadingError && (
                               <div key={-1}>
                                 <AIMessage
-                                  onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent[0])}
+                                  onApplyProductPrompts={(messageContent) => handleApplyProductPrompts(messageContent)}
                                   setPresentingDocument={setPresentingDocument}
                                   currentPersona={liveAssistant}
                                   messageId={-1}
