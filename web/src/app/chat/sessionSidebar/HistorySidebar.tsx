@@ -135,7 +135,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             >
               <NewChatIcon size={20} className="flex-none" />
               <p className="my-auto flex font-normal items-center ">
-                New Chat
+                New Product
               </p>
             </Link>
             <Link
@@ -147,7 +147,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
                 className="flex-none text-text-history-sidebar-button"
               />
               <p className="my-auto flex font-normal items-center text-base">
-                My Documents
+                My Drive
               </p>
             </Link>
             <Link
@@ -158,7 +158,7 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             >
               <FiPackage size={18} className="flex-none text-text-history-sidebar-button" />
               <p className="my-auto flex font-normal items-center text-base">
-                Projects
+                My Products
               </p>
             </Link>
             

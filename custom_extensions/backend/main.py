@@ -1013,7 +1013,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             * `4`: Special Call-outs (e.g., "Module Goal", "Important Note"). Typically use `iconName: "target"` for goals, or lesson objectives.
         * `text` (string): Headline text.
         * `iconName` (string, optional): Based on level and context as described above.
-        * `isImportant` (boolean, optional): Set to `true` for Level 3 and 4 headlines like "Lesson Goal" or "Lesson Target". If `true`, this headline AND its *immediately following single block* will be grouped into a visually distinct highlighted box. Do NOT set this to 'true' for sections like 'Conclusion' or any other section that comes in the very end of the lesson.
+        * `isImportant` (boolean, optional): Set to `true` for Level 3 and 4 headlines like "Lesson Goal" or "Lesson Target". If `true`, this headline AND its *immediately following single block* will be grouped into a visually distinct highlighted box. Do NOT set this to 'true' for sections like 'Conclusion', 'Key Takeaways' or any other section that comes in the very end of the lesson.
 
     2.  **`type: "paragraph"`**
         * `text` (string): Full paragraph text.

@@ -41,6 +41,8 @@ import Cookies from "js-cookie";
 import { HistorySidebar } from "./sessionSidebar/HistorySidebar";
 import { Persona } from "../admin/assistants/interfaces";
 import { HealthCheckBanner } from "@/components/health/healthcheck";
+import { CgSpinner } from "react-icons/cg";
+
 import {
   buildChatUrl,
   buildLatestMessageChain,
@@ -170,6 +172,13 @@ export function ChatPage({
   const [designTemplates, setDesignTemplates] = useState<DesignTemplateResponse[]>([]);
   const [isLoadingDesignTemplates, setIsLoadingDesignTemplates] = useState<boolean>(false);
   const { popup, setPopup } = usePopup();
+
+  const [isCreatingProduct, setIsCreatingProduct] = useState<boolean>(false);
+  const [productCreationResult, setProductCreationResult] = useState<null | {
+    success: boolean;
+    message: string;
+    projectId?: string;
+  }>(null);
 
   const {
     chatSessions,
@@ -1146,11 +1155,14 @@ export function ChatPage({
     // ADDED: Log the full AI message received
     console.log("AI_MESSAGE_DEBUG: Full AI message received:", JSON.stringify(fullAIMessage));
 
+    setIsCreatingProduct(true);
+    setProductCreationResult(null);
+
     if (!fullAIMessage || typeof fullAIMessage !== 'string') {
       // ADDED: Log invalid message content
       console.error("AI_MESSAGE_DEBUG: Invalid AI message content. Message:", fullAIMessage);
-      setPopup({ type: "error", message: "Invalid AI message content for product creation." });
-      return;
+      setIsCreatingProduct(false);
+      setProductCreationResult({ success: false, message: "Invalid AI message content for product creation." });
     }
 
     const lines = fullAIMessage.split('\n');
@@ -1174,8 +1186,9 @@ export function ChatPage({
         JSON.stringify(headerLine),
         "Regex Match:", match
       );
-      setPopup({
-        type: "error",
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: false,
         message: "AI message does not have the expected format for product creation. Expected: **Project Name** : **Product** : **Instance Name**",
       });
       return;
@@ -1194,8 +1207,9 @@ export function ChatPage({
     if (!parsedProjectName || !parsedProductName) {
         // ADDED: Log failure to extract essential names
         console.error("AI_MESSAGE_DEBUG: Could not extract critical Project Name or Product from header after regex match. Header:", JSON.stringify(headerLine));
-        setPopup({
-            type: "error",
+        setIsCreatingProduct(false);
+        setProductCreationResult({
+            success: false,
             message: "Could not extract Project Name or Product from the AI message.",
         });
         return;
@@ -1204,13 +1218,18 @@ export function ChatPage({
     const currentDesignTemplates: DesignTemplateResponse[] = await ensureDesignTemplatesFetched();
 
     if (isLoadingDesignTemplates){
-         setPopup({type: "info", message: "Loading product types, please try again shortly."});
+        setPopup({type: "info", message: "Loading product types, please try again shortly."});
+        setIsCreatingProduct(false);
         return;
     }
     
     if (currentDesignTemplates.length === 0 ) {
       console.error("AI_MESSAGE_DEBUG: No design templates available or fetch failed.");
-      setPopup({ type: "error", message: "No product types available. Please configure them or check for loading errors." });
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: false,
+        message: "No product types available. Please configure them or check for loading errors.",
+      });
       return;
     }
 
@@ -1225,8 +1244,9 @@ export function ChatPage({
     if (!matchedTemplate) {
       // ADDED: Log if no template was found
       console.error(`AI_MESSAGE_DEBUG: Product type "${parsedProductName}" not found in fetched templates. Available templates:`, currentDesignTemplates.map(t => t.template_name));
-      setPopup({
-        type: "error",
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: false,
         message: `Product type "${parsedProductName}" not found. Please ensure it's a valid and existing product design.`,
       });
       return;
@@ -1246,7 +1266,6 @@ export function ChatPage({
     };
 
     console.log("AI_MESSAGE_DEBUG: Submitting to /api/custom-projects-backend/projects/add with payload:", payload);
-    setPopup({type: "info", message: `Creating product "${parsedInstanceName}" in project "${parsedProjectName}"...`})
 
     try {
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -1271,18 +1290,20 @@ export function ChatPage({
       const result = await response.json(); 
       // ADDED: Log API success response
       console.log("AI_MESSAGE_DEBUG: API Success Result:", result);
-      setPopup({
-        type: "success",
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: true,
         message: `Successfully created product "${payload.microProductName}" in project "${payload.projectName}".`,
+        projectId: result.id, // Assuming result.id is the new product's ID
       });
-      
-      router.push('/projects'); 
+     
 
     } catch (err: any) {
       // ADDED: Log caught error during API call
       console.error('AI_MESSAGE_DEBUG: Failed to create product instance (catch block):', err);
-      setPopup({
-        type: "error",
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: false,
         message: err.message || "An unknown error occurred during product creation.",
       });
     }
@@ -2350,6 +2371,47 @@ export function ChatPage({
   return (
     <>
       <HealthCheckBanner />
+
+      {isCreatingProduct && (
+        <div
+          className="fixed bottom-20 right-4 p-4 rounded-lg shadow-xl bg-blue-100 border border-blue-400 text-blue-700 z-[10000] flex items-center"
+          // Style to match existing popups (e.g., from Popup.tsx)
+        >
+          <CgSpinner className="animate-spin mr-2 h-5 w-5" /> {/* Example spinner */}
+          <p className="text-sm">Creating product, please wait...</p>
+        </div>
+      )}
+
+      {/* Success/Error message with redirect button */}
+      {productCreationResult && (
+        <div
+          className={`fixed bottom-20 right-4 p-4 rounded-lg shadow-xl z-[10000] flex flex-col items-start
+            ${productCreationResult.success ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'}`}
+          // Style to match existing popups
+        >
+          <div className="w-full flex justify-between items-start mb-2">
+            <p className="text-sm font-medium">{productCreationResult.message}</p>
+            <button
+              onClick={() => setProductCreationResult(null)}
+              className="ml-4 text-xl font-semibold leading-none hover:text-gray-900 opacity-70 hover:opacity-100"
+              aria-label="Dismiss"
+            >
+              &times;
+            </button>
+          </div>
+          {productCreationResult.success && productCreationResult.projectId && (
+            <button
+              onClick={() => {
+                router.push(`/custom-projects-ui/projects/view/${productCreationResult.projectId}`);
+                setProductCreationResult(null); // Dismiss after navigation
+              }}
+              className="mt-1 bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1.5 px-3 rounded focus:outline-none focus:shadow-outline"
+            >
+              View Product
+            </button>
+          )}
+        </div>
+      )}
 
       <MakeIntoProductModal
         isOpen={showProductSelectionModal}

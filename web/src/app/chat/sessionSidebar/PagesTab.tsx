@@ -325,7 +325,7 @@ export function PagesTab({
       {popup}
       <div className="px-4 mt-2 group mr-2 bg-background-sidebar dark:bg-transparent z-20">
         <div className="flex  group justify-between text-sm gap-x-2 text-text-300/80 items-center font-normal leading-normal">
-          <p>Chats</p>
+          <p>Products</p>
 
           <TooltipProvider delayDuration={1000}>
             <Tooltip>
