@@ -2384,14 +2384,15 @@ export function ChatPage({
       <HealthCheckBanner />
 
       {isCreatingProduct && (
-        <div
-          className="fixed bottom-20 right-4 p-4 rounded-lg shadow-xl bg-blue-100 border border-blue-400 text-blue-700 z-[10000] flex items-center"
-          // Style to match existing popups (e.g., from Popup.tsx)
-        >
-          <CgSpinner className="animate-spin mr-2 h-5 w-5" /> {/* Example spinner */}
-          <p className="text-sm">Creating product, please wait...</p>
-        </div>
-      )}
+  <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-[10000]">
+    <div className="bg-white rounded-lg p-8 flex flex-col items-center shadow-xl border border-border">
+      <CgSpinner className="animate-spin h-10 w-10 text-blue-600 mb-4" />
+      <p className="text-lg font-semibold text-text-800">
+        Creating product, please wait...
+      </p>
+    </div>
+  </div>
+)}
 
       {/* Success/Error message with redirect button */}
       {productCreationResult && (

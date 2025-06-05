@@ -60,7 +60,7 @@ const ProjectsTable: React.FC = () => {
       });
       setExpandedProjects(initialExpansionState);
     } catch (e: any) {
-      setError(e.message || "Failed to load projects.");
+      setError(e.message || "Failed to load products.");
     } finally {
       setLoading(false);
     }
@@ -108,10 +108,10 @@ const ProjectsTable: React.FC = () => {
   const handleDeleteSelected = async () => {
     const validSelectedIds = selectedProjectIds.filter(id => typeof id === 'number');
     if (validSelectedIds.length === 0) {
-      alert("No valid projects selected for deletion.");
+      alert("No valid products selected for deletion.");
       return;
     }
-    if (!window.confirm(`Are you sure you want to delete ${validSelectedIds.length} selected project(s)? This will delete all instances under these projects.`)) {
+    if (!window.confirm(`Are you sure you want to delete ${validSelectedIds.length} selected products?`)) {
       return;
     }
     setIsDeleting(true);
@@ -132,7 +132,6 @@ const ProjectsTable: React.FC = () => {
         throw new Error(errorData.detail);
       }
       const result = await response.json();
-      alert(result.detail || `${validSelectedIds.length} project(s) deleted successfully.`);
       fetchProjects();
     } catch (e: any) {
       alert(`Error deleting projects: ${e.message || "Unknown error."}`);
@@ -241,7 +240,7 @@ const ProjectsTable: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading projects...</div>;
+  if (loading) return <div className="p-8 text-center">Loading products...</div>;
   if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
 
   const allProjectIds = projectsData.map(p => p.id).filter(id => typeof id === 'number');
@@ -251,7 +250,7 @@ const ProjectsTable: React.FC = () => {
   return (
     <div className="p-4 md:p-8 font-['Inter',_sans-serif] flex-grow bg-gray-50">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Products</h1>
         <button
           onClick={handleDeleteSelected}
           disabled={!isAnySelected || isDeleting}
@@ -266,7 +265,7 @@ const ProjectsTable: React.FC = () => {
       </div>
 
       {(!projectsData || projectsData.length === 0) ? (
-        <div className="p-8 text-center">No projects found. <Link href="/add-to-project" className="text-blue-600 hover:underline">Add a new one?</Link></div>
+        <div className="p-8 text-center">No products found. <Link href="/add-to-project" className="text-blue-600 hover:underline">Add a new one?</Link></div>
       ) : (
         <div className="shadow-lg rounded-lg overflow-x-auto border border-gray-200 bg-white">
           <table className="min-w-full bg-white">
@@ -281,7 +280,7 @@ const ProjectsTable: React.FC = () => {
                     disabled={projectsData.length === 0}
                   />
                 </th>
-                <th className="w-full text-left py-3 px-4 uppercase font-semibold text-sm">Project Name / Instance</th>
+                <th className="w-full text-left py-3 px-4 uppercase font-semibold text-sm">Projects/Products</th>
               </tr>
             </thead>
             {Object.entries(groupedProjects).map(([projectName, entries], groupIndex) => {
@@ -314,7 +313,7 @@ const ProjectsTable: React.FC = () => {
                       <td colSpan={1} className="text-left py-3 px-4 font-semibold">
                         <div className="flex items-center">
                           {isCurrentlyExpanded ? <ChevronDown size={18} className="mr-2 expand-collapse-icon" /> : <ChevronRight size={18} className="mr-2 expand-collapse-icon" />}
-                          {projectName} ({entries.length} instances)
+                          {projectName} ({entries.length} products)
                         </div>
                       </td>
                     </tr>

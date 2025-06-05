@@ -1,11 +1,11 @@
 // custom_extensions/frontend/src/components/TrainingPlanTable.tsx
 "use client";
 
-import React, { useEffect } from 'react'; // Added useEffect for potential logging
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { HelpCircle } from 'lucide-react';
 import { TrainingPlanData, Section as SectionType, Lesson as LessonType } from '@/types/trainingPlan';
-import { ProjectListItem, StatusInfo as ProductStatusInfo } from '@/types/products'; 
+import { ProjectListItem, StatusInfo as ProductStatusInfo } from '@/types/products';
 
 
 // --- Custom SVG Icons ---
@@ -66,8 +66,8 @@ interface TrainingPlanTableProps {
   dataToDisplay?: TrainingPlanData | null;
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newValue: string | number | boolean) => void;
-  allUserMicroproducts?: ProjectListItem[]; 
-  parentProjectName?: string;                
+  allUserMicroproducts?: ProjectListItem[];
+  parentProjectName?: string;
 }
 
 const localizationConfig = {
@@ -98,8 +98,8 @@ const formatHoursDisplay = (hours: number | string, language: 'ru' | 'en' | 'uk'
     const numHours = Number(hours);
     if (isNaN(numHours)) return isEditingContext ? "" : "-";
     if (numHours <= 0 && !isEditingContext) return '-';
-    if (isEditingContext && numHours === 0 && (typeof hours === 'number' || hours === "0")) return "0"; 
-    if (isEditingContext && hours === "") return ""; 
+    if (isEditingContext && numHours === 0 && (typeof hours === 'number' || hours === "0")) return "0";
+    if (isEditingContext && hours === "") return "";
 
     const numStr = numHours % 1 === 0 ? numHours.toFixed(0) : numHours.toFixed(1);
     if (language === 'en') { return `${numStr}${localized.timeUnitSingular}`; }
@@ -110,21 +110,12 @@ const formatHoursDisplay = (hours: number | string, language: 'ru' | 'en' | 'uk'
 const MAX_SOURCE_LENGTH = 25;
 
 const findMicroproductByTitle = (
-  titleToMatch: string | undefined | null, 
-  parentProjectName: string | undefined,   
-  allUserMicroproducts: ProjectListItem[] | undefined 
+  titleToMatch: string | undefined | null,
+  parentProjectName: string | undefined,
+  allUserMicroproducts: ProjectListItem[] | undefined
 ): ProjectListItem | undefined => {
-  
-  // Uncomment these logs in your browser's developer console if links are still not working.
-  // console.log(`[findMicroproductByTitle] INPUTS -> lessonTitle: "${titleToMatch}", parentProjectName: "${parentProjectName}"`);
-  // if (allUserMicroproducts) {
-  //   console.log(`[findMicroproductByTitle] Searching in ${allUserMicroproducts.length} microproducts:`, JSON.parse(JSON.stringify(allUserMicroproducts)));
-  // } else {
-  //   console.log(`[findMicroproductByTitle] allUserMicroproducts is undefined.`);
-  // }
 
   if (!allUserMicroproducts || !parentProjectName || !titleToMatch) {
-    // console.log(`[findMicroproductByTitle] EXIT: Missing one or more required parameters.`);
     return undefined;
   }
 
@@ -133,46 +124,26 @@ const findMicroproductByTitle = (
 
   const found = allUserMicroproducts.find(
     (mp) => {
-      // The ProjectListItem type defines 'microProductName' (camelCase).
-      // However, your logs showed the data arriving with 'microproduct_name' (snake_case).
-      // We will robustly check the camelCase version first, then the snake_case version.
-      const mpMicroName = (mp.microProductName !== undefined && mp.microProductName !== null)
-                          ? mp.microProductName 
-                          : (mp as any)["microproduct_name"]; // Accessing snake_case as a fallback
+      const mpMicroName = mp.microProductName ?? (mp as any).microproduct_name;
 
       const projectMatch = mp.projectName?.trim() === trimmedParentProjectName;
       const nameMatch = mpMicroName?.trim() === trimmedTitleToMatch;
       
-      // Uncomment for detailed per-item checking:
-      // if (projectMatch) { 
-      //   console.log(`  [findMicroproductByTitle] Checking item in project "${mp.projectName}": ID=${mp.id}, MicroProdName="${mpMicroName}" vs LessonTitle="${trimmedTitleToMatch}" -> NameMatch=${nameMatch}`);
-      // }
       return projectMatch && nameMatch;
     }
   );
 
-  // console.log(`[findMicroproductByTitle] RESULT for "${trimmedTitleToMatch}":`, found ? `Found ID ${found.id}` : 'Not found');
   return found;
 };
 
 
-const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({ 
-  dataToDisplay, 
-  isEditing, 
+const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
+  dataToDisplay,
+  isEditing,
   onTextChange,
-  allUserMicroproducts, 
-  parentProjectName     
+  allUserMicroproducts,
+  parentProjectName
 }) => {
-  
-  // Uncomment this useEffect to see the props when the component (re)renders.
-  // useEffect(() => {
-  //   console.log("[TrainingPlanTableComponent] PROPS RECEIVED:");
-  //   console.log("  > dataToDisplay (mainTitle):", dataToDisplay?.mainTitle);
-  //   console.log("  > isEditing:", isEditing);
-  //   console.log("  > allUserMicroproducts (count):", allUserMicroproducts?.length);
-  //   console.log("  > parentProjectName:", parentProjectName);
-  // }, [dataToDisplay, isEditing, allUserMicroproducts, parentProjectName]);
-
 
   const iconBaseColor = '#FF1414';
   const sections = dataToDisplay?.sections;
@@ -187,13 +158,13 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
   const handleNumericInputChange = (
     path: (string|number)[],
     event: React.ChangeEvent<HTMLInputElement>,
-    autoCalcPath?: (string|number)[] 
+    autoCalcPath?: (string|number)[]
   ) => {
     if (onTextChange) {
         const valueStr = event.target.value;
         const numValue = parseFloat(valueStr);
-        onTextChange(path, valueStr === "" ? "" : (isNaN(numValue) ? 0 : numValue)); 
-        if (autoCalcPath && valueStr !== "") { 
+        onTextChange(path, valueStr === "" ? "" : (isNaN(numValue) ? 0 : numValue));
+        if (autoCalcPath && valueStr !== "") {
             onTextChange(autoCalcPath, false);
         }
     }
@@ -213,6 +184,8 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
   if ((!sections || sections.length === 0) && !isEditing && mainTitle === undefined) {
     return <div className="p-8 text-center">No training plan data available.</div>;
   }
+
+  let lessonCounter = 0;
 
   return (
     <div className="font-['Inter',_sans-serif] bg-gray-50">
@@ -276,10 +249,9 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
                 </div>
               </div>
               {(section.lessons || []).map((lesson: LessonType, lessonIndex: number) => {
+                lessonCounter++;
+                const currentLessonNumber = lessonCounter;
                 const matchingMicroproduct = findMicroproductByTitle(lesson.title, parentProjectName, allUserMicroproducts);
-                
-                // Uncomment this log to see the result for each lesson directly before rendering
-                // console.log(`[TrainingPlanTable] For lesson: "${lesson.title}" (in parent "${parentProjectName}") - Matching Product:`, matchingMicroproduct ? `ID ${matchingMicroproduct.id}, Name: "${(matchingMicroproduct as any).microproduct_name || matchingMicroproduct.microProductName}"` : "None");
 
                 return (
                   <div key={lesson.id || `lesson-${sectionIdx}-${lessonIndex}`} className="grid grid-cols-10 gap-0 p-4 items-center border-t border-gray-300 hover:bg-gray-50 transition-colors duration-150 min-h-[50px]">
@@ -287,11 +259,11 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
                       {isEditing && onTextChange ? (
                         <input type="text" value={lesson.title} onChange={(e) => handleGenericInputChange(['sections', sectionIdx, 'lessons', lessonIndex, 'title'], e)} className={editingInputClass} placeholder="Lesson Title"/>
                       ) : matchingMicroproduct ? (
-                        <Link href={`/projects/view/${matchingMicroproduct.id}`} className="text-blue-600 hover:underline">
+                        <Link href={`/projects/view/${matchingMicroproduct.id}?parentProjectName=${encodeURIComponent(parentProjectName || "")}&lessonNumber=${currentLessonNumber}`} className="text-blue-600 hover:underline">
                           {lesson.title}
                         </Link>
                       ) : (
-                        lesson.title 
+                        lesson.title
                       )}
                     </div>
                     <div className="col-span-5 sm:col-span-2 flex justify-start px-2 border-r border-gray-400">

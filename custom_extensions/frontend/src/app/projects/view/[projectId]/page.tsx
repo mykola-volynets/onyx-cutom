@@ -129,8 +129,6 @@ export default function ProjectInstanceViewPage() {
 
       if (instanceData.details) {
         const copiedDetails = JSON.parse(JSON.stringify(instanceData.details));
-        // The backend sends MicroProductContentData, so we cast it to the specific type
-        // based on component_name for editableData.
         if (instanceData.component_name === COMPONENT_NAME_TRAINING_PLAN) {
           setEditableData(copiedDetails as TrainingPlanData);
         } else if (instanceData.component_name === COMPONENT_NAME_PDF_LESSON) {
@@ -138,11 +136,10 @@ export default function ProjectInstanceViewPage() {
         } else if (instanceData.component_name === COMPONENT_NAME_VIDEO_LESSON) {
           setEditableData(copiedDetails as VideoLessonData);
         } else {
-          setEditableData(copiedDetails); // Fallback for other types if MicroProductContentData is a wider union
+          setEditableData(copiedDetails); 
         }
       } else {
-        // Initialize with an empty structure if details are null
-        const lang = instanceData.detectedLanguage || 'en'; // Use detectedLanguage from instanceData if available
+        const lang = instanceData.detectedLanguage || 'en'; 
         if (instanceData.component_name === COMPONENT_NAME_TRAINING_PLAN) {
           setEditableData({ mainTitle: instanceData.name || "New Training Plan", sections: [], detectedLanguage: lang });
         } else if (instanceData.component_name === COMPONENT_NAME_PDF_LESSON) {
@@ -282,13 +279,15 @@ export default function ProjectInstanceViewPage() {
       const lang = projectInstanceData.details?.detectedLanguage || 'en';
       if (projectInstanceData.details) {
         setEditableData(JSON.parse(JSON.stringify(projectInstanceData.details)));
-      } else { // Initialize with empty structure if details were null from backend
+      } else { 
         if (projectInstanceData.component_name === COMPONENT_NAME_TRAINING_PLAN) {
           setEditableData({ mainTitle: projectInstanceData.name || "New Training Plan", sections: [], detectedLanguage: lang });
         } else if (projectInstanceData.component_name === COMPONENT_NAME_PDF_LESSON) {
           setEditableData({ lessonTitle: projectInstanceData.name || "New PDF Lesson", contentBlocks: [], detectedLanguage: lang });
         } else if (projectInstanceData.component_name === COMPONENT_NAME_VIDEO_LESSON) {
           setEditableData({ mainPresentationTitle: projectInstanceData.name || "New Video Lesson", slides: [], detectedLanguage: lang });
+        } else {
+          setEditableData(null);
         }
       }
       setIsEditing(true);
@@ -391,9 +390,6 @@ export default function ProjectInstanceViewPage() {
         }
 
         <div className="bg-white p-4 sm:p-6 md:p-8 shadow-xl rounded-xl border border-gray-200">
-            {/* REMOVED: <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-200 text-center">
-              {displayName}
-            </h1> */}
             <Suspense fallback={<div className="py-10 text-center text-gray-500">Loading content display...</div>}>
               {displayContent()}
             </Suspense>

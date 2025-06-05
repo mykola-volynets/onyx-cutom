@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   PdfLessonData, AnyContentBlock, HeadlineBlock, ParagraphBlock,
   BulletListBlock, NumberedListBlock, AlertBlock, SectionBreakBlock,
@@ -378,6 +379,9 @@ export interface PdfLessonDisplayProps {
 }
 
 const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonDisplayProps): React.JSX.Element | null => {
+  const searchParams = useSearchParams();
+  const parentProjectName = searchParams.get('parentProjectName');
+  const lessonNumber = searchParams.get('lessonNumber');
   
   if (!dataToDisplay) {
     return <div className="p-6 text-center text-gray-500 text-xs">No lesson content available to display.</div>;
@@ -445,19 +449,32 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
   return (
     <div className="font-['Inter',_sans-serif] bg-white p-4 sm:p-6 md:p-8 shadow-lg rounded-md max-w-3xl mx-auto my-6">
       {dataToDisplay.lessonTitle && (
-        <div className={`mb-4`}> 
+        <div className={`mb-4`}>
           {isEditing && onTextChange ? (
             <input
               type="text"
               value={dataToDisplay.lessonTitle} 
-              onChange={(e) => onTextChange(['lessonTitle'], e.target.value)}
+              onChange={(e) => onTextChange!(['lessonTitle'], e.target.value)}
               className={`uppercase w-full text-2xl sm:text-3xl font-medium ${THEME_COLORS.headingText} mb-1.5 p-1 ${editingInputClass} outline-none focus:ring-1 focus:ring-yellow-500`}
               style={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit', textTransform: 'uppercase' }}
             />
           ) : (
-            <h1 className={`uppercase text-2xl sm:text-3xl font-medium ${THEME_COLORS.headingText} mb-1.5`}>
-              {styledLessonTitle}
-            </h1>
+            (parentProjectName && lessonNumber) ? (
+              <div>
+                  <div className="pl-2.5 border-l-[3px] border-[#FF1414] py-1 mb-2">
+                      <span className="text-xl sm:text-2xl font-medium text-black">
+                          <span style={{ color: '#FF1414' }}>Course:</span> {decodeURIComponent(parentProjectName)}
+                      </span>
+                  </div>
+                  <h1 className={`uppercase text-2xl sm:text-3xl font-medium ${THEME_COLORS.headingText} mb-1.5`}>
+                      <span style={{ color: '#FF1414' }}>Lesson {lessonNumber}:</span> {styledLessonTitle}
+                  </h1>
+              </div>
+              ) : (
+                <h1 className={`uppercase text-2xl sm:text-3xl font-medium ${THEME_COLORS.headingText} mb-1.5`}>
+                  {styledLessonTitle}
+                </h1>
+              )
           )}
         </div>
       )}

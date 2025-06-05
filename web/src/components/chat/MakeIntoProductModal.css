@@ -1,0 +1,9 @@
+/* MakeIntoProductModal.css */
+
+/*
+  This style is meant to forcefully override any theme styles.
+  The !important flag ensures it takes top priority over conflicting styles.
+*/
+.force-white-background {
+  background-color: #FFFFFF !important;
+}

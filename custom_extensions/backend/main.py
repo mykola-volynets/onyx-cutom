@@ -19,7 +19,7 @@ import logging
 
 # --- CONTROL VARIABLE FOR PRODUCTION LOGGING ---
 # SET THIS TO True FOR PRODUCTION, False FOR DEVELOPMENT
-IS_PRODUCTION = False  # Or True for production
+IS_PRODUCTION = True  # Or True for production
 
 # --- Logger ---
 logger = logging.getLogger(__name__)
@@ -580,6 +580,39 @@ LANG_CONFIG = {
            'LESSONS_HEADER_KEYWORD': "Уроки",
            'TOTAL_TIME_KEYWORD': "Загальний час",
            'TIME_KEYWORD': "час"}
+}
+
+VIDEO_SCRIPT_LANG_STRINGS = {
+    'ru': {
+        'VIDEO_LESSON_SCRIPT_DEFAULT_TITLE': 'Видео урок',
+        'SLIDE_NUMBER_PREFIX': 'СЛАЙД №',
+        'DISPLAYED_TEXT_LABEL': 'Отображаемый текст:',
+        'DISPLAYED_IMAGE_LABEL': 'Отображаемая картинка:',
+        'DISPLAYED_VIDEO_LABEL': 'Отображаемое видео:',
+        'VOICEOVER_TEXT_LABEL': 'Текст озвучки:',
+        'NO_SLIDES_TEXT': 'Нет слайдов для отображения.',
+        'EMPTY_CONTENT_PLACEHOLDER': '...',
+    },
+    'en': {
+        'VIDEO_LESSON_SCRIPT_DEFAULT_TITLE': 'Video Lesson Script',
+        'SLIDE_NUMBER_PREFIX': 'SLIDE №',
+        'DISPLAYED_TEXT_LABEL': 'Displayed Text:',
+        'DISPLAYED_IMAGE_LABEL': 'Displayed Image:',
+        'DISPLAYED_VIDEO_LABEL': 'Displayed Video:',
+        'VOICEOVER_TEXT_LABEL': 'Voiceover Text:',
+        'NO_SLIDES_TEXT': 'No slides to display.',
+        'EMPTY_CONTENT_PLACEHOLDER': '...',
+    },
+    'uk': {
+        'VIDEO_LESSON_SCRIPT_DEFAULT_TITLE': 'Відео урок',
+        'SLIDE_NUMBER_PREFIX': 'СЛАЙД №',
+        'DISPLAYED_TEXT_LABEL': 'Текст, що відображається:',
+        'DISPLAYED_IMAGE_LABEL': 'Зображення, що відображається:',
+        'DISPLAYED_VIDEO_LABEL': 'Відео, що відображається:',
+        'VOICEOVER_TEXT_LABEL': 'Текст озвучення:',
+        'NO_SLIDES_TEXT': 'Немає слайдів для відображення.',
+        'EMPTY_CONTENT_PLACEHOLDER': '...',
+    }
 }
 
 def detect_language(text: str, configs: Dict[str, Dict[str, str]] = LANG_CONFIG) -> str:
@@ -1464,11 +1497,14 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
         data_for_template_render: Optional[Dict[str, Any]] = None
         pdf_template_file: str
 
-        detected_lang_for_pdf = 'ru'
+        detected_lang_for_pdf = 'ru'  # Default language
         if isinstance(content_json, dict) and content_json.get('detectedLanguage'):
             detected_lang_for_pdf = content_json.get('detectedLanguage')
-        elif mp_name_for_pdf_context:
+        elif mp_name_for_pdf_context: # Fallback if not in content_json
             detected_lang_for_pdf = detect_language(mp_name_for_pdf_context)
+        
+        # Get the locale strings for the detected language, defaulting to 'en' if not found
+        current_pdf_locale_strings = VIDEO_SCRIPT_LANG_STRINGS.get(detected_lang_for_pdf, VIDEO_SCRIPT_LANG_STRINGS['en'])
 
         logger.info(f"Project {project_id} PDF Gen: Raw content_json from DB (type: {type(content_json)}). First 1000 chars: {str(content_json)[:1000]}")
 
@@ -1476,12 +1512,14 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
             pdf_template_file = "pdf_lesson_pdf_template.html"
             if content_json and isinstance(content_json, dict):
                 logger.info(f"Project {project_id} PDF Gen (PDF LESSON): Using raw content_json directly for template.")
-                data_for_template_render = json.loads(json.dumps(content_json)) # Force pure Python dict/list for Jinja
+                data_for_template_render = json.loads(json.dumps(content_json)) 
                 if not data_for_template_render.get('detectedLanguage'):
                     try:
                         parsed_model_for_fallback_lang = PdfLessonDetails(**content_json)
                         if parsed_model_for_fallback_lang and parsed_model_for_fallback_lang.detectedLanguage:
                             detected_lang_for_pdf = parsed_model_for_fallback_lang.detectedLanguage
+                            # Update locale strings if language detection changed
+                            current_pdf_locale_strings = VIDEO_SCRIPT_LANG_STRINGS.get(detected_lang_for_pdf, VIDEO_SCRIPT_LANG_STRINGS['en'])
                     except Exception: pass
                     data_for_template_render['detectedLanguage'] = detected_lang_for_pdf
             else:
@@ -1495,30 +1533,39 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
             if content_json and isinstance(content_json, dict):
                 try:
                     parsed_model = TrainingPlanDetails(**content_json)
-                    if parsed_model.detectedLanguage: detected_lang_for_pdf = parsed_model.detectedLanguage
+                    if parsed_model.detectedLanguage: 
+                        detected_lang_for_pdf = parsed_model.detectedLanguage
+                        # Update locale strings if language detection changed
+                        current_pdf_locale_strings = VIDEO_SCRIPT_LANG_STRINGS.get(detected_lang_for_pdf, VIDEO_SCRIPT_LANG_STRINGS['en'])
                     temp_dumped_dict = parsed_model.model_dump(mode='json', exclude_none=True)
-                    data_for_template_render = json.loads(json.dumps(temp_dumped_dict)) # JSON cycle for Jinja
+                    data_for_template_render = json.loads(json.dumps(temp_dumped_dict))
                 except Exception as e_parse_dump:
                     logger.error(f"Pydantic parsing/dumping failed for TrainingPlan (Proj {project_id}): {e_parse_dump}", exc_info=not IS_PRODUCTION)
             if data_for_template_render is None:
                  logger.warning(f"Project {project_id} PDF Gen (TRAINING PLAN): data_for_template_render is None. Using fallback.")
                  data_for_template_render = {"mainTitle": f"Content Error: {mp_name_for_pdf_context}", "sections": [], "detectedLanguage": detected_lang_for_pdf}
-            current_lang_cfg = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru'])
-            data_for_template_render['time_unit_singular'] = current_lang_cfg.get('TIME_UNIT_SINGULAR', 'h')
-            data_for_template_render['time_unit_decimal_plural'] = current_lang_cfg.get('TIME_UNIT_DECIMAL_PLURAL', 'h')
-            data_for_template_render['time_unit_general_plural'] = current_lang_cfg.get('TIME_UNIT_GENERAL_PLURAL', 'h')
-        elif component_name == COMPONENT_NAME_VIDEO_LESSON:
+            
+            current_lang_cfg_main = LANG_CONFIG.get(detected_lang_for_pdf, LANG_CONFIG['ru']) # Using main LANG_CONFIG for units
+            data_for_template_render['time_unit_singular'] = current_lang_cfg_main.get('TIME_UNIT_SINGULAR', 'h')
+            data_for_template_render['time_unit_decimal_plural'] = current_lang_cfg_main.get('TIME_UNIT_DECIMAL_PLURAL', 'h')
+            data_for_template_render['time_unit_general_plural'] = current_lang_cfg_main.get('TIME_UNIT_GENERAL_PLURAL', 'h')
+        elif component_name == COMPONENT_NAME_VIDEO_LESSON: # Updated logic for Video Lesson
             pdf_template_file = "video_lesson_pdf_template.html"
             if content_json and isinstance(content_json, dict):
                 data_for_template_render = json.loads(json.dumps(content_json))
                 if not data_for_template_render.get('detectedLanguage'):
-                    # Fallback language detection
                     try:
                         parsed_model = VideoLessonData(**content_json)
                         if parsed_model.detectedLanguage:
                             detected_lang_for_pdf = parsed_model.detectedLanguage
-                    except Exception: pass # Ignore parsing errors for fallback
+                            # Update locale strings if language detection changed
+                            current_pdf_locale_strings = VIDEO_SCRIPT_LANG_STRINGS.get(detected_lang_for_pdf, VIDEO_SCRIPT_LANG_STRINGS['en'])
+                    except Exception: pass 
                     data_for_template_render['detectedLanguage'] = detected_lang_for_pdf
+                else: # If language IS in content_json, ensure locale strings match
+                    detected_lang_for_pdf = data_for_template_render.get('detectedLanguage', detected_lang_for_pdf)
+                    current_pdf_locale_strings = VIDEO_SCRIPT_LANG_STRINGS.get(detected_lang_for_pdf, VIDEO_SCRIPT_LANG_STRINGS['en'])
+
             else:
                 data_for_template_render = {
                     "mainPresentationTitle": f"Content Error: {mp_name_for_pdf_context}",
@@ -1526,7 +1573,7 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
                 }
         else:
             logger.warning(f"PDF: Unknown component_name '{component_name}' for project {project_id}. Defaulting to simple PDF Lesson structure.")
-            pdf_template_file = "pdf_lesson_pdf_template.html"
+            pdf_template_file = "pdf_lesson_pdf_template.html" # Or a generic template
             data_for_template_render = {
                 "lessonTitle": f"Unknown Content Type: {mp_name_for_pdf_context}",
                 "contentBlocks": [{"type":"paragraph", "text":"The content type of this project is not configured for PDF export."}],
@@ -1536,26 +1583,38 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
         if not isinstance(data_for_template_render, dict):
              logger.critical(f"Project {project_id} PDF Gen: data_for_template_render is NOT A DICT ({type(data_for_template_render)}) before final context prep.")
              data_for_template_render = {"lessonTitle": "Critical Data Preparation Error", "contentBlocks": [], "detectedLanguage": "en"}
+             # Ensure locale is set for critical error case
+             current_pdf_locale_strings = VIDEO_SCRIPT_LANG_STRINGS['en']
+
 
         if isinstance(data_for_template_render, dict):
             logger.info(f"Project {project_id} PDF Gen: Starting deep inspection of data_for_template_render (to be passed as 'details' in template context)...")
             inspect_list_items_recursively(data_for_template_render.get('contentBlocks', []), "data_for_template_render.contentBlocks")
 
         unique_output_filename = f"{project_id}_{document_name_slug}_{uuid.uuid4().hex[:12]}.pdf"
-        context_for_jinja = {'details': data_for_template_render}
+        
+        # Pass the locale strings to the template context
+        context_for_jinja = {
+            'details': data_for_template_render, 
+            'locale': current_pdf_locale_strings
+        }
+        # If your template expects data_for_template_render directly under 'details', adjust like so:
+        # context_for_jinja = {'details': data_for_template_render, 'locale': current_pdf_locale_strings}
+
 
         logger.info(f"Project {project_id} PDF Gen: Type of context_for_jinja['details']: {type(context_for_jinja.get('details'))}")
-        if isinstance(context_for_jinja.get('details'), dict):
-            final_cb_type = type(context_for_jinja.get('details', {}).get('contentBlocks'))
-            logger.info(f"Project {project_id} PDF Gen: Type of context_for_jinja['details']['contentBlocks']: {final_cb_type}")
-            if isinstance(context_for_jinja.get('details', {}).get('contentBlocks'), list):
-                 for block_idx, block_item_final_check in enumerate(context_for_jinja.get('details', {}).get('contentBlocks', [])):
+        if isinstance(context_for_jinja.get('details'), dict) and isinstance(context_for_jinja['details'].get('details'), dict):
+            final_cb_source = context_for_jinja['details']['details']
+            final_cb_type = type(final_cb_source.get('contentBlocks'))
+            logger.info(f"Project {project_id} PDF Gen: Type of context_for_jinja['details']['details']['contentBlocks']: {final_cb_type}")
+            if isinstance(final_cb_source.get('contentBlocks'), list):
+                 for block_idx, block_item_final_check in enumerate(final_cb_source.get('contentBlocks', [])):
                     if isinstance(block_item_final_check, dict) and block_item_final_check.get('type') in ('bullet_list', 'numbered_list'):
                         items_final_check_type = type(block_item_final_check.get('items'))
                         if not isinstance(block_item_final_check.get('items'), list):
                             logger.error(f"Project {project_id} PDF Gen: CRITICAL - 'items' in block_item_final_check for block #{block_idx} is STILL NOT A LIST (type: {items_final_check_type}) just before Jinja render.")
-            elif final_cb_type is not None:
-                logger.error(f"Project {project_id} PDF Gen: CRITICAL - context_for_jinja['details']['contentBlocks'] is NOT A LIST (type: {final_cb_type}) just before Jinja render.")
+            elif final_cb_type is not None: # if it's not None and not a list
+                logger.error(f"Project {project_id} PDF Gen: CRITICAL - context_for_jinja['details']['details']['contentBlocks'] is NOT A LIST (type: {final_cb_type}) just before Jinja render.")
 
         pdf_path = await generate_pdf_from_html_template(pdf_template_file, context_for_jinja, unique_output_filename)
         if not os.path.exists(pdf_path):

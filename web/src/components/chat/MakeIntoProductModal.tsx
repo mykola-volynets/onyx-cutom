@@ -18,6 +18,8 @@ import { Loader2, AlertTriangle, CheckCircle } from "lucide-react";
 
 import { DesignTemplateResponse } from '@/types/designTemplates';
 
+import './MakeIntoProductModal.css';
+
 interface MakeIntoProductModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -46,6 +48,10 @@ const MakeIntoProductModal: React.FC<MakeIntoProductModalProps> = ({
   const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const forceWhiteBackgroundStyle = {
+    backgroundColor: '#FFFFFF !important' as any,
+  };
 
   const fetchDesigns = useCallback(async () => {
     setIsLoading(true);
@@ -119,25 +125,30 @@ const MakeIntoProductModal: React.FC<MakeIntoProductModalProps> = ({
                 <button
                   key={design.id}
                   onClick={() => setSelectedDesignId(design.id.toString())}
+                  // CHANGE #1: Add 'force-white-background' to the button's className
                   className={`
                     relative border-2 rounded-lg p-3 shadow-md hover:shadow-lg transition-all duration-200
                     focus:outline-none focus:ring-2 focus:ring-offset-2
                     flex flex-col items-center
-                    bg-white // Outer button background is white
+                    force-white-background
                     ${selectedDesignId === design.id.toString()
-                      ? 'border-blue-600 ring-2 ring-blue-500 bg-blue-50'
+                      // The blue border and ring will still show when selected!
+                      ? 'border-blue-600 ring-2 ring-blue-500'
                       : 'border-gray-300 hover:border-blue-400'
                     }
                   `}
                 >
-                  {/* Added bg-white to this div to ensure area behind image is white */}
-                  <div className="w-full h-32 relative mb-2 bg-white rounded"> 
+                  {/* CHANGE #2: Removed the redundant class from the div */}
+                  <div 
+                    className="w-full h-32 relative mb-2 rounded"
+                  >
                     <Image
                       src={getFullImagePath(design.design_image_path)}
                       alt={design.template_name}
                       layout="fill"
                       objectFit="contain"
-                      className="rounded" 
+                      // CHANGE #3: Removed the redundant class from the Image
+                      className="rounded"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = '/images/placeholder-image.png';
                         (e.target as HTMLImageElement).alt = 'Placeholder Image';
@@ -145,7 +156,7 @@ const MakeIntoProductModal: React.FC<MakeIntoProductModalProps> = ({
                     />
                   </div>
                   <h3 
-                    className="text-xs font-semibold text-gray-800 text-center truncate w-full" 
+                    className="text-xs font-semibold text-gray-800 text-center truncate w-full"
                     title={design.template_name}
                   >
                     {design.template_name}
