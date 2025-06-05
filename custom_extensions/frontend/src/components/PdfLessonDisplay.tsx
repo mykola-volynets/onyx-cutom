@@ -462,12 +462,12 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
             (parentProjectName && lessonNumber) ? (
               <div>
                   <div className="pl-2.5 border-l-[3px] border-[#FF1414] py-1 mb-2">
-                      <span className="text-xl sm:text-2xl font-medium text-black">
+                      <span className="uppercase text-lg sm:text-xl font-medium text-black">
                           <span style={{ color: '#FF1414' }}>Course:</span> {decodeURIComponent(parentProjectName)}
                       </span>
                   </div>
                   <h1 className={`uppercase text-2xl sm:text-3xl font-medium ${THEME_COLORS.headingText} mb-1.5`}>
-                      <span style={{ color: '#FF1414' }}>Lesson {lessonNumber}:</span> {styledLessonTitle}
+                      <span style={{ color: '#FF1414' }}>LESSON №{lessonNumber}:</span> {styledLessonTitle}
                   </h1>
               </div>
               ) : (

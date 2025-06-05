@@ -245,13 +245,24 @@
         {% endif %}
 
         {% if lesson_data is mapping and lesson_data.lessonTitle is defined %}
-            <div class="lesson-title-section">
+            {% if details.parentProjectName and details.lessonNumber %}
+    <div style="border-left: 3px solid #FF1414; padding-left: 10px; margin-bottom: 8px;">
+        <h2 style="text-transform: uppercase; font-size: 1.125rem; font-weight: 500; color: black; margin: 0;">
+            <span style="color: #FF1414;">COURSE:</span> {{ details.parentProjectName }}
+        </h2>
+    </div>
+    <h1 class="lesson-title-text" style="font-size: 1.875rem; line-height: 2.25rem; margin-bottom: 24px;">
+        <span style="color: #FF1414;">LESSON №{{ details.lessonNumber }}:</span> {{ lesson_data.lessonTitle }}
+    </h1>
+{% else %}
+    <div class="lesson-title-section">
                 <h1 class="lesson-title-text">
                     {% set text_content = lesson_data.lessonTitle %}
                     {% set segments = text_content.split('**') %}
                     {% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}
                 </h1>
             </div>
+{% endif %}
         {% endif %}
 
         {% set last_main_header_idx_list = [-1] %} 

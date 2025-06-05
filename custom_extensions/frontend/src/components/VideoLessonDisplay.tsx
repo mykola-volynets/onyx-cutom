@@ -2,26 +2,26 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-// Remove Image import if not directly displaying images from paths
+import { useSearchParams } from 'next/navigation';
 // import Image from 'next/image';
 import { VideoLessonData, VideoLessonSlideData } from '@/types/videoLessonTypes'; // Adjust path
 
 // --- Theme Colors (consistent with PdfLessonDisplay & image) ---
 const THEME_COLORS = {
-  primaryText: 'text-gray-800', // Main content text
-  headingText: 'text-black',    // For main titles and section headers
-  accentRed: 'text-[#FF1414]',  // Kept for icons or other accents if needed elsewhere
-  accentRedFill: '#FF1414',     // For SVG icon fills
-  activeNavBg: 'bg-[#FFF5F5]', 
+  primaryText: 'text-gray-800',
+  headingText: 'text-black',
+  accentRed: 'text-[#FF1414]',
+  accentRedFill: '#FF1414',
+  activeNavBg: 'bg-[#FFF5F5]', // Lighter red for active nav item background
   activeNavText: 'text-[#FF1414]',
   activeNavBorder: 'border-[#FF1414]',
   navText: 'text-gray-600 hover:text-gray-900',
   navBorder: 'border-gray-200',
   contentBg: 'bg-white',
-  contentBoxBg: 'bg-gray-50', // Consistent background for text display areas
+  contentBoxBg: 'bg-gray-50',
   contentPlaceholderText: 'text-gray-500 italic text-sm',
   lightBorder: 'border-gray-300',
-  mutedText: 'text-gray-600',   // For secondary text like descriptions, voiceover
+  mutedText: 'text-gray-600',
   editableBg: 'bg-yellow-50',
   editableBorder: 'border-yellow-400 focus:ring-1 focus:ring-yellow-500',
 };
@@ -34,7 +34,7 @@ const editingInputClass = (baseClasses: string = "", type: 'input' | 'textarea' 
   return `${common} ${baseClasses} p-2`;
 };
 
-// --- SVG Icon Components (fill remains accentRedFill for visual accent) ---
+// --- SVG Icon Components ---
 const SlidePresentationIcon = () => (
   <svg width="20" height="21" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2 flex-shrink-0 h-5 w-5">
     <g clipPath="url(#clip0_VideoLesson_13)">
@@ -64,7 +64,7 @@ const DisplayedTextIcon = () => (
 const DisplayingImageIcon = () => (
   <svg width="14" height="14" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-1.5 flex-shrink-0 h-3.5 w-3.5">
     <g clipPath="url(#clip0_VideoLesson_25)">
-      <path d="M11.1429 8.76466L12 9.8631V10.6154C11.9979 11.3792 11.4236 11.9977 10.7143 12H8.8929L8.25433 11.0769L5.7172 7.42161L7.77008 5.22472C7.85526 5.13126 7.97419 5.08223 8.0958 5.09088C8.22062 5.10011 8.3358 5.1653 8.41294 5.27088L11.1429 8.76466ZM3.85716 2.76933C3.68359 2.76933 3.5277 2.88183 3.46127 3.05433C3.39484 3.22683 3.43181 3.42528 3.55395 3.55739C3.67663 3.68893 3.86092 3.72874 4.02108 3.6572C4.18127 3.58566 4.28573 3.41778 4.28573 3.23086C4.28573 3.10856 4.24073 2.99087 4.16037 2.90433C4.08002 2.8178 3.97073 2.76933 3.85716 2.76933ZM4.85144 7.71695L4.79144 7.62926L4.07145 6.59543C3.99913 6.49562 3.89252 6.43273 3.77574 6.42005C3.65735 6.40908 3.53948 6.45062 3.45003 6.53543L0.857209 8.79228L6.85336e-05 9.53996V10.6153C0.00221139 11.3792 0.576492 11.9976 1.28578 11.9999H7.82583L7.18298 11.0768L4.85144 7.71695ZM12 1.38474V8.42778L11.1429 7.33396L9.07283 4.6847C8.84408 4.38008 8.50605 4.19432 8.14284 4.17239C7.77963 4.15046 7.42498 4.29469 7.1657 4.56931L5.19852 6.67389L4.75281 6.03697C4.53799 5.73294 4.21495 5.53852 3.86139 5.5016C3.51425 5.46583 3.16817 5.58237 2.90139 5.82467L0.857141 7.60611L0 8.35379V1.38459C0.00214285 0.620756 0.576424 0.00230396 1.28571 0H10.7143C11.4235 0.00230766 11.9978 0.620756 12 1.38459L12 1.38474ZM5.14287 3.23087C5.14287 2.67068 4.82947 2.16589 4.34894 1.95184C3.86894 1.73723 3.31554 1.85607 2.94803 2.25183C2.58053 2.64759 2.47017 3.24354 2.66947 3.76048C2.86821 4.27797 3.33697 4.61547 3.85715 4.61547C4.56644 4.61317 5.14073 3.9947 5.14287 3.23087Z" fill={THEME_COLORS.accentRedFill}/>
+      <path d="M10.9653 0H1.02208C0.454259 0 0 0.454259 0 1.02208V10.9779C0 11.5457 0.454259 12 1.02208 12H10.9779C11.5457 12 12 11.5457 12 10.9779V1.02208C11.9874 0.454259 11.5331 0 10.9653 0ZM7.98738 6.32177L4.93375 8.35331C4.66877 8.52997 4.31546 8.34069 4.31546 8.02524V3.96215C4.31546 3.64669 4.66877 3.45741 4.93375 3.63407L8 5.66562C8.22713 5.81704 8.22713 6.17035 7.98738 6.32177Z" fill={THEME_COLORS.accentRedFill}/>
     </g>
     <defs>
       <clipPath id="clip0_VideoLesson_25">
@@ -77,7 +77,7 @@ const DisplayingImageIcon = () => (
 const DisplayedVideoIcon = () => (
   <svg width="14" height="14" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-1.5 flex-shrink-0 h-3.5 w-3.5">
     <g clipPath="url(#clip0_VideoLesson_31)">
-      <path d="M10.9653 0H1.02208C0.454259 0 0 0.454259 0 1.02208V10.9779C0 11.5457 0.454259 12 1.02208 12H10.9779C11.5457 12 12 11.5457 12 10.9779V1.02208C11.9874 0.454259 11.5331 0 10.9653 0ZM7.98738 6.32177L4.93375 8.35331C4.66877 8.52997 4.31546 8.34069 4.31546 8.02524V3.96215C4.31546 3.64669 4.66877 3.45741 4.93375 3.63407L8 5.66562C8.22713 5.81704 8.22713 6.17035 7.98738 6.32177Z" fill={THEME_COLORS.accentRedFill}/>
+      <path d="M11.1429 8.76466L12 9.8631V10.6154C11.9979 11.3792 11.4236 11.9977 10.7143 12H8.8929L8.25433 11.0769L5.7172 7.42161L7.77008 5.22472C7.85526 5.13126 7.97419 5.08223 8.0958 5.09088C8.22062 5.10011 8.3358 5.1653 8.41294 5.27088L11.1429 8.76466ZM3.85716 2.76933C3.68359 2.76933 3.5277 2.88183 3.46127 3.05433C3.39484 3.22683 3.43181 3.42528 3.55395 3.55739C3.67663 3.68893 3.86092 3.72874 4.02108 3.6572C4.18127 3.58566 4.28573 3.41778 4.28573 3.23086C4.28573 3.10856 4.24073 2.99087 4.16037 2.90433C4.08002 2.8178 3.97073 2.76933 3.85716 2.76933ZM4.85144 7.71695L4.79144 7.62926L4.07145 6.59543C3.99913 6.49562 3.89252 6.43273 3.77574 6.42005C3.65735 6.40908 3.53948 6.45062 3.45003 6.53543L0.857209 8.79228L6.85336e-05 9.53996V10.6153C0.00221139 11.3792 0.576492 11.9976 1.28578 11.9999H7.82583L7.18298 11.0768L4.85144 7.71695ZM12 1.38474V8.42778L11.1429 7.33396L9.07283 4.6847C8.84408 4.38008 8.50605 4.19432 8.14284 4.17239C7.77963 4.15046 7.42498 4.29469 7.1657 4.56931L5.19852 6.67389L4.75281 6.03697C4.53799 5.73294 4.21495 5.53852 3.86139 5.5016C3.51425 5.46583 3.16817 5.58237 2.90139 5.82467L0.857141 7.60611L0 8.35379V1.38459C0.00214285 0.620756 0.576424 0.00230396 1.28571 0H10.7143C11.4235 0.00230766 11.9978 0.620756 12 1.38459L12 1.38474ZM5.14287 3.23087C5.14287 2.67068 4.82947 2.16589 4.34894 1.95184C3.86894 1.73723 3.31554 1.85607 2.94803 2.25183C2.58053 2.64759 2.47017 3.24354 2.66947 3.76048C2.86821 4.27797 3.33697 4.61547 3.85715 4.61547C4.56644 4.61317 5.14073 3.9947 5.14287 3.23087Z" fill={THEME_COLORS.accentRedFill}/>
     </g>
     <defs>
       <clipPath id="clip0_VideoLesson_31">
@@ -107,6 +107,9 @@ const VideoLessonDisplay = ({
   onTextChange,
   className = "",
 }: VideoLessonDisplayProps): React.JSX.Element | null => {
+  const searchParams = useSearchParams();
+  const parentProjectName = searchParams.get('parentProjectName');
+  const lessonNumber = searchParams.get('lessonNumber');
   const [activeSlideId, setActiveSlideId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -123,7 +126,7 @@ const VideoLessonDisplay = ({
       onTextChange(['currentSlideId'], slideId);
     }
   };
-  
+
   const currentSlide = useMemo(() => {
     if (!activeSlideId || !dataToDisplay?.slides) return null;
     return dataToDisplay.slides.find(s => s.slideId === activeSlideId) || null;
@@ -143,7 +146,7 @@ const VideoLessonDisplay = ({
       onTextChange(['mainPresentationTitle'], event.target.value);
     }
   };
-  
+
   const handleSlideTitleChange = (slideId: string, value: string) => {
     if (!onTextChange || !dataToDisplay) return;
     const slideIndex = dataToDisplay.slides.findIndex(s => s.slideId === slideId);
@@ -174,22 +177,42 @@ const VideoLessonDisplay = ({
     editVoiceoverPlaceholder: lang === 'ru' ? 'Текст озвучки (до 3 предложений)...' : lang === 'uk' ? 'Текст озвучення (до 3 речень)...' : 'Voiceover text (max 3 sentences)...',
     emptyContent: "...",
   }), [lang]);
+  
+  // NEW: A unified class for all content display boxes to ensure a consistent look and feel.
+  const contentDisplayBoxClass = `p-3 border ${THEME_COLORS.lightBorder} rounded-md ${THEME_COLORS.contentBoxBg} min-h-[60px] ${THEME_COLORS.primaryText} text-base leading-relaxed whitespace-pre-wrap`;
+
 
   return (
     <div className={`font-['Inter',_sans-serif] ${THEME_COLORS.contentBg} shadow-xl rounded-lg max-w-5xl mx-auto my-8 border ${THEME_COLORS.lightBorder} ${className}`}>
-      {isEditing && onTextChange ? (
-        <input
-          type="text"
-          value={mainPresentationTitle}
-          onChange={handleMainTitleChange}
-          placeholder={localeStrings.editMainTitlePlaceholder}
-          className={`w-full text-xl md:text-2xl font-semibold ${THEME_COLORS.headingText} ${editingInputClass('p-4 border-b text-center')}`}
-        />
-      ) : (
-        <h1 className={`text-xl md:text-2xl font-semibold ${THEME_COLORS.headingText} p-6 pb-4 text-center`}>
-          {mainPresentationTitle}
-        </h1>
-      )}
+      <div className="p-6 pb-4">
+        {isEditing && onTextChange ? (
+          <input
+            type="text"
+            value={mainPresentationTitle}
+            onChange={handleMainTitleChange}
+            placeholder={localeStrings.editMainTitlePlaceholder}
+            className={`w-full text-xl md:text-2xl font-semibold ${THEME_COLORS.headingText} ${editingInputClass('border-b text-center')}`}
+          />
+        ) : (
+          (parentProjectName && lessonNumber) ? (
+            <div className="text-left">
+              <div className="pl-2.5 border-l-[3px] border-[#FF1414] py-1 mb-2">
+                  <span className={`uppercase text-lg sm:text-xl font-medium ${THEME_COLORS.headingText}`}>
+                      <span style={{ color: '#FF1414' }}>Course:</span> {decodeURIComponent(parentProjectName)}
+                  </span>
+              </div>
+              <h1 className={`uppercase text-2xl sm:text-3xl font-medium ${THEME_COLORS.headingText}`}>
+                  <span style={{ color: '#FF1414' }}>LESSON №{lessonNumber}:</span> {mainPresentationTitle}
+              </h1>
+            </div>
+          ) : (
+            <h1 className={`text-xl md:text-2xl font-semibold ${THEME_COLORS.headingText} text-center`}>
+              {mainPresentationTitle}
+            </h1>
+          )
+        )}
+      </div>
+
 
       <div className="flex flex-col md:flex-row min-h-[calc(100vh-220px)] md:min-h-[600px]">
         {/* Left Navigation Pane */}
@@ -228,96 +251,96 @@ const VideoLessonDisplay = ({
               <header className={`pb-3 border-b ${THEME_COLORS.lightBorder} flex items-center`}>
                 <SlidePresentationIcon />
                 {isEditing && onTextChange ? (
-                    <input 
-                        type="text"
-                        value={currentSlide.slideTitle}
-                        onChange={(e) => handleSlideTitleChange(currentSlide.slideId, e.target.value)}
-                        placeholder={localeStrings.editSlideTitlePlaceholder}
-                        className={`text-lg sm:text-xl font-semibold ${THEME_COLORS.headingText} ${editingInputClass()}`}
+                    <input
+                      type="text"
+                      value={currentSlide.slideTitle}
+                      onChange={(e) => handleSlideTitleChange(currentSlide.slideId, e.target.value)}
+                      placeholder={localeStrings.editSlideTitlePlaceholder}
+                      className={`text-lg sm:text-xl font-semibold ${THEME_COLORS.headingText} ${editingInputClass()}`}
                     />
                 ) : (
                     <h2 className={`text-lg sm:text-xl font-semibold ${THEME_COLORS.headingText}`}>
-                     {currentSlide.slideTitle} 
+                     {currentSlide.slideTitle}
                     </h2>
                 )}
               </header>
 
               {/* Displayed Text */}
               <section>
-                <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.headingText} mb-1.5`}> {/* Changed text color */}
+                <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.accentRed} mb-1.5`}>
                   <DisplayedTextIcon /> {localeStrings.displayedTextLabel}
                 </h3>
                 {isEditing && onTextChange ? (
                   <input
-                      type="text" 
-                      value={currentSlide.displayedText || ''}
-                      onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'displayedText', e.target.value)}
-                      placeholder={localeStrings.editTextPlaceholder}
-                      className={`text-base leading-relaxed ${THEME_COLORS.primaryText} ${editingInputClass('p-3')}`}
+                    type="text" // Single short sentence
+                    value={currentSlide.displayedText || ''}
+                    onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'displayedText', e.target.value)}
+                    placeholder={localeStrings.editTextPlaceholder}
+                    className={`text-base leading-relaxed ${THEME_COLORS.primaryText} ${editingInputClass('p-3')}`}
                   />
                 ) : (
-                  <div className={`p-3 border ${THEME_COLORS.lightBorder} rounded-md ${THEME_COLORS.contentBoxBg} min-h-[60px] prose prose-sm max-w-none ${THEME_COLORS.primaryText} text-base leading-relaxed`}>
-                    {currentSlide.displayedText || <span className={THEME_COLORS.contentPlaceholderText}>{localeStrings.emptyContent}</span>}
+                  <div className={contentDisplayBoxClass}>
+                    {currentSlide.displayedText || <span className={THEME_COLORS.mutedText}>{localeStrings.emptyContent}</span>}
                   </div>
                 )}
               </section>
 
               {/* Displaying Image Description */}
               <section>
-                <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.headingText} mb-1.5`}> {/* Changed text color */}
+                <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.accentRed} mb-1.5`}>
                   <DisplayingImageIcon /> {localeStrings.displayingImageLabel}
                 </h3>
                 {isEditing && onTextChange ? (
                    <textarea
-                      value={currentSlide.displayedPictureDescription || ''}
-                      onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'displayedPictureDescription', e.target.value)}
-                      placeholder={localeStrings.editImageDescPlaceholder}
-                      className={`min-h-[60px] text-sm ${THEME_COLORS.primaryText} ${editingInputClass('p-3', 'textarea')}`}
-                      rows={2}
-                  />
+                     value={currentSlide.displayedPictureDescription || ''}
+                     onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'displayedPictureDescription', e.target.value)}
+                     placeholder={localeStrings.editImageDescPlaceholder}
+                     className={`min-h-[60px] text-sm ${THEME_COLORS.primaryText} ${editingInputClass('p-3', 'textarea')}`}
+                     rows={2}
+                 />
                 ) : (
-                   <div className={`p-3 border ${THEME_COLORS.lightBorder} rounded-md ${THEME_COLORS.contentBoxBg} ${THEME_COLORS.mutedText} text-sm min-h-[60px]`}>
-                    {currentSlide.displayedPictureDescription || <span className={THEME_COLORS.contentPlaceholderText}>{localeStrings.emptyContent}</span>}
+                   <div className={contentDisplayBoxClass}>
+                     {currentSlide.displayedPictureDescription || <span className={THEME_COLORS.mutedText}>{localeStrings.emptyContent}</span>}
                   </div>
                 )}
               </section>
 
               {/* Displayed Video Description */}
               <section>
-                <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.headingText} mb-1.5`}> {/* Changed text color */}
+                <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.accentRed} mb-1.5`}>
                   <DisplayedVideoIcon /> {localeStrings.displayedVideoLabel}
                 </h3>
                  {isEditing && onTextChange ? (
                    <textarea
-                      value={currentSlide.displayedVideoDescription || ''}
-                      onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'displayedVideoDescription', e.target.value)}
-                      placeholder={localeStrings.editVideoDescPlaceholder}
-                      className={`min-h-[60px] text-sm ${THEME_COLORS.primaryText} ${editingInputClass('p-3', 'textarea')}`}
-                      rows={2}
-                  />
+                     value={currentSlide.displayedVideoDescription || ''}
+                     onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'displayedVideoDescription', e.target.value)}
+                     placeholder={localeStrings.editVideoDescPlaceholder}
+                     className={`min-h-[60px] text-sm ${THEME_COLORS.primaryText} ${editingInputClass('p-3', 'textarea')}`}
+                     rows={2}
+                 />
                 ) : (
-                   <div className={`p-3 border ${THEME_COLORS.lightBorder} rounded-md ${THEME_COLORS.contentBoxBg} ${THEME_COLORS.mutedText} text-sm min-h-[60px]`}>
-                    {currentSlide.displayedVideoDescription || <span className={THEME_COLORS.contentPlaceholderText}>{localeStrings.emptyContent}</span>}
+                   <div className={contentDisplayBoxClass}>
+                     {currentSlide.displayedVideoDescription || <span className={THEME_COLORS.mutedText}>{localeStrings.emptyContent}</span>}
                   </div>
                 )}
               </section>
 
               {/* Voiceover Text */}
               <section className="pt-4 border-t border-dashed border-gray-200">
-                <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.headingText} mb-1.5`}> {/* Changed text color */}
+                <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.accentRed} mb-1.5`}>
                   <VoiceoverTextIcon /> {localeStrings.voiceoverTextLabel}
                 </h3>
                  {isEditing && onTextChange ? (
                   <textarea
-                      value={currentSlide.voiceoverText || ''}
-                      onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'voiceoverText', e.target.value)}
-                      placeholder={localeStrings.editVoiceoverPlaceholder}
-                      className={`min-h-[80px] text-sm ${THEME_COLORS.mutedText} ${editingInputClass('p-2', 'textarea')}`}
-                      rows={3}
+                    value={currentSlide.voiceoverText || ''}
+                    onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'voiceoverText', e.target.value)}
+                    placeholder={localeStrings.editVoiceoverPlaceholder}
+                    className={`min-h-[80px] text-sm ${THEME_COLORS.mutedText} ${editingInputClass('p-2', 'textarea')}`}
+                    rows={3}
                   />
                 ) : (
-                  <div className={`p-3 border ${THEME_COLORS.lightBorder} rounded-md ${THEME_COLORS.contentBoxBg} ${THEME_COLORS.mutedText} text-sm whitespace-pre-wrap min-h-[80px]`}>
-                    {currentSlide.voiceoverText || <span className={THEME_COLORS.contentPlaceholderText}>{localeStrings.emptyContent}</span>}
+                  <div className={contentDisplayBoxClass}>
+                    {currentSlide.voiceoverText || <span className={THEME_COLORS.mutedText}>{localeStrings.emptyContent}</span>}
                   </div>
                 )}
               </section>

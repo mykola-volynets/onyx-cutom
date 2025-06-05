@@ -1,5 +1,5 @@
 # custom_extensions/backend/main.py
-from fastapi import FastAPI, HTTPException, Depends, Request, status, File, UploadFile
+from fastapi import FastAPI, HTTPException, Depends, Request, status, File, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -1473,7 +1473,15 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail_msg)
 
 @app.get("/api/custom/pdf/{project_id}/{document_name_slug}", response_class=FileResponse, responses={404: {"model": ErrorDetail}, 500: {"model": ErrorDetail}})
-async def download_project_instance_pdf(project_id: int, document_name_slug: str, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
+async def download_project_instance_pdf(
+    project_id: int,
+    document_name_slug: str,
+    parentProjectName: Optional[str] = Query(None),
+    lessonNumber: Optional[int] = Query(None),
+    onyx_user_id: str = Depends(get_current_onyx_user_id),
+    pool: asyncpg.Pool = Depends(get_db_pool)
+):
+    print("OPTIONAL DATA:", parentProjectName, lessonNumber)
     try:
         async with pool.acquire() as conn:
             target_row_dict = await conn.fetchrow(
@@ -1596,7 +1604,9 @@ async def download_project_instance_pdf(project_id: int, document_name_slug: str
         # Pass the locale strings to the template context
         context_for_jinja = {
             'details': data_for_template_render, 
-            'locale': current_pdf_locale_strings
+            'locale': current_pdf_locale_strings,
+            'parentProjectName': parentProjectName,
+            'lessonNumber': lessonNumber
         }
         # If your template expects data_for_template_render directly under 'details', adjust like so:
         # context_for_jinja = {'details': data_for_template_render, 'locale': current_pdf_locale_strings}

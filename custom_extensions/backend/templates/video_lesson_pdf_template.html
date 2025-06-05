@@ -179,7 +179,17 @@
 </head>
 <body>
     <div class="pdf-container">
-        <div class="main-lesson-title">
+        {% if details.parentProjectName and details.lessonNumber %}
+    <div style="border-left: 3px solid var(--color-brand-red); padding-left: 10px; margin-bottom: 8px;">
+                <div style="font-family: var(--font-inter); text-transform: uppercase; font-size: 14pt; line-height: 1.5; font-weight: var(--font-weight-medium); color: var(--color-text-darkest); margin: 0;">
+                    <span style="color: var(--color-brand-red);">COURSE:</span> {{ details.parentProjectName }}
+                </div>
+            </div>
+    <h1 class="main-lesson-title">
+        <span style="color: #FF1414;">LESSON №{{ details.lessonNumber }}:</span> {{ details.details.mainPresentationTitle }}
+    </h1>
+{% else %}
+    <div class="main-lesson-title">
             {% set title_segments = (details.details.mainPresentationTitle | default(details.locale.VIDEO_LESSON_SCRIPT_DEFAULT_TITLE)).split('**') %}
             {% for segment in title_segments %}
                 {%- if loop.index0 is odd -%}
@@ -189,7 +199,7 @@
                 {%- endif -%}
             {% endfor %}
         </div>
-
+{% endif %}
         {% set lesson = details.details %}
         {% if lesson and lesson.slides %}
             {% for slide in lesson.slides %}

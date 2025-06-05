@@ -2,7 +2,7 @@
 "use client";
 
 import React, { Suspense, useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ProjectInstanceDetail,
   MicroProductContentData,
@@ -63,6 +63,7 @@ const DefaultDisplayComponent = ({ instanceData }: { instanceData: ProjectInstan
 export default function ProjectInstanceViewPage() {
   const params = useParams<ProjectViewParams>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { projectId } = params;
 
   const [projectInstanceData, setProjectInstanceData] = useState<ProjectInstanceDetail | null>(null);
@@ -296,13 +297,31 @@ export default function ProjectInstanceViewPage() {
 
   const handlePdfDownload = () => {
     if (!projectInstanceData || typeof projectInstanceData.project_id !== 'number') {
-      alert("Project data or ID is not available for download.");
-      return;
+        alert("Project data or ID is not available for download.");
+        return;
     }
     const nameForSlug = projectInstanceData.name || 'document';
     const docNameSlug = slugify(nameForSlug);
     const pdfProjectId = projectInstanceData.project_id;
-    const pdfUrl = `${CUSTOM_BACKEND_URL}/pdf/${pdfProjectId}/${docNameSlug}`;
+
+    // Get params from the current URL to pass them along
+    const parentProjectName = searchParams.get('parentProjectName');
+    const lessonNumber = searchParams.get('lessonNumber');
+
+    let pdfUrl = `${CUSTOM_BACKEND_URL}/pdf/${pdfProjectId}/${docNameSlug}`;
+    
+    const queryParams = new URLSearchParams();
+    if (parentProjectName) {
+        queryParams.append('parentProjectName', parentProjectName);
+    }
+    if (lessonNumber) {
+        queryParams.append('lessonNumber', lessonNumber);
+    }
+
+    if (queryParams.toString()) {
+        pdfUrl += `?${queryParams.toString()}`;
+    }
+
     window.open(pdfUrl, '_blank');
   };
 
