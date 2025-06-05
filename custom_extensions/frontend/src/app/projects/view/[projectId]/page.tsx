@@ -304,7 +304,6 @@ export default function ProjectInstanceViewPage() {
     const docNameSlug = slugify(nameForSlug);
     const pdfProjectId = projectInstanceData.project_id;
 
-    // Get params from the current URL to pass them along
     const parentProjectName = searchParams.get('parentProjectName');
     const lessonNumber = searchParams.get('lessonNumber');
 
@@ -323,6 +322,18 @@ export default function ProjectInstanceViewPage() {
     }
 
     window.open(pdfUrl, '_blank');
+  };
+
+  const handleBack = () => {
+    // Check if there is a referrer page in the browser history
+    if (document.referrer) {
+      // Navigate to the previous page by setting the window location.
+      // This forces a full page reload, bypassing the browser cache.
+      window.location.href = document.referrer;
+    } else {
+      // Fallback for cases where referrer is not available (e.g., direct navigation)
+      router.back();
+    }
   };
 
   if (pageState === 'initial_loading' || pageState === 'fetching') {
@@ -367,7 +378,7 @@ export default function ProjectInstanceViewPage() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <button
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
           >
             &larr; Back
@@ -388,7 +399,7 @@ export default function ProjectInstanceViewPage() {
                 onClick={handleToggleEdit}
                 disabled={isSaving}
                 className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 flex items-center
-                            ${isEditing ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' : 'bg-orange-500 hover:bg-orange-600 focus:ring-orange-500'}`}
+                                ${isEditing ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' : 'bg-orange-500 hover:bg-orange-600 focus:ring-orange-500'}`}
                 title={isEditing ? "Save current changes" : "Edit content"}
               >
                 {isEditing ? (
