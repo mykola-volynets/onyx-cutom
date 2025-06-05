@@ -36,6 +36,7 @@ ONYX_SESSION_COOKIE_NAME = os.getenv("ONYX_SESSION_COOKIE_NAME", "fastapiusersau
 
 # --- LLM Configuration for JSON Parsing ---
 LLM_API_KEY = os.getenv("COHERE_API_KEY")
+LLM_API_KEY_FALLBACK = os.getenv("COHERE_API_KEY_FALLBACK")
 LLM_API_URL = os.getenv("COHERE_API_URL", "https://api.cohere.com/v1/chat")
 LLM_DEFAULT_MODEL = os.getenv("COHERE_DEFAULT_MODEL", "command-r-plus")
 
@@ -675,7 +676,10 @@ async def parse_ai_response_with_llm(
     dynamic_instructions: str,
     target_json_example: str
 ) -> BaseModel:
-    if not LLM_API_KEY:
+    # Create a list of API keys to try, filtering out any that are not set
+    api_keys_to_try = [key for key in [LLM_API_KEY, LLM_API_KEY_FALLBACK] if key]
+
+    if not api_keys_to_try:
         logger.error(f"LLM_API_KEY not configured for {project_name}. Cannot parse AI response with LLM.")
         return default_error_model_instance
 
@@ -703,17 +707,23 @@ Raw text to parse:
 Return ONLY the JSON object corresponding to the parsed text. Do not include any other explanatory text or markdown formatting (like ```json ... ```) around the JSON.
 The entire output must be a single, valid JSON object and must include all relevant data found in the input, with textual content in the original language.
     """
-    logger.debug(f"--- Calling LLM for {project_name}, Target: {target_model.__name__} ---") # Use debug for this detailed log
-    headers = { "Authorization": f"Bearer {LLM_API_KEY}", "Content-Type": "application/json" }
     payload = { "model": LLM_DEFAULT_MODEL, "message": prompt_message, "temperature": 0.2 }
     detected_lang_by_rules = detect_language(ai_response)
+    last_exception = None
 
-    try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(LLM_API_URL, headers=headers, json=payload)
-            response.raise_for_status()
+    for i, api_key in enumerate(api_keys_to_try):
+        attempt_number = i + 1
+        logger.info(f"Attempting LLM call for '{project_name}' using API key #{attempt_number}.")
+        headers = { "Authorization": f"Bearer {api_key}", "Content-Type": "application/json" }
+
+        try:
+            # --- Attempt the API Call and Full Processing ---
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(LLM_API_URL, headers=headers, json=payload)
+                response.raise_for_status()
             llm_api_response_data = response.json()
 
+            # --- Process the Response ---
             json_text_output = None
             if "text" in llm_api_response_data: json_text_output = llm_api_response_data["text"]
             elif "chatHistory" in llm_api_response_data and llm_api_response_data["chatHistory"]:
@@ -723,50 +733,44 @@ The entire output must be a single, valid JSON object and must include all relev
                 json_text_output = llm_api_response_data["generations"][0]["text"]
 
             if json_text_output is None:
-                logger.error(f"LLM API Response for {project_name} did not contain expected text field. Response: {str(llm_api_response_data)[:500]}")
-                if hasattr(default_error_model_instance, 'detectedLanguage'): default_error_model_instance.detectedLanguage = detected_lang_by_rules
-                return default_error_model_instance
+                # If the response structure is unexpected, raise an error to be caught below
+                raise ValueError("LLM response did not contain an expected text field.")
 
             json_text_output = re.sub(r"^```json\s*|\s*```$", "", json_text_output.strip(), flags=re.MULTILINE)
-            try:
-                parsed_json_data = json.loads(json_text_output)
-                logger.debug(f'Cohere response: {parsed_json_data}') # Use debug for this
-            except json.JSONDecodeError as json_e:
-                logger.error(f"Failed to decode JSON from LLM for {project_name}. Error: {json_e}. Raw: '{json_text_output[:500]}...'", exc_info=not IS_PRODUCTION)
-                if hasattr(default_error_model_instance, 'detectedLanguage'): default_error_model_instance.detectedLanguage = detected_lang_by_rules
-                return default_error_model_instance
+            
+            # --- Parse and Validate the JSON data ---
+            parsed_json_data = json.loads(json_text_output)
+            logger.debug(f'Cohere response: {parsed_json_data}')
 
-            try:
-                if 'detectedLanguage' not in parsed_json_data or not parsed_json_data['detectedLanguage']:
-                    parsed_json_data['detectedLanguage'] = detected_lang_by_rules
+            if 'detectedLanguage' not in parsed_json_data or not parsed_json_data['detectedLanguage']:
+                parsed_json_data['detectedLanguage'] = detected_lang_by_rules
 
-                if target_model == TrainingPlanDetails and ('mainTitle' not in parsed_json_data or not parsed_json_data['mainTitle']):
-                    parsed_json_data['mainTitle'] = project_name
-                elif target_model == PdfLessonDetails and ('lessonTitle' not in parsed_json_data or not parsed_json_data['lessonTitle']):
-                    parsed_json_data['lessonTitle'] = project_name
+            if target_model == TrainingPlanDetails and ('mainTitle' not in parsed_json_data or not parsed_json_data['mainTitle']):
+                parsed_json_data['mainTitle'] = project_name
+            elif target_model == PdfLessonDetails and ('lessonTitle' not in parsed_json_data or not parsed_json_data['lessonTitle']):
+                parsed_json_data['lessonTitle'] = project_name
+            
+            # If everything is successful, validate and return the model
+            validated_model = target_model.model_validate(parsed_json_data)
+            logger.info(f"LLM parsing for '{project_name}' succeeded on attempt #{attempt_number}.")
+            return validated_model
 
-                return target_model.model_validate(parsed_json_data)
-            except Exception as p_e: # Pydantic validation error
-                logger.error(f"Error validating LLM output for {project_name} against {target_model.__name__}. Error: {p_e}. Parsed JSON: {str(parsed_json_data)[:500]}", exc_info=not IS_PRODUCTION)
-                if hasattr(default_error_model_instance, 'detectedLanguage'):
-                    default_error_model_instance.detectedLanguage = parsed_json_data.get('detectedLanguage', detected_lang_by_rules)
-                return default_error_model_instance
+        except Exception as e:
+            # --- Catch ANY exception that occurs during the attempt ---
+            last_exception = e
+            logger.warning(
+                f"LLM parsing attempt #{attempt_number} for '{project_name}' failed with {type(e).__name__}. "
+                f"Details: {str(e)[:250]}. Trying next key if available."
+            )
+            # Continue to the next iteration to try the fallback key, regardless of the error type.
+            continue
 
-    except httpx.HTTPStatusError as http_e:
-        error_detail_text = f"LLM API error ({http_e.response.status_code})"
-        try: error_body = http_e.response.json(); error_detail_text += f": {error_body.get('message', 'No message.')}"
-        except: pass
-        logger.error(f"LLM API call failed for {project_name}. Detail: {error_detail_text}, Response: {http_e.response.text[:500]}", exc_info=not IS_PRODUCTION)
-        if hasattr(default_error_model_instance, 'detectedLanguage'): default_error_model_instance.detectedLanguage = detected_lang_by_rules
-        return default_error_model_instance
-    except httpx.RequestError as req_e:
-        logger.error(f"Error requesting LLM service for {project_name}: {req_e}", exc_info=not IS_PRODUCTION)
-        if hasattr(default_error_model_instance, 'detectedLanguage'): default_error_model_instance.detectedLanguage = detected_lang_by_rules
-        return default_error_model_instance
-    except Exception as e:
-        logger.error(f"Unexpected error in LLM parsing for {project_name}: {e}", exc_info=not IS_PRODUCTION)
-        if hasattr(default_error_model_instance, 'detectedLanguage'): default_error_model_instance.detectedLanguage = detected_lang_by_rules
-        return default_error_model_instance
+    # --- Handle Final Failure ---
+    # This block is reached only if the loop completes without a successful return.
+    logger.error(f"All LLM API call attempts failed for '{project_name}'. Last error: {last_exception}")
+    if hasattr(default_error_model_instance, 'detectedLanguage'):
+        default_error_model_instance.detectedLanguage = detected_lang_by_rules
+    return default_error_model_instance
 
 # --- API Endpoints ---
 @app.post("/api/custom/pipelines/add", response_model=MicroproductPipelineDBRaw, status_code=status.HTTP_201_CREATED)
@@ -1073,6 +1077,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
     * Icons: `info` for H2. `target` or `award` for H4 `isImportant`. `chevronRight` for general bullet lists. No icons for H3 mini-titles.
     * Permissible Icon Names: `info`, `target`, `award`, `chevronRight`, `bullet-circle`, `compass`.
     * Make sure to not have any tags in '<>' brackets (e.g. '<u>') in the list elements, UNLESS it is logically a part of the lesson.
+    * Do NOT remove the '**' from the text, treat it as an equal part of the text.
 
     Return ONLY the JSON object. 
             """
@@ -1085,6 +1090,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             - Extract the 'mainTitle'.
             - Each module becomes a 'section' object with 'id' (e.g., '№1'. It shouldn't be 'Module 1', strictly format it as '№X'), 'title', 'totalHours', and 'lessons' array.
             - Each lesson in a module becomes a 'lesson' object with 'title', 'check', 'contentAvailable', 'source', and 'hours'.
+            - The 'title' of the lesson must not start with 'Lesson 1' or 'Lesson 1.1' or anything similar.
             - For 'check' object: 'type' (e.g., 'test', 'practice', 'none') and 'text'. 'text' must be original language, default to 'Test' if no 'text' but the type is 'test'. If the 'raw text' has mentions of the knowlage assesment and it is not none, then you cannot leave this field blank.
             - For 'contentAvailable' object: 'type' ('yes', 'no', 'percentage') and 'text'. 'text' must be original language. Default to {"type": "yes", "text": "100%"} if not mentioned.
             - Ensure all module numbers, titles, lesson details, hours, and source texts are extracted in their original language.
