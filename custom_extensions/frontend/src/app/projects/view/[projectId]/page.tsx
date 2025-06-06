@@ -1,8 +1,9 @@
 // custom_extensions/frontend/src/app/projects/view/[projectId]/page.tsx
 "use client";
 
-import React, { Suspense, useEffect, useState, useCallback } from 'react';
+import React, { Suspense, useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   ProjectInstanceDetail,
   MicroProductContentData,
@@ -14,7 +15,7 @@ import { ProjectListItem } from '@/types/products';
 import TrainingPlanTableComponent from '@/components/TrainingPlanTable';
 import PdfLessonDisplayComponent from '@/components/PdfLessonDisplay';
 import VideoLessonDisplay from '@/components/VideoLessonDisplay';
-import { Save, Edit, ArrowDownToLine, Info, AlertTriangle } from 'lucide-react';
+import { Save, Edit, ArrowDownToLine, Info, AlertTriangle, ArrowLeft, FolderOpen } from 'lucide-react';
 
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
 
@@ -77,6 +78,9 @@ export default function ProjectInstanceViewPage() {
   const [editableData, setEditableData] = useState<MicroProductContentData>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  
+  // MODIFICATION: State for the absolute chat URL
+  const [chatRedirectUrl, setChatRedirectUrl] = useState<string | null>(null);
 
   const fetchPageData = useCallback(async (currentProjectIdStr: string) => {
     setPageState('fetching');
@@ -118,6 +122,11 @@ export default function ProjectInstanceViewPage() {
       }
       const instanceData: ProjectInstanceDetail = await instanceRes.json();
       setProjectInstanceData(instanceData);
+      
+      // MODIFICATION: Set absolute chat URL here
+      if (typeof window !== 'undefined' && instanceData.sourceChatSessionId) {
+        setChatRedirectUrl(`${window.location.origin}/chat?chatId=${instanceData.sourceChatSessionId}`);
+      }
 
       if (listRes.ok) {
         const allMicroproductsData: ProjectListItem[] = await listRes.json();
@@ -324,18 +333,6 @@ export default function ProjectInstanceViewPage() {
     window.open(pdfUrl, '_blank');
   };
 
-  const handleBack = () => {
-    // Check if there is a referrer page in the browser history
-    if (document.referrer) {
-      // Navigate to the previous page by setting the window location.
-      // This forces a full page reload, bypassing the browser cache.
-      window.location.href = document.referrer;
-    } else {
-      // Fallback for cases where referrer is not available (e.g., direct navigation)
-      router.back();
-    }
-  };
-
   if (pageState === 'initial_loading' || pageState === 'fetching') {
     return <div className="flex items-center justify-center min-h-screen bg-gray-100"><div className="p-8 text-center text-lg text-gray-600">Loading project details...</div></div>;
   }
@@ -362,7 +359,7 @@ export default function ProjectInstanceViewPage() {
         return <PdfLessonDisplayComponent dataToDisplay={pdfData} isEditing={isEditing} onTextChange={handleTextChange} />;
       case COMPONENT_NAME_VIDEO_LESSON:
         const vlData = currentDataForDisplay as VideoLessonData ??
-          { mainPresentationTitle: projectInstanceData!.name || "Video Lesson", slides: [], detectedLanguage: lang };
+          { mainPresentationTitle: projectInstanceData!.name || "New Video Lesson", slides: [], detectedLanguage: lang };
         return <VideoLessonDisplay dataToDisplay={vlData} isEditing={isEditing} onTextChange={handleTextChange} />;
       default:
         return <DefaultDisplayComponent instanceData={projectInstanceData} />;
@@ -377,12 +374,36 @@ export default function ProjectInstanceViewPage() {
     <main className="p-4 md:p-8 bg-gray-100 min-h-screen font-['Inter',_sans-serif]">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <button
-            onClick={handleBack}
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
-          >
-            &larr; Back
-          </button>
+          
+          {/* MODIFICATION START: Replaced Back button with a flex container for both links */}
+          <div className="flex items-center gap-x-4">
+            {chatRedirectUrl ? (
+                <Link
+                  href={chatRedirectUrl}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                >
+                  <ArrowLeft size={16} className="mr-2" />
+                  Open Chat
+                </Link>
+              ) : (
+                <button
+                  onClick={() => router.back()}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                >
+                  <ArrowLeft size={16} className="mr-2" />
+                  Back
+                </button>
+            )}
+            <Link
+                href="/projects"
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                >
+                <FolderOpen size={16} className="mr-2" />
+                Open Products Page
+            </Link>
+          </div>
+          {/* MODIFICATION END */}
+
           <div className="flex items-center space-x-3">
             {projectInstanceData && (typeof projectInstanceData.project_id === 'number') && (
                   <button

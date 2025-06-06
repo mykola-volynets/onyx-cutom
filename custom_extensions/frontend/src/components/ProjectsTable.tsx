@@ -9,7 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   ListOrdered,
-  Edit2 // Added Edit2 icon for renaming
+  Edit2
 } from 'lucide-react';
 import { ProjectListItem } from '@/types/trainingPlan';
 
@@ -27,12 +27,10 @@ const ProjectsTable: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
   
-  // State for inline editing
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [editingItemType, setEditingItemType] = useState<'projectName' | 'instanceName' | null>(null);
   const [editText, setEditText] = useState<string>('');
 
-  // State to track hovered item for showing edit icon
   const [hoveredItemId, setHoveredItemId] = useState<number | null>(null);
 
   const fetchProjects = async () => {
@@ -131,7 +129,7 @@ const ProjectsTable: React.FC = () => {
         const errorData = await response.json().catch(() => ({ detail: `HTTP error! status: ${response.status}` }));
         throw new Error(errorData.detail);
       }
-      const result = await response.json();
+      await response.json();
       fetchProjects();
     } catch (e: any) {
       alert(`Error deleting projects: ${e.message || "Unknown error."}`);
@@ -141,7 +139,6 @@ const ProjectsTable: React.FC = () => {
     }
   };
 
-  // Renamed from handleDoubleClick for clarity
   const startInlineEdit = (item: ProjectListItem, type: 'projectName' | 'instanceName') => {
     if (typeof item.id !== 'number') return;
     setEditingItemId(item.id);
@@ -248,7 +245,8 @@ const ProjectsTable: React.FC = () => {
   const isAnySelected = selectedProjectIds.length > 0;
 
   return (
-    <div className="p-4 md:p-8 font-['Inter',_sans-serif] flex-grow bg-gray-50">
+    // MODIFICATION: Removed outer layout div. This component now renders its direct content.
+    <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Products</h1>
         <button
@@ -329,7 +327,7 @@ const ProjectsTable: React.FC = () => {
                       ${entries.length > 1 ? (isCurrentlyExpanded ? 'expanded-group-item-visible' : 'expanded-group-item-hidden') : ''}
                       ${singleItemGroupBg}
                        border-b border-gray-200 
-                    `; // Removed hover:bg-gray-100 from tr to avoid conflict with cell hover
+                    `;
 
                     const isEditingThisItem = editingItemId === item.id &&
                                             (entries.length === 1 ? editingItemType === 'projectName' : editingItemType === 'instanceName');
@@ -369,7 +367,7 @@ const ProjectsTable: React.FC = () => {
                               </div>
                             )
                           ) : (
-                            <div className="flex items-center justify-between group"> {/* Group for hover effect on icon */}
+                            <div className="flex items-center justify-between group">
                               <Link href={detailPageUrl} className="block flex-grow cursor-pointer py-1">
                                 {entries.length === 1 ? (
                                   <span className="hover:text-blue-600 hover:underline">
@@ -415,13 +413,6 @@ const ProjectsTable: React.FC = () => {
         .expanded-group-item-visible {
           display: table-row; 
         }
-        /* Optional: if you want the hover effect on the entire cell to show the icon */
-        /* .project-item-row:hover .edit-icon-hover { 
-          display: inline-block;
-        }
-        .edit-icon-hover {
-          display: none; 
-        } */
       `}</style>
     </div>
   );

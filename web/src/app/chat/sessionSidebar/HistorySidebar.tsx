@@ -153,8 +153,6 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             <Link
               className="w-full px-2 py-1 group rounded-md items-center hover:bg-accent-background-hovered cursor-pointer transition-all duration-150 flex gap-x-2"
               href="/custom-projects-ui/projects"
-              target="_blank"
-              rel="noopener noreferrer"
             >
               <FiPackage size={18} className="flex-none text-text-history-sidebar-button" />
               <p className="my-auto flex font-normal items-center text-base">
