@@ -1,10 +1,10 @@
-// custom_extensions/frontend/src/components/CreateLessonTypeModal.tsx
+// custom_extensions/frontend/src/components/CreateTestTypeModal.tsx
 "use client";
 
 import React from 'react';
-import { BookText, Video, Film, X } from 'lucide-react';
+import { X, CheckSquare } from 'lucide-react';
 
-interface CreateLessonTypeModalProps {
+interface CreateTestTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
   lessonTitle: string;
@@ -13,26 +13,16 @@ interface CreateLessonTypeModalProps {
   sourceChatSessionId: string | null | undefined;
 }
 
-const lessonTypes = [
+const testTypes = [
   { 
-    name: "Lesson Presentation", 
-    icon: <BookText className="w-6 h-6" />, 
-    disabled: false 
-  },
-  { 
-    name: "Video Lesson Script", 
-    icon: <Video className="w-6 h-6" />, 
-    disabled: false 
-  },
-  { 
-    name: "Video Lesson", 
-    icon: <Film className="w-6 h-6" />, 
-    disabled: true,
-    tooltip: "Coming soon!" 
+    name: "Quiz", 
+    icon: <CheckSquare className="w-6 h-6" />, 
+    disabled: false,
+    tooltip: "Create a quiz for this lesson"
   },
 ];
 
-// A self-contained, Tailwind-styled Modal to avoid cross-project imports.
+// Self-contained Modal component
 const Modal = ({ title, children, onClose }: { title: string, children: React.ReactNode, onClose: () => void }) => (
     <div 
         className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex justify-center items-center p-4"
@@ -45,6 +35,7 @@ const Modal = ({ title, children, onClose }: { title: string, children: React.Re
         <button 
             onClick={onClose} 
             className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors z-10"
+            aria-label="Close modal"
         >
             <X size={24} />
         </button>
@@ -58,7 +49,7 @@ const Modal = ({ title, children, onClose }: { title: string, children: React.Re
     </div>
 );
 
-// A self-contained, Tailwind-styled Button to match the UI.
+// Self-contained StyledButton component
 const StyledButton = ({ children, onClick, disabled, title, className = '' }: { children: React.ReactNode, onClick: () => void, disabled?: boolean, title?: string, className?: string }) => (
     <button
       onClick={onClick}
@@ -79,23 +70,23 @@ const StyledButton = ({ children, onClick, disabled, title, className = '' }: { 
     </button>
 );
 
-export const CreateLessonTypeModal = ({ 
+
+export const CreateTestTypeModal = ({ 
   isOpen, 
   onClose, 
   lessonTitle, 
   moduleName,
   lessonNumber,
   sourceChatSessionId 
-}: CreateLessonTypeModalProps) => {
-
-  const handleLessonCreate = (lessonType: string) => {
+}: CreateTestTypeModalProps) => {
+  const handleTestCreate = (testType: string) => {
     if (!sourceChatSessionId) {
-      alert("Error: Source chat session ID is not available. Cannot create lesson.");
+      alert("Error: Source chat session ID is not available. Cannot create test.");
       onClose();
       return;
     }
 
-    const message = `Please create a ${lessonType} for the ${lessonTitle} (module: ${moduleName}, lesson: ${lessonNumber})`;
+    const message = `Please create a ${testType} for the ${lessonTitle} (module: ${moduleName}, lesson: ${lessonNumber})`;
     
     const chatUrl = `/chat?chatId=${sourceChatSessionId}&user-prompt=${encodeURIComponent(message)}&send-on-load=true`;
     
@@ -108,7 +99,7 @@ export const CreateLessonTypeModal = ({
   }
 
   return (
-    <Modal title="Create a Lesson" onClose={onClose}>
+    <Modal title="Create Test" onClose={onClose}>
       <div className="px-6 pb-6">
         <div className="text-center mb-4">
           <p className="text-2xl font-bold text-indigo-600 break-words">
@@ -116,10 +107,10 @@ export const CreateLessonTypeModal = ({
           </p>
         </div>
         <div className="space-y-4">
-          {lessonTypes.map((type) => (
+          {testTypes.map((type) => (
             <StyledButton
               key={type.name}
-              onClick={() => handleLessonCreate(type.name)}
+              onClick={() => handleTestCreate(type.name)}
               disabled={type.disabled}
               title={type.tooltip}
             >

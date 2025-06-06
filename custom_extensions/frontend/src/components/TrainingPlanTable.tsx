@@ -1,13 +1,12 @@
 // custom_extensions/frontend/src/components/TrainingPlanTable.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { HelpCircle } from 'lucide-react';
 import { TrainingPlanData, Section as SectionType, Lesson as LessonType } from '@/types/trainingPlan';
-import { ProjectListItem, StatusInfo as ProductStatusInfo } from '@/types/products';
+import { ProjectListItem } from '@/types/products';
 import { CreateLessonTypeModal } from './CreateLessonTypeModal';
-
+import { CreateTestTypeModal } from './CreateTestTypeModal';
 
 // --- Custom SVG Icons ---
 const NewPieChartIcon = ({ color = '#FF1414', className = '' }) => (
@@ -159,15 +158,20 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
   parentProjectName,
   sourceChatSessionId,
 }) => {
-
-  // State to control the lesson creation modal
   const [lessonModalState, setLessonModalState] = useState<{
-    isOpen: boolean;
-    lessonTitle: string;
-  }>({ isOpen: false, lessonTitle: '' });
+    isOpen: boolean; lessonTitle: string; moduleName: string; lessonNumber: number;
+  }>({ isOpen: false, lessonTitle: '', moduleName: '', lessonNumber: 0 });
 
-  const handleOpenCreateLessonModal = (lessonTitle: string) => {
-    setLessonModalState({ isOpen: true, lessonTitle });
+  const [testModalState, setTestModalState] = useState<{
+    isOpen: boolean; lessonTitle: string; moduleName: string; lessonNumber: number;
+  }>({ isOpen: false, lessonTitle: '', moduleName: '', lessonNumber: 0 });
+
+  const handleLessonClick = (lesson: LessonType, moduleName: string, lessonNumber: number) => {
+    if (lesson.check.type === 'test') {
+      setTestModalState({ isOpen: true, lessonTitle: lesson.title, moduleName, lessonNumber });
+    } else {
+      setLessonModalState({ isOpen: true, lessonTitle: lesson.title, moduleName, lessonNumber });
+    }
   };
 
   const iconBaseColor = '#FF1414';
@@ -216,8 +220,18 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
     <div className="font-['Inter',_sans-serif] bg-gray-50">
       <CreateLessonTypeModal
         isOpen={lessonModalState.isOpen}
-        onClose={() => setLessonModalState({ isOpen: false, lessonTitle: '' })}
+        onClose={() => setLessonModalState({ isOpen: false, lessonTitle: '', moduleName: '', lessonNumber: 0 })}
         lessonTitle={lessonModalState.lessonTitle}
+        moduleName={lessonModalState.moduleName}
+        lessonNumber={lessonModalState.lessonNumber}
+        sourceChatSessionId={sourceChatSessionId}
+      />
+      <CreateTestTypeModal
+        isOpen={testModalState.isOpen}
+        onClose={() => setTestModalState({ isOpen: false, lessonTitle: '', moduleName: '', lessonNumber: 0 })}
+        lessonTitle={testModalState.lessonTitle}
+        moduleName={testModalState.moduleName}
+        lessonNumber={testModalState.lessonNumber}
         sourceChatSessionId={sourceChatSessionId}
       />
       <div className="shadow-lg rounded-lg overflow-hidden border border-gray-300 bg-white">
@@ -295,7 +309,7 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
                         </Link>
                       ) : (
                         <button
-                          onClick={() => handleOpenCreateLessonModal(lesson.title)}
+                          onClick={() => handleLessonClick(lesson, section.title, currentLessonNumber)}
                           className="text-left text-gray-700 hover:text-blue-600 hover:underline focus:outline-none"
                         >
                           {lesson.title}

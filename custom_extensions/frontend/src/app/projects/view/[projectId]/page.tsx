@@ -15,7 +15,7 @@ import { ProjectListItem } from '@/types/products';
 import TrainingPlanTableComponent from '@/components/TrainingPlanTable';
 import PdfLessonDisplayComponent from '@/components/PdfLessonDisplay';
 import VideoLessonDisplay from '@/components/VideoLessonDisplay';
-import { Save, Edit, ArrowDownToLine, Info, AlertTriangle, ArrowLeft, FolderOpen } from 'lucide-react';
+import { Save, Edit, ArrowDownToLine, Info, AlertTriangle, ArrowLeft, FolderOpen, MessageSquare } from 'lucide-react';
 
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
 
@@ -79,7 +79,7 @@ export default function ProjectInstanceViewPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   
-  // MODIFICATION: State for the absolute chat URL
+  // State for the absolute chat URL
   const [chatRedirectUrl, setChatRedirectUrl] = useState<string | null>(null);
 
   const fetchPageData = useCallback(async (currentProjectIdStr: string) => {
@@ -116,14 +116,13 @@ export default function ProjectInstanceViewPage() {
       if (!instanceRes.ok) {
         const errorText = await instanceRes.text();
         let errorDetail = `HTTP error ${instanceRes.status} fetching project instance (ID: ${currentProjectIdStr})`;
-        try { const jsonError = JSON.parse(errorText); errorDetail = jsonError.detail || errorDetail; }
+        try { const errorJson = JSON.parse(errorText); errorDetail = errorJson.detail || errorDetail; }
         catch { errorDetail = `${errorDetail} - ${errorText.substring(0, 150)}`; }
         throw new Error(errorDetail);
       }
       const instanceData: ProjectInstanceDetail = await instanceRes.json();
       setProjectInstanceData(instanceData);
       
-      // MODIFICATION: Set absolute chat URL here
       if (typeof window !== 'undefined' && instanceData.sourceChatSessionId) {
         setChatRedirectUrl(`${window.location.origin}/chat?chatId=${instanceData.sourceChatSessionId}`);
       }
@@ -375,34 +374,33 @@ export default function ProjectInstanceViewPage() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           
-          {/* MODIFICATION START: Replaced Back button with a flex container for both links */}
           <div className="flex items-center gap-x-4">
-            {chatRedirectUrl ? (
-                <Link
-                  href={chatRedirectUrl}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
-                >
-                  <ArrowLeft size={16} className="mr-2" />
-                  Open Chat
-                </Link>
-              ) : (
-                <button
-                  onClick={() => router.back()}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
-                >
-                  <ArrowLeft size={16} className="mr-2" />
-                  Back
-                </button>
-            )}
+            <button
+              onClick={() => router.back()}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors cursor-pointer"
+            >
+              <ArrowLeft size={16} className="mr-2" />
+              Back
+            </button>
+            
             <Link
                 href="/projects"
                 className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
                 >
                 <FolderOpen size={16} className="mr-2" />
-                Open Products Page
+                Open Products
             </Link>
+
+            {chatRedirectUrl && (
+                <Link
+                  href={chatRedirectUrl}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                >
+                  <MessageSquare size={16} className="mr-2" />
+                  Open Chat
+                </Link>
+            )}
           </div>
-          {/* MODIFICATION END */}
 
           <div className="flex items-center space-x-3">
             {projectInstanceData && (typeof projectInstanceData.project_id === 'number') && (
