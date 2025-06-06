@@ -355,7 +355,7 @@ export default function ProjectInstanceViewPage() {
       case COMPONENT_NAME_TRAINING_PLAN:
         const tpData = currentDataForDisplay as TrainingPlanData ??
           { mainTitle: projectInstanceData!.name || "Training Plan", sections: [], detectedLanguage: lang };
-        return <TrainingPlanTableComponent dataToDisplay={tpData} isEditing={isEditing} onTextChange={handleTextChange} allUserMicroproducts={allUserMicroproducts} parentProjectName={parentProjectNameForCurrentView} />;
+        return <TrainingPlanTableComponent dataToDisplay={tpData} isEditing={isEditing} onTextChange={handleTextChange} allUserMicroproducts={allUserMicroproducts} parentProjectName={parentProjectNameForCurrentView}  sourceChatSessionId={projectInstanceData?.sourceChatSessionId} />;
       case COMPONENT_NAME_PDF_LESSON:
         const pdfData = currentDataForDisplay as PdfLessonData ??
           { lessonTitle: projectInstanceData!.name || "PDF Lesson", contentBlocks: [], detectedLanguage: lang };

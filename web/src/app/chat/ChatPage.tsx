@@ -169,6 +169,7 @@ export function ChatPage({
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const [messageToSendOnLoad, setMessageToSendOnLoad] = useState<string | null>(null);
   const [designTemplates, setDesignTemplates] = useState<DesignTemplateResponse[]>([]);
   const [isLoadingDesignTemplates, setIsLoadingDesignTemplates] = useState<boolean>(false);
   const { popup, setPopup } = usePopup();
@@ -312,32 +313,6 @@ export function ChatPage({
       toggle(false);
     }
   }, [user, toggle, sidebarVisible]);
-
-  const processSearchParamsAndSubmitMessage = (searchParamsString: string) => {
-    const newSearchParams = new URLSearchParams(searchParamsString);
-    const message = newSearchParams?.get("user-prompt");
-
-    filterManager.buildFiltersFromQueryString(
-      newSearchParams.toString(),
-      availableSources,
-      documentSets.map((ds) => ds.name),
-      tags
-    );
-
-    const fileDescriptorString = newSearchParams?.get(SEARCH_PARAM_NAMES.FILES);
-    const overrideFileDescriptors: FileDescriptor[] = fileDescriptorString
-      ? JSON.parse(decodeURIComponent(fileDescriptorString))
-      : [];
-
-    newSearchParams.delete(SEARCH_PARAM_NAMES.SEND_ON_LOAD);
-
-    router.replace(`?${newSearchParams.toString()}`, { scroll: false });
-
-    if (message) {
-      setSubmittedMessage(message);
-      onSubmit({ messageOverride: message, overrideFileDescriptors });
-    }
-  };
 
   const chatSessionIdRef = useRef<string | null>(existingChatSessionId);
   const loadedIdSessionRef = useRef<string | null>(existingChatSessionId);
@@ -509,6 +484,8 @@ export function ChatPage({
       setSelectedAssistantFromId(chatSession.persona_id);
 
       const newMessageMap = processRawChatHistory(chatSession.messages);
+      updateCompleteMessageDetail(chatSession.chat_session_id, newMessageMap);
+
       const newMessageHistory = buildLatestMessageChain(newMessageMap);
 
       if (
@@ -543,6 +520,24 @@ export function ChatPage({
 
       setIsFetchingChatMessages(false);
 
+      const shouldSendOnLoad = searchParams?.get(SEARCH_PARAM_NAMES.SEND_ON_LOAD) === "true";
+      if (shouldSendOnLoad && !submitOnLoadPerformed.current) {
+        submitOnLoadPerformed.current = true;
+        
+        const messageFromParams = searchParams?.get(SEARCH_PARAM_NAMES.USER_PROMPT);
+
+        if (messageFromParams) {
+          // Clean up the URL to prevent re-submission on page refresh
+          const newSearchParams = new URLSearchParams(searchParams.toString());
+          newSearchParams.delete(SEARCH_PARAM_NAMES.USER_PROMPT);
+          newSearchParams.delete(SEARCH_PARAM_NAMES.SEND_ON_LOAD);
+          router.replace(`?${newSearchParams.toString()}`, { scroll: false });
+          
+          // Set the state that will trigger the submission in the next render cycle
+          setMessageToSendOnLoad(messageFromParams);
+        }
+      }
+
       if (
         newMessageHistory.length === 1 &&
         !submitOnLoadPerformed.current &&
@@ -567,6 +562,21 @@ export function ChatPage({
     initialSessionFetch();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingChatSessionId, searchParams?.get(SEARCH_PARAM_NAMES.PERSONA_ID)]);
+  
+  useEffect(() => {
+    // This effect will run *after* the render cycle where `messageToSendOnLoad` is set.
+    // At this point, the chat history from `initialSessionFetch` is guaranteed to be
+    // in the component's state.
+    if (messageToSendOnLoad && !currentChatAnswering()) {
+      // Now the call to `onSubmit` will read the up-to-date chat history.
+      onSubmit({ messageOverride: messageToSendOnLoad });
+      
+      // Reset the state to prevent this from running more than once
+      setMessageToSendOnLoad(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messageToSendOnLoad]);
+
 
   useEffect(() => {
     const userFolderId = searchParams?.get(SEARCH_PARAM_NAMES.USER_FOLDER_ID);
@@ -1007,19 +1017,33 @@ export function ChatPage({
     if (event.data.type === SUBMIT_MESSAGE_TYPES.PAGE_CHANGE) {
       try {
         const url = new URL(event.data.href);
-        processSearchParamsAndSubmitMessage(url.searchParams.toString());
+        const newSearchParams = new URLSearchParams(url.searchParams.toString());
+        const message = newSearchParams.get(SEARCH_PARAM_NAMES.USER_PROMPT);
+
+        filterManager.buildFiltersFromQueryString(
+          newSearchParams.toString(),
+          availableSources,
+          documentSets.map((ds) => ds.name),
+          tags
+        );
+        const fileDescriptorString = newSearchParams.get(SEARCH_PARAM_NAMES.FILES);
+        const overrideFileDescriptors: FileDescriptor[] = fileDescriptorString
+          ? JSON.parse(decodeURIComponent(fileDescriptorString))
+          : [];
+
+        newSearchParams.delete(SEARCH_PARAM_NAMES.SEND_ON_LOAD);
+
+        router.replace(`?${newSearchParams.toString()}`, { scroll: false });
+
+        if (message) {
+          setSubmittedMessage(message);
+          onSubmit({ messageOverride: message, overrideFileDescriptors });
+        }
       } catch (error) {
         console.error("Error parsing URL:", error);
       }
     }
   };
-
-  useEffect(() => {
-    if (searchParams?.get(SEARCH_PARAM_NAMES.SEND_ON_LOAD)) {
-      processSearchParamsAndSubmitMessage(searchParams.toString());
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, router]); 
 
   useEffect(() => {
     adjustDocumentSidebarWidth();
@@ -1269,11 +1293,18 @@ export function ChatPage({
       console.log("AI_MESSAGE_DEBUG: Instance Name defaulted to product name:", parsedInstanceName);
     }
 
+    const currentChatId = currentSessionId();
+    if (!currentChatId) {
+      setPopup({ type: "error", message: "Cannot create a product without an active chat session." });
+      return;
+    }
+
     const payload = {
       projectName: parsedProjectName,
       design_template_id: matchedTemplate.id,
       microProductName: parsedInstanceName,
       aiResponse: strippedAiResponse,
+      chatSessionId: currentChatId, // Use the validated ID
     };
 
     console.log("AI_MESSAGE_DEBUG: Submitting to /api/custom-projects-backend/projects/add with payload:", payload);

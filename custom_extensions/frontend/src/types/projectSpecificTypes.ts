@@ -81,8 +81,9 @@ export interface ProjectInstanceDetail {
   component_name: string;
   webLinkPath?: string | null;
   pdfLinkPath?: string | null;
-  details?: MicroProductContentData; // This now implicitly includes VideoLessonData
-  detectedLanguage?: string; // Added to match other data structures if needed at this level
+  details?: MicroProductContentData; 
+  detectedLanguage?: string; 
+  sourceChatSessionId?: string | null;
 }
 
 // Type for Design Template API Response

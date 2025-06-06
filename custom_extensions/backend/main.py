@@ -19,7 +19,7 @@ import logging
 
 # --- CONTROL VARIABLE FOR PRODUCTION LOGGING ---
 # SET THIS TO True FOR PRODUCTION, False FOR DEVELOPMENT
-IS_PRODUCTION = True  # Or True for production
+IS_PRODUCTION = False  # Or True for production
 
 # --- Logger ---
 logger = logging.getLogger(__name__)
@@ -193,6 +193,9 @@ async def startup_event():
                 logger.info("Attempting to alter 'microproduct_content' column type to JSONB...")
                 await connection.execute("ALTER TABLE projects ALTER COLUMN microproduct_content TYPE JSONB USING microproduct_content::text::jsonb;")
                 logger.info("Successfully altered 'microproduct_content' to JSONB.")
+
+            await connection.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS source_chat_session_id UUID;")
+            logger.info("'projects' table ensured and updated with 'source_chat_session_id'.")
 
             await connection.execute("""
                 CREATE TABLE IF NOT EXISTS projects (
@@ -404,6 +407,7 @@ class ProjectCreateRequest(BaseModel):
     design_template_id: int
     microProductName: Optional[str] = None
     aiResponse: str
+    chatSessionId: Optional[uuid.UUID] = None
     model_config = {"from_attributes": True}
 
 class ProjectDB(BaseModel):
@@ -427,6 +431,7 @@ class MicroProductApiResponse(BaseModel):
     webLinkPath: Optional[str] = None
     pdfLinkPath: Optional[str] = None
     details: Optional[MicroProductContentType] = None
+    sourceChatSessionId: Optional[uuid.UUID] = None
     model_config = {"from_attributes": True}
 
 class ProjectApiResponse(BaseModel):
@@ -1200,10 +1205,28 @@ Return ONLY the JSON object.
 
         logger.info(f"Content prepared for DB storage (first 200 chars of JSON): {str(content_to_store_for_db)[:200]}")
 
-        insert_query = "INSERT INTO projects (onyx_user_id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, design_template_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id, onyx_user_id, project_name, product_type, microproduct_type, microproduct_name, microproduct_content, design_template_id, created_at;"
+        insert_query = """
+        INSERT INTO projects (
+            onyx_user_id, project_name, product_type, microproduct_type,
+            microproduct_name, microproduct_content, design_template_id, source_chat_session_id, created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+        RETURNING id, onyx_user_id, project_name, product_type, microproduct_type, microproduct_name,
+                  microproduct_content, design_template_id, source_chat_session_id, created_at;
+    """
 
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(insert_query, onyx_user_id, project_data.projectName, derived_product_type, derived_microproduct_type, db_microproduct_name_to_store, content_to_store_for_db, project_data.design_template_id)
+            row = await conn.fetchrow(
+                insert_query,
+                onyx_user_id,
+                project_data.projectName,
+                derived_product_type,
+                derived_microproduct_type,
+                db_microproduct_name_to_store,
+                content_to_store_for_db,
+                project_data.design_template_id,
+                project_data.chatSessionId
+            )
         if not row:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create project entry.")
 
@@ -1418,12 +1441,12 @@ async def get_user_projects_list_from_db(onyx_user_id: str = Depends(get_current
 @app.get("/api/custom/projects/view/{project_id}", response_model=MicroProductApiResponse, responses={404: {"model": ErrorDetail}})
 async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depends(get_current_onyx_user_id), pool: asyncpg.Pool = Depends(get_db_pool)):
     query = """
-        SELECT p.id, p.project_name, p.microproduct_name, p.microproduct_content,
-               p.design_template_id, dt.template_name as design_template_name,
-               dt.component_name as design_component_name, dt.microproduct_type as design_microproduct_type
-        FROM projects p
-        JOIN design_templates dt ON p.design_template_id = dt.id
-        WHERE p.id = $1 AND p.onyx_user_id = $2;
+    SELECT p.id, p.project_name, p.microproduct_name, p.microproduct_content,
+           p.design_template_id, p.source_chat_session_id, dt.template_name as design_template_name,
+           dt.component_name as design_component_name, dt.microproduct_type as design_microproduct_type
+    FROM projects p
+    JOIN design_templates dt ON p.design_template_id = dt.id
+    WHERE p.id = $1 AND p.onyx_user_id = $2;
     """
     try:
         async with pool.acquire() as conn: row = await conn.fetchrow(query, project_id, onyx_user_id)
@@ -1469,7 +1492,8 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
         return MicroProductApiResponse(
             name=project_instance_name, slug=create_slug(project_instance_name), project_id=project_id,
             design_template_id=row_dict["design_template_id"], component_name=component_name,
-            webLinkPath=web_link_path, pdfLinkPath=pdf_link_path, details=details_data
+            webLinkPath=web_link_path, pdfLinkPath=pdf_link_path, details=details_data,
+            sourceChatSessionId=row_dict.get("source_chat_session_id")
         )
     except HTTPException:
         raise

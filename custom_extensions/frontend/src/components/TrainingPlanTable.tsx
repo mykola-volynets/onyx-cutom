@@ -1,11 +1,12 @@
 // custom_extensions/frontend/src/components/TrainingPlanTable.tsx
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { HelpCircle } from 'lucide-react';
 import { TrainingPlanData, Section as SectionType, Lesson as LessonType } from '@/types/trainingPlan';
 import { ProjectListItem, StatusInfo as ProductStatusInfo } from '@/types/products';
+import { CreateLessonTypeModal } from './CreateLessonTypeModal';
 
 
 // --- Custom SVG Icons ---
@@ -80,6 +81,7 @@ interface TrainingPlanTableProps {
   onTextChange?: (path: (string | number)[], newValue: string | number | boolean) => void;
   allUserMicroproducts?: ProjectListItem[];
   parentProjectName?: string;
+  sourceChatSessionId?: string | null;
 }
 
 const localizationConfig = {
@@ -154,8 +156,19 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
   isEditing,
   onTextChange,
   allUserMicroproducts,
-  parentProjectName
+  parentProjectName,
+  sourceChatSessionId,
 }) => {
+
+  // State to control the lesson creation modal
+  const [lessonModalState, setLessonModalState] = useState<{
+    isOpen: boolean;
+    lessonTitle: string;
+  }>({ isOpen: false, lessonTitle: '' });
+
+  const handleOpenCreateLessonModal = (lessonTitle: string) => {
+    setLessonModalState({ isOpen: true, lessonTitle });
+  };
 
   const iconBaseColor = '#FF1414';
   const sections = dataToDisplay?.sections;
@@ -201,6 +214,12 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
 
   return (
     <div className="font-['Inter',_sans-serif] bg-gray-50">
+      <CreateLessonTypeModal
+        isOpen={lessonModalState.isOpen}
+        onClose={() => setLessonModalState({ isOpen: false, lessonTitle: '' })}
+        lessonTitle={lessonModalState.lessonTitle}
+        sourceChatSessionId={sourceChatSessionId}
+      />
       <div className="shadow-lg rounded-lg overflow-hidden border border-gray-300 bg-white">
         {(isEditing || (mainTitle !== undefined && mainTitle !== null)) && (
           <div className="bg-gray-800 text-white p-4">
@@ -275,7 +294,12 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
                           {lesson.title}
                         </Link>
                       ) : (
-                        lesson.title
+                        <button
+                          onClick={() => handleOpenCreateLessonModal(lesson.title)}
+                          className="text-left text-gray-700 hover:text-blue-600 hover:underline focus:outline-none"
+                        >
+                          {lesson.title}
+                        </button>
                       )}
                     </div>
                     <div className="col-span-5 sm:col-span-2 flex justify-start px-2 border-r border-gray-400">
