@@ -9,7 +9,6 @@ import ProjectsTable from '../../components/ProjectsTable';
 export default function ProjectsPage() {
   // This logic ensures the "Back to Chat" URL is absolute, fixing the redirect issue.
   const [chatUrl, setChatUrl] = useState("/chat");
-  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -43,7 +42,7 @@ export default function ProjectsPage() {
             </Link>
         </div>
         <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading Projects...</div>}>
-            <ProjectsTable projects={projects} onProjectClick={handleProjectClick} />
+            <ProjectsTable />
         </Suspense>
       </div>
     </main>
