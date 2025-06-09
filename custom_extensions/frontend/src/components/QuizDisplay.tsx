@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   QuizData, AnyQuizQuestion, MultipleChoiceQuestion, MultiSelectQuestion,
-  MatchingQuestion, SortingQuestion, OpenAnswerQuestion
+  MatchingQuestion, SortingQuestion, OpenAnswerQuestion, SortableItem
 } from '@/types/quizTypes';
 import { CheckCircle, XCircle, Info, ArrowRight } from 'lucide-react';
 
