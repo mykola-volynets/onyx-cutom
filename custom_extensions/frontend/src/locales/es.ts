@@ -28,6 +28,7 @@ export const es = {
     quizTitle: "Título del cuestionario",
     question: "Pregunta",
     correctAnswer: "Respuesta correcta",
+    correctAnswers: "Respuestas correctas",
     acceptableAnswers: "Respuestas aceptables",
     prompts: "Indicaciones",
     correctMatches: "Correspondencias correctas",
@@ -38,6 +39,8 @@ export const es = {
     matching: "Correspondencia",
     sorting: "Ordenamiento",
     openAnswer: "Respuesta abierta",
+    answerKey: "Clave de respuestas",
+    correctOrder: "Orden correcto",
     emptyContent: "...",
   },
   modals: {

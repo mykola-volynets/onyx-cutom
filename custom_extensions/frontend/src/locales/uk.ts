@@ -28,6 +28,7 @@ export const uk = {
     quizTitle: "Назва тесту",
     question: "Питання",
     correctAnswer: "Правильна відповідь",
+    correctAnswers: "Правильні відповіді",
     acceptableAnswers: "Допустимі відповіді",
     prompts: "Підказки",
     correctMatches: "Правильні відповідності",
@@ -38,6 +39,8 @@ export const uk = {
     matching: "Відповідність",
     sorting: "Сортування",
     openAnswer: "Вільна відповідь",
+    answerKey: "Ключ відповідей",
+    correctOrder: "Правильний порядок",
     emptyContent: "...",
   },
   modals: {

@@ -28,6 +28,7 @@ export const ru = {
     quizTitle: "Название теста",
     question: "Вопрос",
     correctAnswer: "Правильный ответ",
+    correctAnswers: "Правильные ответы",
     acceptableAnswers: "Допустимые ответы",
     prompts: "Подсказки",
     correctMatches: "Правильные соответствия",
@@ -38,6 +39,8 @@ export const ru = {
     matching: "Соответствие",
     sorting: "Сортировка",
     openAnswer: "Свободный ответ",
+    answerKey: "Ключ ответов",
+    correctOrder: "Правильный порядок",
     emptyContent: "...",
   },
   modals: {

@@ -28,6 +28,7 @@ export const en = {
     quizTitle: "Quiz Title",
     question: "Question",
     correctAnswer: "Correct Answer",
+    correctAnswers: "Correct Answers",
     acceptableAnswers: "Acceptable Answers",
     prompts: "Prompts",
     correctMatches: "Correct Matches",
@@ -38,6 +39,8 @@ export const en = {
     matching: "Matching",
     sorting: "Sorting",
     openAnswer: "Open Answer",
+    answerKey: "Answer Key",
+    correctOrder: "Correct Order",
     emptyContent: "...",
   },
   modals: {
