@@ -40,15 +40,6 @@ export const es = {
       errorNoSessionId: "Error: El ID de la sesión de chat de origen no está disponible. No se puede crear la prueba."
     }
   },
-  projectTable: {
-    name: "Nombre",
-    description: "Descripción",
-    status: "Estado",
-    createdAt: "Creado el",
-    noProjects: "No se encontraron proyectos",
-    active: "Activo",
-    inactive: "Inactivo"
-  },
   projects: {
     loading: "Cargando productos...",
     error: "Error: {error}",

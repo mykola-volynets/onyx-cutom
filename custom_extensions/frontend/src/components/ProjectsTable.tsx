@@ -37,7 +37,7 @@ const ProjectsTable = ({
   onProjectClick,
   detectedLanguage = 'en'
 }: ProjectsTableProps) => {
-  const localized = locales[detectedLanguage].projectTable;
+  const localized = locales[detectedLanguage]?.projects || locales['en'].projects;
 
   if (!projects.length) {
     return (
