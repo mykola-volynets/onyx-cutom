@@ -2,7 +2,7 @@
 <html lang="{{ details.details.detectedLanguage | default('en') }}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ details.details.quizTitle | default(details.locale.quiz.quizTitle) }}</title>
+    <title>{{ details.details.quizTitle | default('Quiz') }}</title>
     <style>
         body { 
             font-family: 'Inter', Arial, sans-serif; 
@@ -61,82 +61,58 @@
             padding-top: 20px;
             border-top: 2px solid #34495e;
         }
-        .answer-key-title { 
-            font-size: 16pt; 
-            font-weight: 600; 
+        .answer-key-title {
+            font-size: 16pt;
+            font-weight: 600;
             margin-bottom: 20px;
             color: #2c3e50;
-            text-align: center;
-        }
-        .answer-block { 
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-        .answer-block strong {
-            color: #2c3e50;
-        }
-        .matching-table { 
-            width: 100%; 
-            border-collapse: collapse;
-            margin: 10px 0;
-        }
-        .matching-table td { 
-            padding: 8px;
-            vertical-align: top;
-            border: 1px solid #e0e0e0;
-        }
-        .matching-table .prompts-col { 
-            width: 50%;
-            background-color: #f8f9fa;
-        }
-        .matching-table .options-col { 
-            width: 50%;
-            background-color: #ffffff;
-        }
-        .explanation {
-            margin-top: 8px;
-            font-style: italic;
-            color: #666;
-            font-size: 9pt;
         }
         .correct-answer {
-            color: #27ae60;
-            font-weight: 600;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .explanation {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-style: italic;
+        }
+        .matching-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .matching-table td {
+            padding: 10px;
+            vertical-align: top;
+        }
+        .prompts-col {
+            width: 50%;
+            border-right: 1px solid #e0e0e0;
+        }
+        .options-col {
+            width: 50%;
+            padding-left: 20px;
         }
         .sorting-list {
-            list-style-type: none;
-            padding-left: 0;
+            list-style-type: decimal;
+            padding-left: 20px;
         }
         .sorting-list li {
             margin-bottom: 8px;
-            padding: 8px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-        .correct-order {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #e8f5e9;
-            border-radius: 4px;
-        }
-        .correct-order ol {
-            margin: 0;
-            padding-left: 20px;
-        }
-        .correct-order li {
-            margin-bottom: 4px;
         }
     </style>
 </head>
 <body>
     <div class="quiz-container">
-        <div class="quiz-title">{{ details.details.quizTitle }}</div>
+        <div class="quiz-title">{{ details.details.quizTitle | default('Quiz') }}</div>
 
         {% for question in details.details.questions %}
             <div class="question-block">
-                <div class="question-text">{{ details.locale.quiz.question }} {{ loop.index }}: {{ question.question_text }}</div>
+                <div class="question-text">Question {{ loop.index }}: {{ question.question_text }}</div>
 
                 {# Multiple Choice or Multi-Select #}
                 {% if question.question_type in ['multiple-choice', 'multi-select'] %}
@@ -152,7 +128,7 @@
                     <table class="matching-table">
                         <tr>
                             <td class="prompts-col">
-                                <strong>{{ details.locale.quiz.prompts }}</strong>
+                                <strong>Prompts:</strong>
                                 <ul style="list-style-type: none; padding-left: 0;">
                                 {% for prompt in question.prompts %}
                                     <li>{{ prompt.id }}. {{ prompt.text }}</li>
@@ -160,7 +136,7 @@
                                 </ul>
                             </td>
                             <td class="options-col">
-                                <strong>{{ details.locale.quiz.correctMatches }}</strong>
+                                <strong>Options:</strong>
                                 <ul style="list-style-type: none; padding-left: 0;">
                                 {% for option in question.options %}
                                     <li>{{ option.id }}. {{ option.text }}</li>
@@ -188,16 +164,16 @@
         {% endfor %}
 
         <div class="answer-key">
-            <div class="answer-key-title">{{ details.locale.quiz.correctAnswer }}</div>
+            <div class="answer-key-title">Answer Key</div>
             {% for question in details.details.questions %}
-                <div class="answer-block">
-                    <div><strong>{{ details.locale.quiz.question }} {{ loop.index }}:</strong></div>
+                <div>
+                    <div><strong>Question {{ loop.index }}:</strong></div>
                     {% if question.question_type == 'multiple-choice' %}
-                        <div class="correct-answer">{{ details.locale.quiz.correctAnswer }}: {{ question.correct_option_id }}</div>
+                        <div class="correct-answer">Correct Answer: {{ question.correct_option_id }}</div>
                     {% elif question.question_type == 'multi-select' %}
-                        <div class="correct-answer">{{ details.locale.quiz.correctAnswer }}: {{ question.correct_option_ids | join(', ') }}</div>
+                        <div class="correct-answer">Correct Answers: {{ question.correct_option_ids | join(', ') }}</div>
                     {% elif question.question_type == 'matching' %}
-                        <div class="correct-answer">{{ details.locale.quiz.correctMatches }}:
+                        <div class="correct-answer">Correct Matches:
                             <ul>
                             {% for prompt_id, option_id in question.correct_matches.items() %}
                                 <li>{{ prompt_id }} - {{ option_id }}</li>
@@ -205,7 +181,7 @@
                             </ul>
                         </div>
                     {% elif question.question_type == 'sorting' %}
-                        <div class="correct-answer">{{ details.locale.quiz.itemsToSort }}:
+                        <div class="correct-answer">Correct Order:
                             <ol>
                                 {% for item_id in question.correct_order %}
                                     {% for item in question.items_to_sort if item.id == item_id %}
@@ -215,11 +191,11 @@
                             </ol>
                         </div>
                     {% elif question.question_type == 'open-answer' %}
-                        <div class="correct-answer">{{ details.locale.quiz.acceptableAnswers }}: {{ question.acceptable_answers | join(' / ') }}</div>
+                        <div class="correct-answer">Acceptable Answers: {{ question.acceptable_answers | join(' / ') }}</div>
                     {% endif %}
 
                     {% if question.explanation %}
-                        <div class="explanation"><strong>{{ details.locale.quiz.explanation }}:</strong> {{ question.explanation }}</div>
+                        <div class="explanation"><strong>Explanation:</strong> {{ question.explanation }}</div>
                     {% endif %}
                 </div>
             {% endfor %}
