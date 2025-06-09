@@ -257,7 +257,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
 
   const renderSorting = (question: SortingQuestion, index: number) => {
     const userAnswer = userAnswers[index] || [];
-    const isCorrect = question.items.every((item: SortableItem, i: number) => item.id === userAnswer[i]);
+    const isCorrect = question.items_to_sort.every((item: SortableItem, i: number) => item.id === userAnswer[i]);
     const showResult = isSubmitted && showAnswers;
 
     const handleDragStart = (e: React.DragEvent, itemId: string) => {
@@ -270,47 +270,47 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
 
     const handleDrop = (e: React.DragEvent, targetIndex: number) => {
       e.preventDefault();
-      const draggedId = e.dataTransfer.getData('text/plain');
-      const newOrder = [...userAnswer];
-      const draggedIndex = newOrder.indexOf(draggedId);
-      newOrder.splice(draggedIndex, 1);
-      newOrder.splice(targetIndex, 0, draggedId);
-      handleAnswerChange(index, newOrder);
+      const itemId = e.dataTransfer.getData('text/plain');
+      const newAnswer = [...userAnswer];
+      const currentIndex = newAnswer.indexOf(itemId);
+      
+      if (currentIndex !== -1) {
+        newAnswer.splice(currentIndex, 1);
+      }
+      newAnswer.splice(targetIndex, 0, itemId);
+      handleAnswerChange(index, newAnswer);
     };
 
     return (
       <div className="space-y-4">
         <div className="space-y-2">
-          {question.items_to_sort.map((item, itemIndex) => {
-            const currentIndex = userAnswer.indexOf(item.id);
-            return (
-              <div
-                key={item.id}
-                draggable={!isSubmitted}
-                onDragStart={(e) => handleDragStart(e, item.id)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, itemIndex)}
-                className={`p-3 rounded-lg border ${
-                  showResult
-                    ? currentIndex === question.correct_order.indexOf(item.id)
-                      ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
-                      : `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
-                    : THEME_COLORS.lightBorder
-                } cursor-move`}
-              >
-                <div className="flex items-center">
-                  <span className="mr-2 text-gray-500">{currentIndex + 1}.</span>
-                  <span className={THEME_COLORS.primaryText}>{item.text}</span>
-                  {showResult && currentIndex === question.correct_order.indexOf(item.id) && (
-                    <CheckCircle className="ml-auto text-green-500" size={20} />
-                  )}
-                  {showResult && currentIndex !== question.correct_order.indexOf(item.id) && (
-                    <XCircle className="ml-auto text-red-500" size={20} />
-                  )}
-                </div>
+          {question.items_to_sort.map((item, i) => (
+            <div
+              key={item.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, item.id)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, i)}
+              className={`p-3 rounded-lg border ${
+                showResult
+                  ? item.id === question.correct_order[i]
+                    ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
+                    : `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
+                  : THEME_COLORS.lightBorder
+              } cursor-move hover:bg-gray-50`}
+            >
+              <div className="flex items-center">
+                <span className="mr-2 text-gray-500">{i + 1}.</span>
+                <span className={THEME_COLORS.primaryText}>{item.text}</span>
+                {showResult && item.id === question.correct_order[i] && (
+                  <CheckCircle className="ml-auto text-green-500" size={20} />
+                )}
+                {showResult && item.id !== question.correct_order[i] && (
+                  <XCircle className="ml-auto text-red-500" size={20} />
+                )}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
         {showResult && question.explanation && (
           <div className={`mt-2 p-3 rounded-lg ${isCorrect ? THEME_COLORS.successBg : THEME_COLORS.errorBg}`}>
