@@ -31,9 +31,10 @@ interface QuizDisplayProps {
   dataToDisplay: QuizData | null;
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newText: string) => void;
+  parentProjectName?: string;
 }
 
-const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onTextChange }) => {
+const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onTextChange, parentProjectName }) => {
   const [userAnswers, setUserAnswers] = useState<Record<number, any>>({});
   const [showAnswers, setShowAnswers] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -412,6 +413,13 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {parentProjectName && (
+        <div style={{ borderLeft: '3px solid #FF1414', paddingLeft: '10px', marginBottom: '8px' }}>
+          <h2 style={{ textTransform: 'uppercase', fontSize: '1.125rem', fontWeight: 500, color: 'black', margin: 0 }}>
+            <span style={{ color: '#FF1414' }}>COURSE:</span> {parentProjectName}
+          </h2>
+        </div>
+      )}
       <div className="mb-8">
         {isEditing ? (
           <input
@@ -422,7 +430,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
             placeholder={t.quizTitle}
           />
         ) : (
-          <h1 className="text-2xl font-bold text-black mb-2">{dataToDisplay.quizTitle || t.quizTitle}</h1>
+          <h1 className="font-bold text-black mb-2" style={{ fontSize: '1.875rem', lineHeight: '2.25rem' }}>{dataToDisplay.quizTitle || t.quizTitle}</h1>
         )}
       </div>
 

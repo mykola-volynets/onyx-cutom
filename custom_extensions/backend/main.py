@@ -508,6 +508,7 @@ class MicroProductApiResponse(BaseModel):
     project_id: int
     design_template_id: int
     component_name: str
+    parentProjectName: Optional[str] = None
     webLinkPath: Optional[str] = None
     pdfLinkPath: Optional[str] = None
     details: Optional[MicroProductContentType] = None
@@ -1778,7 +1779,8 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
             name=project_instance_name, slug=create_slug(project_instance_name), project_id=project_id,
             design_template_id=row_dict["design_template_id"], component_name=component_name,
             webLinkPath=web_link_path, pdfLinkPath=pdf_link_path, details=details_data,
-            sourceChatSessionId=row_dict.get("source_chat_session_id")
+            sourceChatSessionId=row_dict.get("source_chat_session_id"),
+            parentProjectName=row_dict.get('project_name')
         )
     except HTTPException:
         raise
@@ -1903,28 +1905,19 @@ async def download_project_instance_pdf(
                         detected_lang_for_pdf = parsed_model.detectedLanguage
                         # Update locale strings if language detection changed
                         current_pdf_locale_strings = VIDEO_SCRIPT_LANG_STRINGS.get(detected_lang_for_pdf, VIDEO_SCRIPT_LANG_STRINGS['en'])
-                    data_for_template_render = {
-                        "details": parsed_model.model_dump(mode='json', exclude_none=True),
-                        "locale": current_pdf_locale_strings
-                    }
+                    data_for_template_render = parsed_model.model_dump(mode='json', exclude_none=True)
                 except Exception as e_parse_dump:
                     logger.error(f"Pydantic parsing/dumping failed for Quiz (Proj {project_id}): {e_parse_dump}", exc_info=not IS_PRODUCTION)
                     data_for_template_render = {
-                        "details": {
-                            "quizTitle": f"Content Error: {mp_name_for_pdf_context}",
-                            "questions": [],
-                            "detectedLanguage": detected_lang_for_pdf
-                        },
-                        "locale": current_pdf_locale_strings
-                    }
-            else:
-                data_for_template_render = {
-                    "details": {
                         "quizTitle": f"Content Error: {mp_name_for_pdf_context}",
                         "questions": [],
                         "detectedLanguage": detected_lang_for_pdf
-                    },
-                    "locale": current_pdf_locale_strings
+                    }
+            else:
+                data_for_template_render = {
+                    "quizTitle": f"Content Error: {mp_name_for_pdf_context}",
+                    "questions": [],
+                    "detectedLanguage": detected_lang_for_pdf
                 }
         else:
             logger.warning(f"PDF: Unknown component_name '{component_name}' for project {project_id}. Defaulting to simple PDF Lesson structure.")

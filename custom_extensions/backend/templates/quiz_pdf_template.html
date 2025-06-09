@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="{{ details.details.details.detectedLanguage | default('en') }}">
+<html lang="{{ details.detectedLanguage | default('en') }}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ details.details.details.quizTitle | default('Quiz') }}</title>
+    <title>{{ details.quizTitle | default('Quiz') }}</title>
     <style>
         body { 
             font-family: 'Inter', Arial, sans-serif; 
@@ -108,9 +108,23 @@
 </head>
 <body>
     <div class="quiz-container">
-        {% set quiz_data = details.details.details %}
-        {% set locale = details.details.locale%}
-        <div class="quiz-title">{{ quiz_data.quizTitle | default('Quiz') }}</div>
+        {% set quiz_data = details %}
+
+        {% if parentProjectName %}
+            <div style="border-left: 3px solid #FF1414; padding-left: 10px; margin-bottom: 8px;">
+                <h2 style="text-transform: uppercase; font-size: 1.125rem; font-weight: 500; color: black; margin: 0;">
+                    <span style="color: #FF1414;">COURSE:</span> {{ parentProjectName }}
+                </h2>
+            </div>
+             <h1 class="quiz-title" style="text-align: left; font-size: 1.875rem; line-height: 2.25rem; margin-bottom: 24px; text-transform: none;">
+                {% if lessonNumber %}
+                    <span style="color: #FF1414;">LESSON №{{ lessonNumber }}:</span> 
+                {% endif %}
+                {{ quiz_data.quizTitle | default('Quiz') }}
+            </h1>
+        {% else %}
+            <div class="quiz-title">{{ quiz_data.quizTitle | default('Quiz') }}</div>
+        {% endif %}
 
         {% for question in quiz_data.questions %}
             <div class="question-block">
