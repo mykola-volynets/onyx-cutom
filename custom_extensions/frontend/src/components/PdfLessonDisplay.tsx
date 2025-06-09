@@ -393,6 +393,14 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
   let skipNextH2Headline = false;
   const contentBlocksToProcess = dataToDisplay.contentBlocks || [];
 
+  // Find the last headline index (any level)
+  let lastHeadlineIndex = -1;
+  contentBlocksToProcess.forEach((block, index) => {
+    if (block.type === 'headline') {
+      lastHeadlineIndex = index;
+    }
+  });
+
   if (dataToDisplay.lessonTitle && contentBlocksToProcess.length > 0) {
     const firstBlock = contentBlocksToProcess[0];
     if (firstBlock.type === 'headline' &&
@@ -437,13 +445,6 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
       return (dataToDisplay?.contentBlocks || []).findIndex(cb => cb === blockToFind);
   };
 
-  let lastSectionHeaderRenderableItemIndex = -1;
-  for (let k = renderableItems.length - 1; k >= 0; k--) {
-    if (isSectionHeader(renderableItems[k])) {
-      lastSectionHeaderRenderableItemIndex = k;
-      break;
-    }
-  }
   const styledLessonTitle = parseAndStyleText(dataToDisplay.lessonTitle);
 
   return (
@@ -505,7 +506,10 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
             isCurrentItemEffectivelyLast = dividerWillBeBeforeNextItem;
           }
           
-          const isLastHeaderForStar = index === lastSectionHeaderRenderableItemIndex;
+          // Show star icon for the last headline of any level
+          const isLastHeaderForStar = (item.type === 'major_section' || item.type === 'mini_section') && 
+            item.headline && 
+            findOriginalIndex(item.headline) === lastHeadlineIndex;
 
           return (
             <React.Fragment key={fragmentKey}>

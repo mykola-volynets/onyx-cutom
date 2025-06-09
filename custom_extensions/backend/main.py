@@ -1067,7 +1067,8 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
     * Icons: `info` for H2. `target` or `award` for H4 `isImportant`. `chevronRight` for general bullet lists. No icons for H3 mini-titles.
     * Permissible Icon Names: `info`, `target`, `award`, `chevronRight`, `bullet-circle`, `compass`.
     * Make sure to not have any tags in '<>' brackets (e.g. '<u>') in the list elements, UNLESS it is logically a part of the lesson.
-    * Do NOT remove the '**' from the text, treat it as an equal part of the text.
+    * Do NOT remove the '**' from the text, treat it as an equal part of the text. Moreover, ADD '**' around short parts of the text if you are sure that they should be bold.
+    * Make sure to analyze the numbered lists in depth to not break their logically intended structure.
 
     Return ONLY the JSON object. 
             """
