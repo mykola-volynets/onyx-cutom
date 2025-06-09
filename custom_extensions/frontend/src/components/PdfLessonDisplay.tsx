@@ -248,162 +248,245 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
       }
 
       const ListTag = isNumbered ? 'ol' : 'ul';
-      let listClasses = `list-none ${isLastInBox ? 'mb-0' : 'mb-2'} ${isNumbered ? 'space-y-2' : 'space-y-0.5'}`;
-      if (isMiniSectionList) {
-        listClasses += " pl-[22px]"; 
-      }
-
-      const listItemBaseTextStyle = `text-[10px] ${THEME_COLORS.primaryText}`;
+      const listClasses = isNumbered 
+        ? 'list-decimal list-inside space-y-1'
+        : 'list-none space-y-1';
+      
+      const plClass = isMiniSectionList || depth > 0 ? '' : 'pl-5';
+      const mbClass = isLastInBox ? 'mb-0' : 'mb-2';
+      const mtClass = depth > 0 ? 'mt-0' : 'mt-1.5';
+      const finalClass = `${listClasses} ${plClass} ${mbClass} ${mtClass}`.trim();
 
       return (
-        <ListTag className={listClasses.trim()}>
+        <ListTag className={finalClass}>
           {items.map((item, index) => {
-            const itemNumber = isNumbered ? `${depth > 0 ? String.fromCharCode(97 + depth -1) : ''}${index + 1}` : '';
-            const currentItemPathForData = listItemPath(index); 
-            const styledItemText = typeof item === 'string' ? parseAndStyleText(item) : null;
-
-            if (isNumbered) {
-              const liBoxClass = `${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-md p-2.5`;
+            const isLastItem = index === items.length - 1;
+            const itemPath = listItemPath(index);
+            
+            if (typeof item === 'string') {
+                if (isEditing && onTextChange) {
+                    return (
+                        <li key={index} className="flex items-start">
+                            {!isNumbered && BulletIconToRender && <BulletIconToRender />}
+                            <input 
+                                type="text"
+                                value={item}
+                                onChange={(e) => handleInputChangeEvent(itemPath, e)}
+                                className={`${editingInputClass} w-full`}
+                            />
+                        </li>
+                    );
+                }
+                return (
+                    <li key={index} className={`flex items-start text-[10px] ${THEME_COLORS.primaryText}`}>
+                        {!isNumbered && BulletIconToRender && <BulletIconToRender />}
+                        {parseAndStyleText(item)}
+                    </li>
+                );
+            }
+            if ('type' in item) {
               return (
-                <li key={index} className={`${liBoxClass} ${listItemBaseTextStyle}`}>
-                  <div className={`flex items-start`}>
-                    <span 
-                      className={`mr-2.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${THEME_COLORS.accentRedBg} text-white text-[10px] font-medium`}
-                    > {itemNumber} </span>
-                    <div className="flex-grow">
-                      {typeof item === 'string' ? (
-                        isEditing && onTextChange ? (
-                          <input 
-                            type="text" 
-                            value={item} 
-                            onChange={(e) => handleInputChangeEvent(currentItemPathForData, e)}
-                            className={`${editingInputClass} ${listItemBaseTextStyle.replace(THEME_COLORS.primaryText, '')}`}
-                          />
-                        ) : ( <span>{styledItemText}</span> )
-                      ) : (
-                        <RenderBlock 
-                            block={item as AnyContentBlock} depth={depth + 1} 
-                            isFirstInBox={true} isLastInBox={true} isListItemContent={true} 
-                            isEditing={isEditing} onTextChange={onTextChange} 
-                            basePath={currentItemPathForData} 
-                        />
-                      )}
-                    </div>
-                  </div>
-                </li>
-              );
-            } else { // Bullet List
-              return (
-                <li key={index} className={`py-0.5 ${listItemBaseTextStyle} flex items-start`}>
-                  {BulletIconToRender && <div className="pt-[0.1em] mr-1.5 shrink-0"><BulletIconToRender /></div>}
-                  <div className="flex-grow">
-                    {typeof item === 'string' ? (
-                      isEditing && onTextChange ? (
-                        <input 
-                          type="text" value={item} 
-                          onChange={(e) => handleInputChangeEvent(currentItemPathForData, e)}
-                          className={`${editingInputClass} ${listItemBaseTextStyle.replace(THEME_COLORS.primaryText, '')} ml-0`}
-                        />
-                      ) : ( <span>{styledItemText}</span>)
-                    ) : ( 
-                        <RenderBlock 
-                          block={item as AnyContentBlock} depth={depth + 1} 
-                          isLastInBox={index === items.length -1 && isLastInBox}
-                          isEditing={isEditing} onTextChange={onTextChange}
-                          basePath={currentItemPathForData}
-                        />
-                    )}
-                  </div>
+                <li key={index}>
+                  <RenderBlock block={item} depth={depth + 1} isListItemContent isLastInBox={isLastItem} isEditing={isEditing} onTextChange={onTextChange} basePath={itemPath} />
                 </li>
               );
             }
+            return null;
           })}
         </ListTag>
       );
     }
-    case 'alert': { 
-        const alertBlock = block as AlertBlock;
-        const { bgColor, borderColor, textColor, iconColorClass, Icon } = getAlertColors(alertBlock.alertType); 
-        const CustomIcon = alertBlock.iconName ? iconMap[alertBlock.iconName] || Icon : Icon;
-        const finalBgColor = alertBlock.backgroundColor || bgColor;
-        const finalBorderColor = alertBlock.borderColor || borderColor;
-        const finalTextColorToUse = alertBlock.textColor || textColor; 
-        const finalIconColorClass = alertBlock.iconColor ? '' : iconColorClass; 
-        const finalIconColorStyle = alertBlock.iconColor || undefined;
-        const defaultAlertMb = 'my-3';
-        const finalAlertMb = isLastInBox ? 'mb-0 mt-3' : defaultAlertMb; 
-        const alertTextStyle = `text-[10px]`;
-        
-        const styledAlertTitle = alertBlock.title ? parseAndStyleText(alertBlock.title) : null;
-        const styledAlertText = parseAndStyleText(alertBlock.text);
+    case 'alert': {
+      const { alertType, title, text } = block as AlertBlock;
+      const { bgColor, borderColor, textColor, iconColorClass, Icon } = getAlertColors(alertType);
+      const mbClass = isLastInBox ? 'mb-0' : (depth > 0 ? 'mb-1' : 'mb-2.5');
 
+      if (isEditing && onTextChange) {
         return (
-          <div className={`p-2.5 border-l-4 rounded-r-sm ${finalBgColor} ${finalBorderColor} ${depth > 0 ? 'ml-3' : ''} ${finalAlertMb}`} style={{ backgroundColor: alertBlock.backgroundColor || undefined, borderColor: alertBlock.borderColor || undefined }}>
-            <div className="flex">
-              <div className="shrink-0 pt-[1px]"><CustomIcon size={16} className={`${finalIconColorClass}`} style={{ color: finalIconColorStyle }} /></div>
-              <div className={`ml-2 flex-grow ${finalTextColorToUse}`}> 
-                {alertBlock.title && ( isEditing && onTextChange ? ( <input type="text" value={alertBlock.title || ''} onChange={(e) => handleInputChangeEvent(fieldPath('title'), e)} className={`${editingInputClass} ${alertTextStyle} font-semibold mb-0.5 ${finalTextColorToUse.replace(THEME_COLORS.alertInfoText, '')}`}/>
-                  ) : ( <h3 className={`${alertTextStyle} font-semibold`} style={{ color: alertBlock.textColor || undefined }}>{styledAlertTitle}</h3> )
-                )}
-                {isEditing && onTextChange ? ( <textarea value={alertBlock.text} onChange={(e) => handleInputChangeEvent(fieldPath('text'), e)} className={`${editingTextareaClass} ${alertTextStyle} ${alertBlock.title ? 'mt-0.5' : ''} ${finalTextColorToUse.replace(THEME_COLORS.alertInfoText, '')}`}/>
-                ) : ( <div className={`${alertTextStyle} ${alertBlock.title ? 'mt-0.5' : ''}`} style={{ color: alertBlock.textColor || undefined }}>{styledAlertText}</div> )}
-              </div>
+            <div className={`p-2 rounded-md border ${bgColor} ${borderColor} ${mbClass}`}>
+                <div className="flex">
+                    <div className="shrink-0"><Icon className={`h-4 w-4 ${iconColorClass}`} /></div>
+                    <div className="ml-2 flex-1">
+                        <input 
+                            type="text"
+                            value={title || ''}
+                            onChange={(e) => handleInputChangeEvent(fieldPath('title'), e)}
+                            className={`${editingInputClass} text-sm font-medium ${textColor}`}
+                            placeholder="Alert Title"
+                        />
+                        <textarea 
+                            value={text}
+                            onChange={(e) => handleInputChangeEvent(fieldPath('text'), e)}
+                            className={`${editingTextareaClass} text-xs mt-1 w-full`}
+                        />
+                    </div>
+                </div>
+            </div>
+        );
+      }
+
+      return (
+        <div className={`p-2 rounded-md border ${bgColor} ${borderColor} ${mbClass}`}>
+          <div className="flex">
+            <div className="shrink-0"><Icon className={`h-4 w-4 ${iconColorClass}`} /></div>
+            <div className="ml-2">
+              {title && <h5 className={`text-sm font-medium ${textColor}`}>{parseAndStyleText(title)}</h5>}
+              <p className={`text-xs ${textColor} ${title ? 'mt-1' : ''}`}>{parseAndStyleText(text)}</p>
             </div>
           </div>
-        );
+        </div>
+      );
     }
-    case 'section_break': {
-      const sb = block as SectionBreakBlock;
-      if (sb.style === 'none') return <div className="my-4"></div>;
-      let hrClassName = "my-3 border-t border-gray-200"; 
-      if (sb.style === 'dashed') hrClassName = "my-3 border-dashed border-gray-200"; 
-      return <hr className={hrClassName} />;
-    }
+    case 'section_break':
+      const { style } = block as SectionBreakBlock;
+      const borderStyle = style === 'dashed' ? 'border-dashed' : 'border-solid';
+      return <hr className={`my-4 border-t ${borderStyle} ${THEME_COLORS.lightBorder}`} />;
     default:
-      const exhaustiveCheck: never = block;
-      return <div className="text-red-500 text-[10px]">Unsupported block type: {(exhaustiveCheck as any)?.type}</div>;
+      return (
+        <div className="p-2 my-2 text-red-600 bg-red-100 border border-red-400 rounded">
+            Unsupported block type: {(block as any).type}
+        </div>
+      );
   }
 };
 
 export interface PdfLessonDisplayProps {
-  dataToDisplay: PdfLessonData | null; 
+  dataToDisplay: PdfLessonData | null;
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newText: string) => void;
   parentProjectName?: string;
   lessonNumber?: number;
 }
 
-const processContentBlocks = (blocks: AnyContentBlock[]) => {
+const processContentBlocks = (blocks: AnyContentBlock[]): { structuredContent: RenderableItem[], lastMajorSectionIndex: number } => {
   const renderableItems: RenderableItem[] = [];
-  let i = 0;
-  while (i < blocks.length) {
-    const currentBlock = blocks[i];
-    const nextBlock = i + 1 < blocks.length ? blocks[i+1] : null;
+  let lastMajorSectionIndex = -1;
 
-    if (currentBlock.type === 'section_break') {
-      i++;
-      continue;
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    if (block.type === 'headline' && (block.level === 3 || block.level === 4) && (block as HeadlineBlock).isImportant) {
+        if (i + 1 < blocks.length) {
+            const nextBlock = blocks[i + 1];
+            if (nextBlock.type === 'bullet_list' || nextBlock.type === 'numbered_list' || nextBlock.type === 'paragraph') {
+                renderableItems.push({
+                    type: 'mini_section',
+                    headline: block as HeadlineBlock,
+                    list: nextBlock as BulletListBlock | NumberedListBlock,
+                });
+                i++; 
+                continue;
+            }
+        }
+    }
+    renderableItems.push({ type: 'standalone_block', content: block });
+  }
+
+  const finalRenderableItems: RenderableItem[] = [];
+  let currentMajorSection: MajorSection | null = null;
+
+  for (let i = 0; i < renderableItems.length; i++) {
+    const item = renderableItems[i];
+    let isHeadlineLevel2 = false;
+
+    if (item.type === 'standalone_block' && item.content.type === 'headline' && item.content.level === 2) {
+      isHeadlineLevel2 = true;
     }
 
-    let isImportantHeadline = currentBlock.type === 'headline' && (currentBlock as HeadlineBlock).isImportant;
-    let isListFollowing = nextBlock && (nextBlock.type === 'bullet_list' || nextBlock.type === 'numbered_list');
-
-    if (isImportantHeadline && isListFollowing) {
-      renderableItems.push({ 
-        type: "mini_section", 
-        headline: currentBlock as HeadlineBlock, 
-        list: nextBlock as BulletListBlock | NumberedListBlock 
-      });
-      i += 2;
+    if (isHeadlineLevel2) {
+      if (currentMajorSection) {
+        finalRenderableItems.push(currentMajorSection);
+      }
+      currentMajorSection = {
+        type: 'major_section',
+        headline: (item as StandaloneBlock).content as HeadlineBlock,
+        items: [],
+      };
+      lastMajorSectionIndex = i; 
     } else {
-      renderableItems.push({ type: "standalone_block", content: currentBlock });
-      i++;
+      if (currentMajorSection) {
+        currentMajorSection.items.push(item.type === 'standalone_block' ? item.content : item);
+      } else {
+        finalRenderableItems.push(item);
+      }
     }
   }
 
-  const lastMajorSectionIndex = blocks.map(b => b.type === 'headline' ? (b as HeadlineBlock).level === 2 : false).lastIndexOf(true);
+  if (currentMajorSection) {
+    finalRenderableItems.push(currentMajorSection);
+  }
   
-  return { structuredContent: renderableItems, lastMajorSectionIndex };
+  return { structuredContent: finalRenderableItems, lastMajorSectionIndex };
+};
+
+const RenderableItemRenderer: React.FC<{ 
+  item: RenderableItem; 
+  isEditing?: boolean; 
+  onTextChange?: (path: (string | number)[], newText: string) => void; 
+  basePath: (string|number)[]; 
+  lastMajorSectionIndex: number; 
+  currentIndex: number;
+  dataToDisplay: PdfLessonData | null;
+}> = ({ item, isEditing, onTextChange, basePath, lastMajorSectionIndex, dataToDisplay }) => {
+
+  const findOriginalIndex = (blockToFind: AnyContentBlock): number => {
+    if (!dataToDisplay || !dataToDisplay.contentBlocks) return -1;
+    return dataToDisplay.contentBlocks.findIndex(b => b === blockToFind);
+  };
+
+  const handleBlockChange = (path: (string | number)[], newText: string) => {
+    if (onTextChange) {
+      onTextChange(path, newText);
+    }
+  };
+
+  if (item.type === 'major_section' && item._skipRenderHeadline) {
+     return (
+        <div className="space-y-1">
+            {item.items.map((subItem, subIndex) => {
+                 const originalSubItem = subItem as AnyContentBlock;
+                 const originalIndex = findOriginalIndex(originalSubItem);
+                 const newBasePath = [...basePath, originalIndex];
+                 return <RenderableItemRenderer key={subIndex} item={{type: 'standalone_block', content: originalSubItem}} isEditing={isEditing} onTextChange={onTextChange} basePath={newBasePath} lastMajorSectionIndex={lastMajorSectionIndex} currentIndex={-1} dataToDisplay={dataToDisplay} />;
+            })}
+        </div>
+    );
+  }
+
+  if (item.type === 'standalone_block') {
+    const originalIndex = findOriginalIndex(item.content);
+    return <RenderBlock block={item.content} isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, originalIndex]} isLastSectionHeaderWithStar={item.content.type === 'headline' && originalIndex === lastMajorSectionIndex} />;
+  }
+  
+  if (item.type === 'major_section') {
+    const headlineIndex = findOriginalIndex(item.headline);
+    return (
+      <div className="mt-4">
+        {!item._skipRenderHeadline && <RenderBlock block={item.headline} isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, headlineIndex]} isLastSectionHeaderWithStar={headlineIndex === lastMajorSectionIndex}/>}
+        <div className="space-y-1 pl-2">
+           {item.items.map((subItem, subIndex) => {
+            const originalSubItem = subItem as AnyContentBlock;
+            const originalIndex = findOriginalIndex(originalSubItem);
+            const newBasePath = [...basePath, originalIndex];
+            return <RenderableItemRenderer key={subIndex} item={{type: 'standalone_block', content: originalSubItem}} isEditing={isEditing} onTextChange={onTextChange} basePath={newBasePath} lastMajorSectionIndex={lastMajorSectionIndex} currentIndex={-1} dataToDisplay={dataToDisplay} />;
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (item.type === 'mini_section') {
+     const headlineIndex = findOriginalIndex(item.headline);
+     const listIndex = findOriginalIndex(item.list);
+
+    return (
+      <div className={`my-3 p-3 rounded-md bg-[#FAFAFA] border border-[#FF1414]`}>
+          <RenderBlock block={item.headline} isMiniSectionHeadline isFirstInBox isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, headlineIndex]} />
+          <RenderBlock block={item.list} isLastInBox isMiniSectionList isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, listIndex]} />
+      </div>
+    );
+  }
+
+  return <div>Unsupported renderable item type</div>;
 };
 
 const PdfLessonDisplayComponent = ({ dataToDisplay, isEditing, onTextChange, parentProjectName, lessonNumber }: PdfLessonDisplayProps) => {
@@ -412,14 +495,14 @@ const PdfLessonDisplayComponent = ({ dataToDisplay, isEditing, onTextChange, par
   const t = locales[lang as keyof typeof locales];
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if(onTextChange) onTextChange(['lessonTitle'], e.target.value);
-  }
+    if (onTextChange) {
+      onTextChange(['lessonTitle'], e.target.value);
+    }
+  };
 
-  if (!dataToDisplay) return (
-    <div className="text-center p-8 text-gray-500">
-      Loading lesson content...
-    </div>
-  );
+  if (!dataToDisplay) {
+    return null; 
+  }
   
   const { structuredContent, lastMajorSectionIndex } = processContentBlocks(dataToDisplay.contentBlocks || []);
 
@@ -440,14 +523,14 @@ const PdfLessonDisplayComponent = ({ dataToDisplay, isEditing, onTextChange, par
       )}
       <div className="mb-4">
           {isEditing ? (
-              <input 
-                  type="text"
-                  value={dataToDisplay.lessonTitle || ''}
-                  onChange={handleTitleChange}
-                  className="text-2xl font-bold text-black w-full border-b-2 border-gray-300 focus:border-red-500 outline-none pb-1"
-              />
+            <input 
+              type="text"
+              value={dataToDisplay.lessonTitle} 
+              onChange={handleTitleChange}
+              className={`${editingInputClass} text-2xl font-bold`}
+            />
           ) : (
-            <h1 className="text-2xl font-bold text-black mb-2" style={{ fontSize: '1.875rem', lineHeight: '2.25rem' }}>
+            <h1 className="text-3xl font-bold mb-2 text-black" style={{ fontSize: '1.875rem', lineHeight: '2.25rem' }}>
               {lessonNumber && <span style={{ color: '#FF1414' }}>{t.common.lesson} №{lessonNumber}: </span>}
               {parseAndStyleText(dataToDisplay.lessonTitle)}
             </h1>
@@ -455,69 +538,11 @@ const PdfLessonDisplayComponent = ({ dataToDisplay, isEditing, onTextChange, par
       </div>
       <div className="space-y-1">
         {structuredContent.map((item, index) => (
-          <RenderableItemRenderer key={index} item={item} isEditing={isEditing} onTextChange={handleItemChange} basePath={['contentBlocks']} lastMajorSectionIndex={lastMajorSectionIndex} currentIndex={index} />
+          <RenderableItemRenderer key={index} item={item} isEditing={isEditing} onTextChange={handleItemChange} basePath={['contentBlocks']} lastMajorSectionIndex={lastMajorSectionIndex} currentIndex={index} dataToDisplay={dataToDisplay} />
         ))}
       </div>
     </div>
   );
-};
-
-const RenderableItemRenderer: React.FC<{ item: RenderableItem, isEditing?: boolean, onTextChange?: (path: (string | number)[], newText: string) => void, basePath: (string|number)[], lastMajorSectionIndex: number, currentIndex: number }> = ({ item, isEditing, onTextChange, basePath, lastMajorSectionIndex, currentIndex }) => {
-  const handleBlockChange = (index: number, newText: string) => {
-    if (onTextChange) {
-      onTextChange([...basePath, index], newText);
-    }
-  };
-
-  if (item.type === 'major_section' && item._skipRenderHeadline) {
-     return (
-        <div className="space-y-1">
-            {item.items.map((subItem, subIndex) => {
-                 const newBasePath = [...basePath, findOriginalIndex(subItem as AnyContentBlock)];
-                 return <RenderableItemRenderer key={subIndex} item={{type: 'standalone_block', content: subItem as AnyContentBlock}} isEditing={isEditing} onTextChange={onTextChange} basePath={newBasePath} lastMajorSectionIndex={lastMajorSectionIndex} currentIndex={-1} />;
-            })}
-        </div>
-    );
-  }
-
-  const findOriginalIndex = (blockToFind: AnyContentBlock | HeadlineBlock | BulletListBlock | NumberedListBlock): number => {
-    if (!dataToDisplay || !dataToDisplay.contentBlocks) return -1;
-    return dataToDisplay.contentBlocks.findIndex(b => b === blockToFind);
-  };
-
-  if (item.type === 'standalone_block') {
-    const originalIndex = findOriginalIndex(item.content);
-    return <RenderBlock block={item.content} isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, originalIndex]} isLastSectionHeaderWithStar={item.content.type === 'headline' && originalIndex === lastMajorSectionIndex} />;
-  }
-  
-  if (item.type === 'major_section') {
-    const headlineIndex = findOriginalIndex(item.headline);
-    return (
-      <div className="mt-4">
-        {!item._skipRenderHeadline && <RenderBlock block={item.headline} isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, headlineIndex]} isLastSectionHeaderWithStar={headlineIndex === lastMajorSectionIndex}/>}
-        <div className="space-y-1 pl-2">
-           {item.items.map((subItem, subIndex) => {
-            const newBasePath = [...basePath, findOriginalIndex(subItem as AnyContentBlock)];
-            return <RenderableItemRenderer key={subIndex} item={{type: 'standalone_block', content: subItem as AnyContentBlock}} isEditing={isEditing} onTextChange={onTextChange} basePath={newBasePath} lastMajorSectionIndex={lastMajorSectionIndex} currentIndex={-1} />;
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  if (item.type === 'mini_section') {
-     const headlineIndex = findOriginalIndex(item.headline);
-     const listIndex = findOriginalIndex(item.list);
-
-    return (
-      <div className={`my-3 p-3 rounded-md bg-[#FAFAFA] border border-[#FF1414]`}>
-          <RenderBlock block={item.headline} isMiniSectionHeadline isFirstInBox isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, headlineIndex]} />
-          <RenderBlock block={item.list} isLastInBox isMiniSectionList isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, listIndex]} />
-      </div>
-    );
-  }
-
-  return <div>Unsupported renderable item type</div>;
 };
 
 export default PdfLessonDisplayComponent;
