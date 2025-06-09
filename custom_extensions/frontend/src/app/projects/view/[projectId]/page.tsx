@@ -85,20 +85,6 @@ export default function ProjectInstanceViewPage() {
   // State for the absolute chat URL
   const [chatRedirectUrl, setChatRedirectUrl] = useState<string | null>(null);
 
-  const findLessonNumberForCurrentProject = useCallback((): number | undefined => {
-    if (!projectInstanceData || !allUserMicroproducts || !parentProjectNameForCurrentView) {
-      return undefined;
-    }
-    // Assuming 'Training Plan' is the type of the container project, we filter it out
-    const courseMicroproducts = allUserMicroproducts
-      .filter(mp => mp.projectName === parentProjectNameForCurrentView && mp.design_microproduct_type !== 'Training Plan')
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  
-    const currentIndex = courseMicroproducts.findIndex(mp => mp.id === projectInstanceData.project_id);
-
-    return currentIndex !== -1 ? currentIndex + 1 : undefined;
-  }, [projectInstanceData, allUserMicroproducts, parentProjectNameForCurrentView]);
-
   const fetchPageData = useCallback(async (currentProjectIdStr: string) => {
     setPageState('fetching');
     setErrorMessage(null);
@@ -376,18 +362,13 @@ export default function ProjectInstanceViewPage() {
   }
 
   const displayContent = () => {
-    if (!projectInstanceData || pageState !== 'success') {
-      return null; 
-    }
-
-    const lessonNumber = findLessonNumberForCurrentProject();
+    if (!projectInstanceData) return null;
 
     switch (projectInstanceData.component_name) {
       case COMPONENT_NAME_TRAINING_PLAN:
-        const trainingPlanData = editableData as TrainingPlanData | null;
         return (
           <TrainingPlanTableComponent
-            dataToDisplay={trainingPlanData}
+            dataToDisplay={editableData as TrainingPlanData}
             isEditing={isEditing}
             onTextChange={handleTextChange}
             sourceChatSessionId={projectInstanceData.sourceChatSessionId}
@@ -396,25 +377,19 @@ export default function ProjectInstanceViewPage() {
           />
         );
       case COMPONENT_NAME_PDF_LESSON:
-        const pdfLessonData = editableData as PdfLessonData | null;
         return (
-          <PdfLessonDisplayComponent 
-            dataToDisplay={pdfLessonData} 
-            isEditing={isEditing} 
+          <PdfLessonDisplayComponent
+            dataToDisplay={editableData as PdfLessonData}
+            isEditing={isEditing}
             onTextChange={handleTextChange}
-            parentProjectName={parentProjectNameForCurrentView}
-            lessonNumber={lessonNumber}
           />
         );
       case COMPONENT_NAME_VIDEO_LESSON:
-        const videoData = editableData as VideoLessonData | null;
         return (
           <VideoLessonDisplay
-            dataToDisplay={videoData}
+            dataToDisplay={editableData as VideoLessonData}
             isEditing={isEditing}
             onTextChange={handleTextChange}
-            parentProjectName={parentProjectNameForCurrentView}
-            lessonNumber={lessonNumber}
           />
         );
       case COMPONENT_NAME_QUIZ:
@@ -425,7 +400,6 @@ export default function ProjectInstanceViewPage() {
             isEditing={isEditing} 
             onTextChange={handleTextChange} 
             parentProjectName={parentProjectNameForCurrentView}
-            lessonNumber={lessonNumber}
           />
         );
       default:
