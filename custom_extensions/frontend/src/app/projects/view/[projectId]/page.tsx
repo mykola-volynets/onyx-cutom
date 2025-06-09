@@ -147,6 +147,8 @@ export default function ProjectInstanceViewPage() {
           setEditableData(copiedDetails as PdfLessonData);
         } else if (instanceData.component_name === COMPONENT_NAME_VIDEO_LESSON) {
           setEditableData(copiedDetails as VideoLessonData);
+        } else if (instanceData.component_name === COMPONENT_NAME_QUIZ) {
+          setEditableData({ quizTitle: instanceData.name || "New Quiz", questions: [], detectedLanguage: instanceData.detectedLanguage || 'en' });
         } else {
           setEditableData(copiedDetails); 
         }
@@ -158,6 +160,8 @@ export default function ProjectInstanceViewPage() {
           setEditableData({ lessonTitle: instanceData.name || "New PDF Lesson", contentBlocks: [], detectedLanguage: lang });
         } else if (instanceData.component_name === COMPONENT_NAME_VIDEO_LESSON) {
           setEditableData({ mainPresentationTitle: instanceData.name || "New Video Lesson", slides: [], detectedLanguage: lang });
+        } else if (instanceData.component_name === COMPONENT_NAME_QUIZ) {
+          setEditableData({ quizTitle: instanceData.name || "New Quiz", questions: [], detectedLanguage: lang });
         } else {
           setEditableData(null);
         }
@@ -308,6 +312,8 @@ export default function ProjectInstanceViewPage() {
           setEditableData({ lessonTitle: projectInstanceData.name || "New PDF Lesson", contentBlocks: [], detectedLanguage: lang });
         } else if (projectInstanceData.component_name === COMPONENT_NAME_VIDEO_LESSON) {
           setEditableData({ mainPresentationTitle: projectInstanceData.name || "New Video Lesson", slides: [], detectedLanguage: lang });
+        } else if (projectInstanceData.component_name === COMPONENT_NAME_QUIZ) {
+          setEditableData({ quizTitle: projectInstanceData.name || "New Quiz", questions: [], detectedLanguage: lang });
         } else {
           setEditableData(null);
         }
