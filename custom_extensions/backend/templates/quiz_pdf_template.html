@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="{{ quiz_data.detectedLanguage | default('en') }}">
+<html lang="{{ details.details.details.detectedLanguage | default('en') }}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ quiz_data.quizTitle | default('Quiz') }}</title>
+    <title>{{ details.details.details.quizTitle | default('Quiz') }}</title>
     <style>
         body { 
             font-family: 'Inter', Arial, sans-serif; 
