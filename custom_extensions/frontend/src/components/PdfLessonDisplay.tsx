@@ -570,7 +570,7 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
                     isLastInBox={isCurrentItemEffectivelyLast} 
                     isEditing={isEditing} onTextChange={onTextChange} 
                     basePath={['contentBlocks', findOriginalIndex(item.content)]}
-                    isLastSectionHeaderWithStar={isLastHeaderForStar && 'type' in item.content && item.content.type === 'headline'}
+                    isLastSectionHeaderWithStar={isLastHeaderForStar && item.content.type === 'headline' && findOriginalIndex(item.content) === lastHeadlineIndex}
                 /> 
               )}
             </React.Fragment>
