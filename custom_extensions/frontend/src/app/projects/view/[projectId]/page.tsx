@@ -72,7 +72,6 @@ export default function ProjectInstanceViewPage() {
 
   const [projectInstanceData, setProjectInstanceData] = useState<ProjectInstanceDetail | null>(null);
   const [allUserMicroproducts, setAllUserMicroproducts] = useState<ProjectListItem[] | undefined>(undefined);
-  const [parentProjectNameForCurrentView, setParentProjectNameForCurrentView] = useState<string | undefined>(undefined);
 
   const [pageState, setPageState] = useState<'initial_loading' | 'fetching' | 'error' | 'success' | 'nodata'>('initial_loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -90,7 +89,6 @@ export default function ProjectInstanceViewPage() {
     setErrorMessage(null);
     setProjectInstanceData(null);
     setAllUserMicroproducts(undefined);
-    setParentProjectNameForCurrentView(undefined);
     setEditableData(null);
     setIsEditing(false);
     setSaveError(null);
@@ -133,8 +131,6 @@ export default function ProjectInstanceViewPage() {
       if (listRes.ok) {
         const allMicroproductsData: ProjectListItem[] = await listRes.json();
         setAllUserMicroproducts(allMicroproductsData);
-        const currentMicroproductInList = allMicroproductsData.find(mp => mp.id === instanceData.project_id);
-        setParentProjectNameForCurrentView(currentMicroproductInList?.projectName);
       } else {
           console.warn("Could not fetch full projects list to determine parent project name.");
       }
@@ -362,34 +358,46 @@ export default function ProjectInstanceViewPage() {
   }
 
   const displayContent = () => {
-    if (!projectInstanceData) return null;
+    if (!projectInstanceData || pageState !== 'success') {
+      return null; 
+    }
+
+    const parentProjectName = searchParams.get('parentProjectName');
+    const lessonNumberStr = searchParams.get('lessonNumber');
+    const lessonNumber = lessonNumberStr ? parseInt(lessonNumberStr, 10) : undefined;
 
     switch (projectInstanceData.component_name) {
       case COMPONENT_NAME_TRAINING_PLAN:
+        const trainingPlanData = editableData as TrainingPlanData | null;
         return (
           <TrainingPlanTableComponent
-            dataToDisplay={editableData as TrainingPlanData}
+            dataToDisplay={trainingPlanData}
             isEditing={isEditing}
             onTextChange={handleTextChange}
             sourceChatSessionId={projectInstanceData.sourceChatSessionId}
             allUserMicroproducts={allUserMicroproducts}
-            parentProjectName={parentProjectNameForCurrentView}
           />
         );
       case COMPONENT_NAME_PDF_LESSON:
+        const pdfLessonData = editableData as PdfLessonData | null;
         return (
-          <PdfLessonDisplayComponent
-            dataToDisplay={editableData as PdfLessonData}
-            isEditing={isEditing}
+          <PdfLessonDisplayComponent 
+            dataToDisplay={pdfLessonData} 
+            isEditing={isEditing} 
             onTextChange={handleTextChange}
+            parentProjectName={parentProjectName}
+            lessonNumber={lessonNumber}
           />
         );
       case COMPONENT_NAME_VIDEO_LESSON:
+        const videoData = editableData as VideoLessonData | null;
         return (
           <VideoLessonDisplay
-            dataToDisplay={editableData as VideoLessonData}
+            dataToDisplay={videoData}
             isEditing={isEditing}
             onTextChange={handleTextChange}
+            parentProjectName={parentProjectName}
+            lessonNumber={lessonNumber}
           />
         );
       case COMPONENT_NAME_QUIZ:
@@ -399,7 +407,8 @@ export default function ProjectInstanceViewPage() {
             dataToDisplay={quizData} 
             isEditing={isEditing} 
             onTextChange={handleTextChange} 
-            parentProjectName={parentProjectNameForCurrentView}
+            parentProjectName={parentProjectName}
+            lessonNumber={lessonNumber}
           />
         );
       default:
