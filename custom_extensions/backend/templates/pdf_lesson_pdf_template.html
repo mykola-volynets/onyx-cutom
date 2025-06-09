@@ -23,7 +23,7 @@
             --color-text-black: #000000;
             --color-text-darkest: #18181B;
             --color-text-default: #4B4B4B; 
-            --color-text-muted: #4B4B4B;   
+            --color-text-muted: #4B4B4B;  
             --color-border-extralight: #F3F4F6;
             --color-border-light: #E5E7EB; 
             --color-background-page: #FFFFFF;
@@ -96,7 +96,7 @@
             /* vertical-align: text-top; or adjust with small top margin if needed */
              position: relative; /* For fine-tuning */
              top: 0.1em; /* Adjust this value */
-        }
+         }
 
         .headline-block span { flex-grow: 1; }
         .headline-block.h1 { font-size: var(--font-size-h1-content); font-weight: var(--font-weight-medium); color: var(--color-text-darkest); margin-top: var(--space-2xl); margin-bottom: 8px; }
@@ -152,8 +152,38 @@
 
 
         .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol { list-style: none; padding-left: 0; margin-top: var(--space-lg); counter-reset: numbered-box-li; }
-        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li { position: relative; border: 1px solid var(--color-primary-accent); background-color: var(--color-primary-accent-light-bg); padding: var(--space-lg); padding-left: calc(var(--space-lg) + var(--list-number-circle-size) + var(--space-md)); margin-bottom: var(--space-lg); border-radius: 5px; line-height: 1.5; letter-spacing: var(--letter-spacing-increased); }
-        .list-number-circle { position: absolute; left: var(--space-lg); top: var(--space-lg); display: inline-flex; align-items: center; justify-content: center; width: var(--list-number-circle-size); height: var(--list-number-circle-size); border-radius: 50%; background-color: var(--color-primary-accent); color: white; font-weight: var(--font-weight-semibold); font-size: var(--list-number-font-size); line-height: var(--list-number-circle-size); text-align: center; }
+        
+        /* --- MODIFICATION 1: Replaced old list item style with Flexbox layout --- */
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-md);
+            border: 1px solid var(--color-primary-accent);
+            background-color: var(--color-primary-accent-light-bg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+            border-radius: 5px;
+            line-height: 1.5;
+            letter-spacing: var(--letter-spacing-increased);
+        }
+
+        /* --- MODIFICATION 2: Removed absolute positioning from number circle --- */
+        .list-number-circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: var(--list-number-circle-size);
+            height: var(--list-number-circle-size);
+            border-radius: 50%;
+            background-color: var(--color-primary-accent);
+            color: white;
+            font-weight: var(--font-weight-semibold);
+            font-size: var(--list-number-font-size);
+            line-height: var(--list-number-circle-size);
+            text-align: center;
+            flex-shrink: 0;
+        }
+
         .list-number-circle::before { counter-increment: numbered-box-li; content: counter(numbered-box-li); }
         .list-content-column { width: 100%; }
         .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li::before { display: none; content: ""; }
@@ -163,6 +193,12 @@
         .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list > ul > li { padding: 0; margin: 0 0 var(--space-xs) 0; display: flex; align-items: flex-start; } 
         .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list > ul > li:last-child { margin-bottom: 0; }
         .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list > ul > li > .list-marker { display: flex; }
+
+        /* --- MODIFICATION 3: Added rule to remove top margin from headline in list item --- */
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column > .content-block-wrapper:first-child > .headline-block {
+            margin-top: 0;
+        }
+        
         .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list .headline-block { margin-top: -3px !important; margin-bottom: var(--space-xs) !important; font-size: var(--font-size-mini-title); font-weight: var(--font-weight-medium); color: var(--color-text-black); line-height: 1.5; text-transform: uppercase; letter-spacing: var(--letter-spacing-increased); }
         .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list .headline-block .icon-svg { display: none; }
         .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list .paragraph-block { font-size: var(--font-size-mini-title-text); font-weight: var(--font-weight-normal); color: var(--color-text-muted); max-width: 100%; line-height: 1.5; letter-spacing: var(--letter-spacing-increased); }
@@ -256,11 +292,10 @@
     </h1>
 {% else %}
     <div class="lesson-title-section">
-                <h1 class="lesson-title-text">
-                    {% set text_content = lesson_data.lessonTitle %}
-                    {% set segments = text_content.split('**') %}
-                    {% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}
-                </h1>
+            <h1 class="lesson-title-text">
+                {% set text_content = lesson_data.lessonTitle %}
+                {% set segments = text_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}
+            </h1>
             </div>
 {% endif %}
         {% endif %}
@@ -271,7 +306,7 @@
             {% for idx in range(lesson_data.contentBlocks | length - 1, -1, -1) %}
                 {% if not found_last_header_flag_list[0] %}
                     {% set blk = lesson_data.contentBlocks[idx] %}
-                    {% if blk is mapping and blk.type == 'headline' and (blk.level <= 2 or (blk.level in [3, 4] and blk.isImportant == true)) %}
+                    {% if blk is mapping and blk.type == 'headline' %}
                         {% if last_main_header_idx_list.pop() %}{% endif %}
                         {% set _ = last_main_header_idx_list.append(idx) %}
                         {% if found_last_header_flag_list.pop() %}{% endif %}
@@ -410,7 +445,7 @@
                 {% set next_block_item = lesson_data.contentBlocks[loop_index+1] if (loop_index+1) < (lesson_data.contentBlocks | length) else none %}
                 {% set is_last_block_overall = loop_index == (lesson_data.contentBlocks | length) - 1 %}
                 
-                {% set is_this_block_last_main_header_for_star_flag = (current_block_item.type == 'headline' and (current_block_item.level <= 2 or (current_block_item.level in [3,4] and current_block_item.isImportant == true)) and loop_index == final_last_main_header_idx) %}
+                {% set is_this_block_last_main_header_for_star_flag = (current_block_item.type == 'headline' and loop_index == final_last_main_header_idx) %}
 
                 {% if loop_index == 0 and first_block_is_title_duplicate %}
                 {% elif next_block_in_box_content[0] %}
@@ -435,7 +470,7 @@
                 {% set render_this_divider = false %}
                 {% if not is_last_block_overall and current_block_item.type != 'section_break' %}
                     {% set current_block_type = current_block_item.get('type') %}
-                    {% set next_block_type = next_block_item.get('type') if next_block_item else None %}
+                    {% set next_block_type = next_block_item.get('type') if next_block_item else none %}
                     {% set next_block_level = next_block_item.get('level') if next_block_item and next_block_type == 'headline' else 99 %}
                     
                     {% set current_is_mini_section_box_end_heuristic = false %}
@@ -447,12 +482,10 @@
                     {% endif %}
                     
                     {% if next_block_type == 'headline' %}
-                        {# Divider if next is H1/H2 and current isn't H2 itself (unless current is end of a box) #}
                         {% if next_block_level <= 2 %}
                             {% if not (current_block_type == 'headline' and current_block_item.level == 2 and not current_block_item.isImportant) and not current_is_mini_section_box_end_heuristic %}
                                 {% set render_this_divider = true %}
                             {% endif %}
-                        {# Divider if next is H3/H4, but not if current was a mini-section box end or numbered list #}
                         {% elif next_block_level > 2 %}
                             {% if current_block_type != 'numbered_list' and not current_is_mini_section_box_end_heuristic %}
                                 {% set render_this_divider = true %}

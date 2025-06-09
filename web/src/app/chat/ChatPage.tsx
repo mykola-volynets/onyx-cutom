@@ -1187,169 +1187,170 @@ export function ChatPage({
 
 
   const handleApplyProductPrompts = async (fullAIMessage: string) => {
-    // ADDED: Log the full AI message received
-    console.log("AI_MESSAGE_DEBUG: Full AI message received:", JSON.stringify(fullAIMessage));
+    // ADDED: Log the full AI message received
+    console.log("AI_MESSAGE_DEBUG: Full AI message received:", JSON.stringify(fullAIMessage));
 
-    setIsCreatingProduct(true);
-    setProductCreationResult(null);
+    setIsCreatingProduct(true);
+    setProductCreationResult(null);
 
-    if (!fullAIMessage || typeof fullAIMessage !== 'string') {
-      // ADDED: Log invalid message content
-      console.error("AI_MESSAGE_DEBUG: Invalid AI message content. Message:", fullAIMessage);
-      setIsCreatingProduct(false);
-      setProductCreationResult({ success: false, message: "Invalid AI message content for product creation." });
-    }
+    if (!fullAIMessage || typeof fullAIMessage !== 'string') {
+      // ADDED: Log invalid message content
+      console.error("AI_MESSAGE_DEBUG: Invalid AI message content. Message:", fullAIMessage);
+      setIsCreatingProduct(false);
+      setProductCreationResult({ success: false, message: "Invalid AI message content for product creation." });
+    }
 
-    const lines = fullAIMessage.split('\n');
-    const headerLine = lines[0];
-    const strippedAiResponse = lines.slice(1).join('\n');
+    const lines = fullAIMessage.split('\n');
+    const headerLine = lines[0];
+    const strippedAiResponse = lines.slice(1).join('\n');
 
-    // ADDED: Log the extracted header and the rest of the response
-    console.log("AI_MESSAGE_DEBUG: Extracted Header Line:", JSON.stringify(headerLine));
-    console.log("AI_MESSAGE_DEBUG: Stripped AI Response:", JSON.stringify(strippedAiResponse));
-
-    const headerRegex = /^\*\*(.*?)\*\* *: *\*\*(.*?)\*\* *: *\*\*(.*?)\*\*$/;
-    const match = headerLine.match(headerRegex);
-
-    // ADDED: Log the result of the regex match
-    console.log("AI_MESSAGE_DEBUG: Regex match result:", match);
-
-    if (!match || match.length < 4) {
-      // ADDED: Log detailed parsing failure information
-      console.error(
-        "AI_MESSAGE_DEBUG: Header parsing failed. Expected format: **Project Name** : **Product** : **Instance Name**. Received Header:",
-        JSON.stringify(headerLine),
-        "Regex Match:", match
-      );
-      setIsCreatingProduct(false);
-      setProductCreationResult({
-        success: false,
-        message: "AI message does not have the expected format for product creation. Expected: **Project Name** : **Product** : **Instance Name**",
-      });
-      return;
-    }
-
-    const parsedProjectName = match[1].trim();
-    const parsedProductName = match[2].trim();
-    let parsedInstanceName = match[3].trim();
-
-    // ADDED: Log parsed values
-    console.log("AI_MESSAGE_DEBUG: Parsed Project Name:", parsedProjectName);
-    console.log("AI_MESSAGE_DEBUG: Parsed Product Name:", parsedProductName);
-    console.log("AI_MESSAGE_DEBUG: Parsed Instance Name:", parsedInstanceName);
-
-
-    if (!parsedProjectName || !parsedProductName) {
-        // ADDED: Log failure to extract essential names
-        console.error("AI_MESSAGE_DEBUG: Could not extract critical Project Name or Product from header after regex match. Header:", JSON.stringify(headerLine));
-        setIsCreatingProduct(false);
-        setProductCreationResult({
-            success: false,
-            message: "Could not extract Project Name or Product from the AI message.",
-        });
-        return;
-    }
+    // ADDED: Log the extracted header and the rest of the response
+    console.log("AI_MESSAGE_DEBUG: Extracted Header Line:", JSON.stringify(headerLine));
+    console.log("AI_MESSAGE_DEBUG: Stripped AI Response:", JSON.stringify(strippedAiResponse));
     
-    const currentDesignTemplates: DesignTemplateResponse[] = await ensureDesignTemplatesFetched();
+    // UPDATED: Regex is now less strict and allows for leading/trailing whitespace.
+    const headerRegex = /^\s*\*\*(.*?)\*\* *: *\*\*(.*?)\*\* *: *\*\*(.*?)\*\*\s*$/;
+    const match = headerLine.match(headerRegex);
 
-    if (isLoadingDesignTemplates){
-        setPopup({type: "info", message: "Loading product types, please try again shortly."});
-        setIsCreatingProduct(false);
-        return;
-    }
-    
-    if (currentDesignTemplates.length === 0 ) {
-      console.error("AI_MESSAGE_DEBUG: No design templates available or fetch failed.");
-      setIsCreatingProduct(false);
-      setProductCreationResult({
-        success: false,
-        message: "No product types available. Please configure them or check for loading errors.",
-      });
-      return;
-    }
+    // ADDED: Log the result of the regex match
+    console.log("AI_MESSAGE_DEBUG: Regex match result:", match);
 
-    const matchedTemplate = currentDesignTemplates.find(
-      (template: DesignTemplateResponse) => 
-        template.template_name.trim().toLowerCase() === parsedProductName.toLowerCase()
-    );
+    if (!match || match.length < 4) {
+      // ADDED: Log detailed parsing failure information
+      console.error(
+        "AI_MESSAGE_DEBUG: Header parsing failed. Expected format: **Project Name** : **Product** : **Instance Name**. Received Header:",
+        JSON.stringify(headerLine),
+        "Regex Match:", match
+      );
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: false,
+        message: "AI message does not have the expected format for product creation. Expected: **Project Name** : **Product** : **Instance Name**",
+      });
+      return;
+    }
 
-    // ADDED: Log template matching result
-    console.log("AI_MESSAGE_DEBUG: Matched Template:", matchedTemplate);
+    const parsedProjectName = match[1].trim();
+    const parsedProductName = match[2].trim();
+    let parsedInstanceName = match[3].trim();
 
-    if (!matchedTemplate) {
-      // ADDED: Log if no template was found
-      console.error(`AI_MESSAGE_DEBUG: Product type "${parsedProductName}" not found in fetched templates. Available templates:`, currentDesignTemplates.map(t => t.template_name));
-      setIsCreatingProduct(false);
-      setProductCreationResult({
-        success: false,
-        message: `Product type "${parsedProductName}" not found. Please ensure it's a valid and existing product design.`,
-      });
-      return;
-    }
+    // ADDED: Log parsed values
+    console.log("AI_MESSAGE_DEBUG: Parsed Project Name:", parsedProjectName);
+    console.log("AI_MESSAGE_DEBUG: Parsed Product Name:", parsedProductName);
+    console.log("AI_MESSAGE_DEBUG: Parsed Instance Name:", parsedInstanceName);
 
-    if (!parsedInstanceName) {
-      parsedInstanceName = matchedTemplate.template_name;
-      // ADDED: Log if instance name was defaulted
-      console.log("AI_MESSAGE_DEBUG: Instance Name defaulted to product name:", parsedInstanceName);
-    }
 
-    const currentChatId = currentSessionId();
-    if (!currentChatId) {
-      setPopup({ type: "error", message: "Cannot create a product without an active chat session." });
-      return;
-    }
+    if (!parsedProjectName || !parsedProductName) {
+        // ADDED: Log failure to extract essential names
+        console.error("AI_MESSAGE_DEBUG: Could not extract critical Project Name or Product from header after regex match. Header:", JSON.stringify(headerLine));
+        setIsCreatingProduct(false);
+        setProductCreationResult({
+            success: false,
+            message: "Could not extract Project Name or Product from the AI message.",
+        });
+        return;
+    }
+    
+    const currentDesignTemplates: DesignTemplateResponse[] = await ensureDesignTemplatesFetched();
 
-    const payload = {
-      projectName: parsedProjectName,
-      design_template_id: matchedTemplate.id,
-      microProductName: parsedInstanceName,
-      aiResponse: strippedAiResponse,
-      chatSessionId: currentChatId, // Use the validated ID
-    };
+    if (isLoadingDesignTemplates){
+        setPopup({type: "info", message: "Loading product types, please try again shortly."});
+        setIsCreatingProduct(false);
+        return;
+    }
+    
+    if (currentDesignTemplates.length === 0 ) {
+      console.error("AI_MESSAGE_DEBUG: No design templates available or fetch failed.");
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: false,
+        message: "No product types available. Please configure them or check for loading errors.",
+      });
+      return;
+    }
 
-    console.log("AI_MESSAGE_DEBUG: Submitting to /api/custom-projects-backend/projects/add with payload:", payload);
+    const matchedTemplate = currentDesignTemplates.find(
+      (template: DesignTemplateResponse) => 
+        template.template_name.trim().toLowerCase() === parsedProductName.toLowerCase()
+    );
 
-    try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      const devUserId = "dummy-onyx-user-id-for-testing"; 
-      if (devUserId && process.env.NODE_ENV === 'development') {
-        headers['X-Dev-Onyx-User-ID'] = devUserId;
-      }
+    // ADDED: Log template matching result
+    console.log("AI_MESSAGE_DEBUG: Matched Template:", matchedTemplate);
 
-      const response = await fetch(`/api/custom-projects-backend/projects/add`, { // Ensure this path is correct for your setup
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(payload),
-      });
+    if (!matchedTemplate) {
+      // ADDED: Log if no template was found
+      console.error(`AI_MESSAGE_DEBUG: Product type "${parsedProductName}" not found in fetched templates. Available templates:`, currentDesignTemplates.map(t => t.template_name));
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: false,
+        message: `Product type "${parsedProductName}" not found. Please ensure it's a valid and existing product design.`,
+      });
+      return;
+    }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: `HTTP error! status: ${response.status}` }));
-        // ADDED: Log API error response
-        console.error("AI_MESSAGE_DEBUG: API Error Data:", errorData);
-        throw new Error(errorData.detail || `Failed to create product instance.`);
-      }
-      
-      const result = await response.json(); 
-      // ADDED: Log API success response
-      console.log("AI_MESSAGE_DEBUG: API Success Result:", result);
-      setIsCreatingProduct(false);
-      setProductCreationResult({
-        success: true,
-        message: `Successfully created product "${payload.microProductName}" in project "${payload.projectName}".`,
-        projectId: result.id, // Assuming result.id is the new product's ID
-      });
-     
+    if (!parsedInstanceName) {
+      parsedInstanceName = matchedTemplate.template_name;
+      // ADDED: Log if instance name was defaulted
+      console.log("AI_MESSAGE_DEBUG: Instance Name defaulted to product name:", parsedInstanceName);
+    }
 
-    } catch (err: any) {
-      // ADDED: Log caught error during API call
-      console.error('AI_MESSAGE_DEBUG: Failed to create product instance (catch block):', err);
-      setIsCreatingProduct(false);
-      setProductCreationResult({
-        success: false,
-        message: err.message || "An unknown error occurred during product creation.",
-      });
-    }
-  };
+    const currentChatId = currentSessionId();
+    if (!currentChatId) {
+      setPopup({ type: "error", message: "Cannot create a product without an active chat session." });
+      return;
+    }
+
+    const payload = {
+      projectName: parsedProjectName,
+      design_template_id: matchedTemplate.id,
+      microProductName: parsedInstanceName,
+      aiResponse: strippedAiResponse,
+      chatSessionId: currentChatId, // Use the validated ID
+    };
+
+    console.log("AI_MESSAGE_DEBUG: Submitting to /api/custom-projects-backend/projects/add with payload:", payload);
+
+    try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      const devUserId = "dummy-onyx-user-id-for-testing"; 
+      if (devUserId && process.env.NODE_ENV === 'development') {
+        headers['X-Dev-Onyx-User-ID'] = devUserId;
+      }
+
+      const response = await fetch(`/api/custom-projects-backend/projects/add`, { // Ensure this path is correct for your setup
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP error! status: ${response.status}` }));
+        // ADDED: Log API error response
+        console.error("AI_MESSAGE_DEBUG: API Error Data:", errorData);
+        throw new Error(errorData.detail || `Failed to create product instance.`);
+      }
+      
+      const result = await response.json(); 
+      // ADDED: Log API success response
+      console.log("AI_MESSAGE_DEBUG: API Success Result:", result);
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: true,
+        message: `Successfully created product "${payload.microProductName}" in project "${payload.projectName}".`,
+        projectId: result.id, // Assuming result.id is the new product's ID
+      });
+     
+
+    } catch (err: any) {
+      // ADDED: Log caught error during API call
+      console.error('AI_MESSAGE_DEBUG: Failed to create product instance (catch block):', err);
+      setIsCreatingProduct(false);
+      setProductCreationResult({
+        success: false,
+        message: err.message || "An unknown error occurred during product creation.",
+      });
+    }
+  };
 
   const onSubmit = async ({
     messageIdToResend,
