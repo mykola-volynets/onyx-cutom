@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   QuizData, AnyQuizQuestion, MultipleChoiceQuestion, MultiSelectQuestion,
@@ -47,7 +47,27 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     return null;
   }
 
-  const questions = Array.isArray(dataToDisplay.questions) ? dataToDisplay.questions : [];
+  const questions = useMemo(() => {
+    const rawQuestions = Array.isArray(dataToDisplay.questions) ? dataToDisplay.questions : [];
+    return rawQuestions.map((q: AnyQuizQuestion) => {
+      if (q.question_type === 'multi-select') {
+        const multiSelectQuestion = q as MultiSelectQuestion;
+        let ids = multiSelectQuestion.correct_option_ids;
+        if (typeof ids === 'string') {
+          try {
+            ids = JSON.parse(ids);
+          } catch (e) {
+            ids = [];
+          }
+        }
+        if (!Array.isArray(ids)) {
+          ids = [];
+        }
+        return { ...multiSelectQuestion, correct_option_ids: ids };
+      }
+      return q;
+    });
+  }, [dataToDisplay.questions]);
 
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     setUserAnswers((prev: Record<number, any>) => ({
