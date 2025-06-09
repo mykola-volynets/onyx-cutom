@@ -148,7 +148,7 @@ export default function ProjectInstanceViewPage() {
         } else if (instanceData.component_name === COMPONENT_NAME_VIDEO_LESSON) {
           setEditableData(copiedDetails as VideoLessonData);
         } else if (instanceData.component_name === COMPONENT_NAME_QUIZ) {
-          setEditableData({ quizTitle: instanceData.name || "New Quiz", questions: [], detectedLanguage: instanceData.detectedLanguage || 'en' });
+          setEditableData(copiedDetails as QuizData);
         } else {
           setEditableData(copiedDetails); 
         }
