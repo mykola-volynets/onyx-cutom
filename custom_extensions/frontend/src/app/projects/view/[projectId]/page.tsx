@@ -362,13 +362,18 @@ export default function ProjectInstanceViewPage() {
   }
 
   const displayContent = () => {
-    if (!projectInstanceData) return null;
+    if (!projectInstanceData || pageState !== 'success') {
+      return null; 
+    }
+
+    const lessonNumber = findLessonNumberForCurrentProject();
 
     switch (projectInstanceData.component_name) {
       case COMPONENT_NAME_TRAINING_PLAN:
+        const trainingPlanData = editableData as TrainingPlanData | null;
         return (
           <TrainingPlanTableComponent
-            dataToDisplay={editableData as TrainingPlanData}
+            dataToDisplay={trainingPlanData}
             isEditing={isEditing}
             onTextChange={handleTextChange}
             sourceChatSessionId={projectInstanceData.sourceChatSessionId}
@@ -377,19 +382,25 @@ export default function ProjectInstanceViewPage() {
           />
         );
       case COMPONENT_NAME_PDF_LESSON:
+        const pdfLessonData = editableData as PdfLessonData | null;
         return (
-          <PdfLessonDisplayComponent
-            dataToDisplay={editableData as PdfLessonData}
-            isEditing={isEditing}
+          <PdfLessonDisplayComponent 
+            dataToDisplay={pdfLessonData} 
+            isEditing={isEditing} 
             onTextChange={handleTextChange}
+            parentProjectName={parentProjectNameForCurrentView}
+            lessonNumber={lessonNumber}
           />
         );
       case COMPONENT_NAME_VIDEO_LESSON:
+        const videoData = editableData as VideoLessonData | null;
         return (
           <VideoLessonDisplay
-            dataToDisplay={editableData as VideoLessonData}
+            dataToDisplay={videoData}
             isEditing={isEditing}
             onTextChange={handleTextChange}
+            parentProjectName={parentProjectNameForCurrentView}
+            lessonNumber={lessonNumber}
           />
         );
       case COMPONENT_NAME_QUIZ:
@@ -400,6 +411,7 @@ export default function ProjectInstanceViewPage() {
             isEditing={isEditing} 
             onTextChange={handleTextChange} 
             parentProjectName={parentProjectNameForCurrentView}
+            lessonNumber={lessonNumber}
           />
         );
       default:

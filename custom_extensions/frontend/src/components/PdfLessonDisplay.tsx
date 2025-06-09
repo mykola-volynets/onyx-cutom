@@ -12,6 +12,7 @@ import {
   Award, Brain, BookOpen, Edit3, Lightbulb, Search, Compass, CloudDrizzle, EyeOff,
   ClipboardCheck, AlertTriangle, Star, ArrowRight, Circle,
 } from 'lucide-react';
+import { locales } from '@/locales';
 
 // Type definitions for internal structuring
 type MiniSection = {
@@ -368,198 +369,122 @@ export interface PdfLessonDisplayProps {
   dataToDisplay: PdfLessonData | null; 
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newText: string) => void;
+  parentProjectName?: string;
+  lessonNumber?: number;
 }
 
-const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonDisplayProps): React.JSX.Element | null => {
+const PdfLessonDisplayComponent = ({ dataToDisplay, isEditing, onTextChange, parentProjectName, lessonNumber }: PdfLessonDisplayProps) => {
   const searchParams = useSearchParams();
-  const parentProjectName = searchParams.get('parentProjectName');
-  const lessonNumber = searchParams.get('lessonNumber');
-  
-  if (!dataToDisplay) {
-    return <div className="p-6 text-center text-gray-500 text-xs">No lesson content available to display.</div>;
-  }
-  
-  const renderableItems: RenderableItem[] = [];
-  let i = 0;
-  let isFirstH2Processed = false;
-  let skipNextH2Headline = false;
-  const contentBlocksToProcess = dataToDisplay.contentBlocks || [];
+  const lang = dataToDisplay?.detectedLanguage || 'en';
+  const t = locales[lang as keyof typeof locales];
 
-  if (dataToDisplay.lessonTitle && contentBlocksToProcess.length > 0) {
-    const firstBlock = contentBlocksToProcess[0];
-    if (firstBlock.type === 'headline' &&
-        ((firstBlock as HeadlineBlock).level === 1 || (firstBlock as HeadlineBlock).level === 2) &&
-        (firstBlock as HeadlineBlock).text.trim().toLowerCase() === dataToDisplay.lessonTitle.trim().toLowerCase()) {
-      skipNextH2Headline = true;
-    }
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if(onTextChange) onTextChange(['lessonTitle'], e.target.value);
   }
 
-  while (i < contentBlocksToProcess.length) {
-    if (contentBlocksToProcess[i].type === 'section_break') { i++; continue; }
-    const currentBlock = contentBlocksToProcess[i];
-    const nextBlock = (i + 1 < contentBlocksToProcess.length) ? contentBlocksToProcess[i+1] : null;
-    if (currentBlock.type === 'headline' && (currentBlock as HeadlineBlock).level === 2) {
-      const majorSectionHeadline = currentBlock as HeadlineBlock;
-      const sectionItemsInternal: Array<AnyContentBlock | MiniSection> = [];
-      let headlineToSkipThisIteration = false;
-      if (!isFirstH2Processed && skipNextH2Headline) { headlineToSkipThisIteration = true; }
-      isFirstH2Processed = true;
-      i++; 
-      while (i < contentBlocksToProcess.length && !(contentBlocksToProcess[i].type === 'headline' && (contentBlocksToProcess[i] as HeadlineBlock).level === 2)) {
-        if (contentBlocksToProcess[i].type === 'section_break') { i++; continue; }
-        const innerBlock = contentBlocksToProcess[i];
-        const innerNextBlock = (i + 1 < contentBlocksToProcess.length) ? contentBlocksToProcess[i+1] : null;
-        if (innerBlock.type === 'headline' && ((innerBlock as HeadlineBlock).level === 3 || (innerBlock as HeadlineBlock).level === 4) && (innerBlock as HeadlineBlock).isImportant === true && innerNextBlock && (innerNextBlock.type === 'bullet_list' || innerNextBlock.type === 'numbered_list')) {
-          sectionItemsInternal.push({ type: "mini_section", headline: innerBlock as HeadlineBlock, list: innerNextBlock as BulletListBlock | NumberedListBlock });
-          i += 2; 
-        } else { sectionItemsInternal.push(innerBlock); i++;  }
-      }
-      renderableItems.push({ type: "major_section", headline: majorSectionHeadline, items: sectionItemsInternal, _skipRenderHeadline: headlineToSkipThisIteration });
-    } else if (currentBlock.type === 'headline' && ((currentBlock as HeadlineBlock).level === 3 || (currentBlock as HeadlineBlock).level === 4) && (currentBlock as HeadlineBlock).isImportant === true && nextBlock && (nextBlock.type === 'bullet_list' || nextBlock.type === 'numbered_list')) {
-      renderableItems.push({ type: "mini_section", headline: currentBlock as HeadlineBlock, list: nextBlock as BulletListBlock | NumberedListBlock });
-      i += 2; 
-    } else {
-      if (i === 0 && skipNextH2Headline && currentBlock.type === 'headline' && ((currentBlock as HeadlineBlock).level === 1 || (currentBlock as HeadlineBlock).level === 2)) { i++; continue; }
-      renderableItems.push({ type: "standalone_block", content: currentBlock });
-      i++; 
-    }
-  } 
+  if (!dataToDisplay) return (
+    <div className="text-center p-8 text-gray-500">
+      Loading lesson content...
+    </div>
+  );
+  
+  const { structuredContent, lastMajorSectionIndex } = processContentBlocks(dataToDisplay.contentBlocks || []);
 
-  const findOriginalIndex = (blockToFind: AnyContentBlock | HeadlineBlock | BulletListBlock | NumberedListBlock): number => {
-      return (dataToDisplay?.contentBlocks || []).findIndex(cb => cb === blockToFind);
+  const handleItemChange = (path: (string | number)[], newText: string) => {
+    if (onTextChange) {
+      onTextChange(path, newText);
+    }
   };
 
-  const lastHeadlineBlock = [...(dataToDisplay.contentBlocks || [])]
-    .reverse()
-    .find(block => block.type === 'headline');
-  
-  const styledLessonTitle = parseAndStyleText(dataToDisplay.lessonTitle);
-
   return (
-    <div className="font-['Inter',_sans-serif] bg-white p-4 sm:p-6 md:p-8 shadow-lg rounded-md max-w-3xl mx-auto my-6">
-      {dataToDisplay.lessonTitle && (
-        <div className={`mb-4`}>
-          {isEditing && onTextChange ? (
-            <input
-              type="text"
-              value={dataToDisplay.lessonTitle} 
-              onChange={(e) => onTextChange!(['lessonTitle'], e.target.value)}
-              className={`uppercase w-full text-2xl sm:text-3xl font-medium ${THEME_COLORS.headingText} mb-1.5 p-1 ${editingInputClass} outline-none focus:ring-1 focus:ring-yellow-500`}
-              style={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit', textTransform: 'uppercase' }}
-            />
-          ) : (
-            (parentProjectName && lessonNumber) ? (
-              <div>
-                  <div className="pl-2.5 border-l-[3px] border-[#FF1414] py-1 mb-2">
-                      <span className="uppercase text-lg sm:text-xl font-medium text-black">
-                          <span style={{ color: '#FF1414' }}>Course:</span> {decodeURIComponent(parentProjectName)}
-                      </span>
-                  </div>
-                  <h1 className={`uppercase text-2xl sm:text-3xl font-medium ${THEME_COLORS.headingText} mb-1.5`}>
-                      <span style={{ color: '#FF1414' }}>LESSON №{lessonNumber}:</span> {styledLessonTitle}
-                  </h1>
-              </div>
-              ) : (
-                <h1 className={`uppercase text-2xl sm:text-3xl font-medium ${THEME_COLORS.headingText} mb-1.5`}>
-                  {styledLessonTitle}
-                </h1>
-              )
-          )}
+    <div className="pdf-lesson-container max-w-4xl mx-auto px-4 py-8">
+      {parentProjectName && (
+        <div style={{ borderLeft: '3px solid #FF1414', paddingLeft: '10px', marginBottom: '8px' }}>
+          <h2 style={{ textTransform: 'uppercase', fontSize: '1.125rem', fontWeight: 500, color: 'black', margin: 0 }}>
+            <span style={{ color: '#FF1414' }}>{t.common.course}:</span> {parentProjectName}
+          </h2>
         </div>
       )}
-      <div className="max-w-none">
-        {renderableItems.map((item, index) => {
-          let showDividerBeforeItem = false; 
-          if (index > 0) { 
-            const previousItem = renderableItems[index - 1];
-            if (item.type === 'major_section' || (item.type === 'standalone_block' && item.content.type === 'headline') || item.type === 'mini_section') {
-              let prevItemExemptsDivider = false;
-              if (previousItem.type === 'mini_section') prevItemExemptsDivider = true;
-              else if (previousItem.type === 'standalone_block' && previousItem.content.type === 'numbered_list') prevItemExemptsDivider = true;
-              if (!prevItemExemptsDivider) showDividerBeforeItem = true;
-            }
-          }
-          
-          const fragmentKey = `renderable-item-${index}`;
-          let isCurrentItemEffectivelyLast = false;
-          if (index === renderableItems.length - 1) { isCurrentItemEffectivelyLast = true; } 
-          else {
-            const nextItem = renderableItems[index + 1]; let dividerWillBeBeforeNextItem = false;
-            if (nextItem.type === 'major_section' || (nextItem.type === 'standalone_block' && nextItem.content.type === 'headline') || nextItem.type === 'mini_section') { 
-                let currentItemExemptsNextDivider = false;
-                if (item.type === 'mini_section') currentItemExemptsNextDivider = true;
-                else if (item.type === 'standalone_block' && item.content.type === 'numbered_list') currentItemExemptsNextDivider = true;
-                if (!currentItemExemptsNextDivider) dividerWillBeBeforeNextItem = true;
-            }
-            isCurrentItemEffectivelyLast = dividerWillBeBeforeNextItem;
-          }
-
-          return (
-            <React.Fragment key={fragmentKey}>
-              {showDividerBeforeItem && ( <hr className="my-3 border-t border-gray-200" /> )}
-              {item.type === "major_section" && (
-                <div className="my-2"> 
-                  {!item._skipRenderHeadline && 
-                    <RenderBlock 
-                        block={item.headline} 
-                        isFirstInBox={true} 
-                        isLastInBox={item.items.length === 0 && isCurrentItemEffectivelyLast} 
-                        isEditing={isEditing} onTextChange={onTextChange} 
-                        basePath={['contentBlocks', findOriginalIndex(item.headline)]} 
-                        isLastSectionHeaderWithStar={item.headline === lastHeadlineBlock}
-                    />
-                  } 
-                  {item.items.map((subItem, subIndex) => {
-                      const isLastSubItemInMajor = subIndex === item.items.length - 1;
-                      if (typeof subItem === 'object' && 'type' in subItem && subItem.type === "mini_section") {
-                        const miniSec = subItem as MiniSection;
-                        return (
-                          <div key={`major-${index}-mini-${subIndex}`} className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
-                            <RenderBlock 
-                                block={miniSec.headline} 
-                                isFirstInBox={true} isLastInBox={false} isMiniSectionHeadline={true} 
-                                isEditing={isEditing} onTextChange={onTextChange} 
-                                basePath={['contentBlocks', findOriginalIndex(miniSec.headline)]}
-                                isLastSectionHeaderWithStar={miniSec.headline === lastHeadlineBlock}
-                            />
-                            <RenderBlock block={miniSec.list} isFirstInBox={false} isLastInBox={true} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(miniSec.list)]} isMiniSectionList={true}/>
-                          </div>);
-                      } else {
-                        return <RenderBlock key={`major-${index}-block-${subIndex}`} block={subItem as AnyContentBlock} isLastInBox={isLastSubItemInMajor && isCurrentItemEffectivelyLast} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(subItem as AnyContentBlock)]}/>;
-                      }
-                  })}
-                </div>
-              )}
-              {item.type === "mini_section" && (
-                 (() => {
-                    return (
-                        <div className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
-                        <RenderBlock 
-                            block={item.headline} 
-                            isFirstInBox={true} isLastInBox={false} isMiniSectionHeadline={true} 
-                            isEditing={isEditing} onTextChange={onTextChange} 
-                            basePath={['contentBlocks', findOriginalIndex(item.headline)]}
-                            isLastSectionHeaderWithStar={item.headline === lastHeadlineBlock}
-                        />
-                        <RenderBlock block={item.list} isFirstInBox={false} isLastInBox={true} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(item.list)]} isMiniSectionList={true}/>
-                        </div> );
-                })()
-              )}
-              {item.type === "standalone_block" && ( 
-                <RenderBlock 
-                    block={item.content} 
-                    isLastInBox={isCurrentItemEffectivelyLast} 
-                    isEditing={isEditing} onTextChange={onTextChange} 
-                    basePath={['contentBlocks', findOriginalIndex(item.content)]}
-                    isLastSectionHeaderWithStar={item.content.type === 'headline' && item.content === lastHeadlineBlock}
-                /> 
-              )}
-            </React.Fragment>
-          );
-        })}
+      <div className="mb-4">
+          {isEditing ? (
+              <input 
+                  type="text"
+                  value={dataToDisplay.lessonTitle || ''}
+                  onChange={handleTitleChange}
+                  className="text-2xl font-bold text-black w-full border-b-2 border-gray-300 focus:border-red-500 outline-none pb-1"
+              />
+          ) : (
+            <h1 className="text-2xl font-bold text-black mb-2" style={{ fontSize: '1.875rem', lineHeight: '2.25rem' }}>
+              {lessonNumber && <span style={{ color: '#FF1414' }}>{t.common.lesson} №{lessonNumber}: </span>}
+              {parseAndStyleText(dataToDisplay.lessonTitle)}
+            </h1>
+          )}
+      </div>
+      <div className="space-y-1">
+        {structuredContent.map((item, index) => (
+          <RenderableItemRenderer key={index} item={item} isEditing={isEditing} onTextChange={handleItemChange} basePath={['contentBlocks']} lastMajorSectionIndex={lastMajorSectionIndex} currentIndex={index} />
+        ))}
       </div>
     </div>
   );
 };
 
-export default PdfLessonDisplay;
+const RenderableItemRenderer: React.FC<{ item: RenderableItem, isEditing?: boolean, onTextChange?: (path: (string | number)[], newText: string) => void, basePath: (string|number)[], lastMajorSectionIndex: number, currentIndex: number }> = ({ item, isEditing, onTextChange, basePath, lastMajorSectionIndex, currentIndex }) => {
+  const handleBlockChange = (index: number, newText: string) => {
+    if (onTextChange) {
+      onTextChange([...basePath, index], newText);
+    }
+  };
+
+  if (item.type === 'major_section' && item._skipRenderHeadline) {
+     return (
+        <div className="space-y-1">
+            {item.items.map((subItem, subIndex) => {
+                 const newBasePath = [...basePath, findOriginalIndex(subItem as AnyContentBlock)];
+                 return <RenderableItemRenderer key={subIndex} item={{type: 'standalone_block', content: subItem as AnyContentBlock}} isEditing={isEditing} onTextChange={onTextChange} basePath={newBasePath} lastMajorSectionIndex={lastMajorSectionIndex} currentIndex={-1} />;
+            })}
+        </div>
+    );
+  }
+
+  const findOriginalIndex = (blockToFind: AnyContentBlock | HeadlineBlock | BulletListBlock | NumberedListBlock): number => {
+    if (!dataToDisplay || !dataToDisplay.contentBlocks) return -1;
+    return dataToDisplay.contentBlocks.findIndex(b => b === blockToFind);
+  };
+
+  if (item.type === 'standalone_block') {
+    const originalIndex = findOriginalIndex(item.content);
+    return <RenderBlock block={item.content} isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, originalIndex]} isLastSectionHeaderWithStar={item.content.type === 'headline' && originalIndex === lastMajorSectionIndex} />;
+  }
+  
+  if (item.type === 'major_section') {
+    const headlineIndex = findOriginalIndex(item.headline);
+    return (
+      <div className="mt-4">
+        {!item._skipRenderHeadline && <RenderBlock block={item.headline} isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, headlineIndex]} isLastSectionHeaderWithStar={headlineIndex === lastMajorSectionIndex}/>}
+        <div className="space-y-1 pl-2">
+           {item.items.map((subItem, subIndex) => {
+            const newBasePath = [...basePath, findOriginalIndex(subItem as AnyContentBlock)];
+            return <RenderableItemRenderer key={subIndex} item={{type: 'standalone_block', content: subItem as AnyContentBlock}} isEditing={isEditing} onTextChange={onTextChange} basePath={newBasePath} lastMajorSectionIndex={lastMajorSectionIndex} currentIndex={-1} />;
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (item.type === 'mini_section') {
+     const headlineIndex = findOriginalIndex(item.headline);
+     const listIndex = findOriginalIndex(item.list);
+
+    return (
+      <div className={`my-3 p-3 rounded-md bg-[#FAFAFA] border border-[#FF1414]`}>
+          <RenderBlock block={item.headline} isMiniSectionHeadline isFirstInBox isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, headlineIndex]} />
+          <RenderBlock block={item.list} isLastInBox isMiniSectionList isEditing={isEditing} onTextChange={onTextChange} basePath={[...basePath, listIndex]} />
+      </div>
+    );
+  }
+
+  return <div>Unsupported renderable item type</div>;
+};
+
+export default PdfLessonDisplayComponent;
