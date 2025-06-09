@@ -153,7 +153,7 @@
                                 </ul>
                             </td>
                             <td class="options-col">
-                                <strong>{{ locale.quiz.correctMatches }}:</strong>
+                                <strong>{{ locale.quiz.options | default('Options') }}:</strong>
                                 <ul style="list-style-type: none; padding-left: 0;">
                                 {% for option in question.options %}
                                     <li>{{ option.id }}. {{ option.text }}</li>

@@ -228,52 +228,78 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
 
     return (
       <div className="mt-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h4 className="font-medium mb-2 text-black">{t.quiz.prompts}</h4>
-            {question.prompts.map((prompt) => (
-              <div key={prompt.id} className="mb-2 flex items-center">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={prompt.text}
-                    onChange={(e) => handleTextChange(['questions', index, 'prompts', question.prompts.findIndex(p => p.id === prompt.id), 'text'], e.target.value)}
-                    className="w-full p-2 border rounded text-black"
-                  />
-                ) : (
-                  <span className="text-black flex-1">{prompt.text}</span>
-                )}
+        {isEditing ? (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium mb-2 text-black">{t.quiz.prompts}</h4>
+                {question.prompts.map((prompt) => (
+                  <div key={prompt.id} className="mb-2">
+                    <input
+                      type="text"
+                      value={prompt.text}
+                      onChange={(e) => handleTextChange(['questions', index, 'prompts', question.prompts.findIndex(p => p.id === prompt.id), 'text'], e.target.value)}
+                      className="w-full p-2 border rounded text-black"
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div>
-            <h4 className="font-medium mb-2 text-black">{t.quiz.correctMatches}</h4>
-            {question.prompts.map((prompt) => {
-              if (isEditing) {
+              <div>
+                <h4 className="font-medium mb-2 text-black">{t.quiz.options || 'Options'}</h4>
+                {question.options.map((option) => (
+                  <div key={option.id} className="mb-2">
+                    <input
+                      type="text"
+                      value={option.text}
+                      onChange={(e) => handleTextChange(['questions', index, 'options', question.options.findIndex(o => o.id === option.id), 'text'], e.target.value)}
+                      className="w-full p-2 border rounded text-black"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4">
+              <h4 className="font-medium mb-2 text-black">{t.quiz.correctMatches}</h4>
+              {question.prompts.map((prompt) => (
+                <div key={prompt.id} className="grid grid-cols-2 gap-4 mb-2 items-center">
+                  <span className="text-black">{prompt.text}</span>
+                  <select
+                    value={question.correct_matches[prompt.id] || ''}
+                    onChange={(e) => handleMatchChange(prompt.id, e.target.value)}
+                    className="w-full p-2 border rounded text-black bg-white"
+                  >
+                    <option value="" disabled>{t.quiz.selectOption}</option>
+                    {question.options.map(opt => (
+                      <option key={opt.id} value={opt.id}>{opt.text}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-medium mb-2 text-black">{t.quiz.prompts}</h4>
+              {question.prompts.map((prompt) => (
+                <div key={prompt.id} className="mb-2 flex items-center">
+                  <span className="text-black flex-1">{prompt.text}</span>
+                </div>
+              ))}
+            </div>
+            <div>
+              <h4 className="font-medium mb-2 text-black">{t.quiz.correctMatches}</h4>
+              {question.prompts.map((prompt) => {
+                const matchedOption = question.options.find(opt => opt.id === question.correct_matches[prompt.id]);
                 return (
                   <div key={prompt.id} className="mb-2">
-                    <select
-                      value={question.correct_matches[prompt.id] || ''}
-                      onChange={(e) => handleMatchChange(prompt.id, e.target.value)}
-                      className="w-full p-2 border rounded text-black bg-white"
-                    >
-                      <option value="" disabled>{t.quiz.selectOption}</option>
-                      {question.options.map(opt => (
-                        <option key={opt.id} value={opt.id}>{opt.text}</option>
-                      ))}
-                    </select>
+                    <span className="text-black">{matchedOption?.text}</span>
                   </div>
-                )
-              }
-              const matchedOption = question.options.find(opt => opt.id === question.correct_matches[prompt.id]);
-              return (
-                <div key={prompt.id} className="mb-2">
-                  <span className="text-black">{matchedOption?.text}</span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
         {isEditing ? (
           <div className="mt-4">
             <label className="block text-sm font-medium text-black mb-1">{t.quiz.explanation}</label>
