@@ -47,27 +47,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     return null;
   }
 
-  const questions = useMemo(() => {
-    const rawQuestions = Array.isArray(dataToDisplay.questions) ? dataToDisplay.questions : [];
-    return rawQuestions.map((q: AnyQuizQuestion) => {
-      if (q.question_type === 'multi-select') {
-        const multiSelectQuestion = q as MultiSelectQuestion;
-        let ids = multiSelectQuestion.correct_option_ids;
-        if (typeof ids === 'string') {
-          try {
-            ids = JSON.parse(ids);
-          } catch (e) {
-            ids = [];
-          }
-        }
-        if (!Array.isArray(ids)) {
-          ids = [];
-        }
-        return { ...multiSelectQuestion, correct_option_ids: ids };
-      }
-      return q;
-    });
-  }, [dataToDisplay.questions]);
+  const questions = Array.isArray(dataToDisplay.questions) ? dataToDisplay.questions : [];
 
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     setUserAnswers((prev: Record<number, any>) => ({
@@ -98,7 +78,18 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     if (question.question_type === 'multiple-choice') {
       handleTextChange(['questions', questionIndex, 'correct_option_id'], optionId);
     } else if (question.question_type === 'multi-select') {
-      const currentCorrectIds = (question as MultiSelectQuestion).correct_option_ids || [];
+      const multiSelectQuestion = question as MultiSelectQuestion;
+      let currentCorrectIds: string[] = [];
+      if (typeof multiSelectQuestion.correct_option_ids === 'string') {
+        try {
+          currentCorrectIds = JSON.parse(multiSelectQuestion.correct_option_ids);
+        } catch (e) {
+          currentCorrectIds = [];
+        }
+      } else if (Array.isArray(multiSelectQuestion.correct_option_ids)) {
+        currentCorrectIds = multiSelectQuestion.correct_option_ids;
+      }
+
       const newCorrectIds = isCorrect
         ? currentCorrectIds.filter(id => id !== optionId)
         : [...currentCorrectIds, optionId];
@@ -162,8 +153,20 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
 
   const renderMultiSelect = (question: MultiSelectQuestion, index: number) => {
     const userAnswer = userAnswers[index] || [];
-    const isCorrect = question.correct_option_ids.every((id: string) => userAnswer.includes(id)) &&
-                     userAnswer.every((id: string) => question.correct_option_ids.includes(id));
+
+    let correctIds: string[] = [];
+    if (typeof question.correct_option_ids === 'string') {
+      try {
+        correctIds = JSON.parse(question.correct_option_ids);
+      } catch (e) {
+        correctIds = [];
+      }
+    } else if (Array.isArray(question.correct_option_ids)) {
+      correctIds = question.correct_option_ids;
+    }
+
+    const isCorrect = correctIds.every((id: string) => userAnswer.includes(id)) &&
+                     userAnswer.every((id: string) => correctIds.includes(id));
     const showResult = isSubmitted && showAnswers;
 
     return (
@@ -173,10 +176,10 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
             <div key={option.id} className="flex items-start">
               <div className={`flex items-center h-5 ${isEditing ? 'cursor-pointer' : ''}`}>
                 <div 
-                  className={`w-4 h-4 rounded border ${question.correct_option_ids.includes(option.id) ? 'border-[#FF1414] bg-[#FF1414]' : 'border-gray-300'}`}
-                  onClick={() => isEditing && handleCorrectAnswerChange(index, option.id, question.correct_option_ids.includes(option.id))}
+                  className={`w-4 h-4 rounded border ${correctIds.includes(option.id) ? 'border-[#FF1414] bg-[#FF1414]' : 'border-gray-300'}`}
+                  onClick={() => isEditing && handleCorrectAnswerChange(index, option.id, correctIds.includes(option.id))}
                 >
-                  {question.correct_option_ids.includes(option.id) && (
+                  {correctIds.includes(option.id) && (
                     <div className="w-2 h-2 bg-white m-auto" />
                   )}
                 </div>
