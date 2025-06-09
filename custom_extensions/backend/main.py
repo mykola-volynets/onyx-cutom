@@ -36,7 +36,7 @@ ONYX_API_SERVER_URL = "http://api_server:8080" # Adjust if needed
 ONYX_SESSION_COOKIE_NAME = os.getenv("ONYX_SESSION_COOKIE_NAME", "fastapiusersauth")
 
 # Component name constants
-COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanDisplay"
+COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanTable"
 COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay"
 COMPONENT_NAME_VIDEO_LESSON = "VideoLessonDisplay"
 COMPONENT_NAME_QUIZ = "QuizDisplay"
