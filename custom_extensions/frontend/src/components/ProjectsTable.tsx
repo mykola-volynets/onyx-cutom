@@ -42,7 +42,7 @@ const ProjectsTable = ({
   if (!projects.length) {
     return (
       <div className="text-center py-8 text-gray-500">
-        {localized.noProjects}
+        {localized.noProductsSelected}
       </div>
     );
   }
@@ -53,16 +53,16 @@ const ProjectsTable = ({
         <thead className="bg-gray-50">
           <tr>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {localized.name}
+              {localized.name || 'Name'}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {localized.description}
+              {localized.description || 'Description'}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {localized.status}
+              {localized.status || 'Status'}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {localized.createdAt}
+              {localized.createdAt || 'Created At'}
             </th>
           </tr>
         </thead>
@@ -83,7 +83,7 @@ const ProjectsTable = ({
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                   project.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {localized[project.status as keyof typeof localized] || project.status}
+                  {localized[project.status as keyof typeof localized] || project.status || 'Unknown'}
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
