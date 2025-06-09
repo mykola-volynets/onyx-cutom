@@ -39,14 +39,6 @@ const parseAndStyleText = (text: string | undefined | null): React.ReactNode[] =
   }).filter(segment => segment !== ""); 
 };
 
-const isSectionHeader = (item: RenderableItem | undefined): item is MajorSection | (StandaloneBlock & { content: HeadlineBlock }) | MiniSection => {
-  if (!item) return false;
-  if (item.type === 'major_section') return true;
-  if (item.type === 'standalone_block' && item.content.type === 'headline') return true;
-  if (item.type === 'mini_section') return true;
-  return false;
-};
-
 const LessonGoalIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-1.5 shrink-0">
     <rect width="16" height="16" rx="8" fill="#FF1414"/>
@@ -393,14 +385,6 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
   let skipNextH2Headline = false;
   const contentBlocksToProcess = dataToDisplay.contentBlocks || [];
 
-  // Find the last headline index (any level)
-  let lastHeadlineIndex = -1;
-  contentBlocksToProcess.forEach((block, index) => {
-    if (block.type === 'headline') {
-      lastHeadlineIndex = index;
-    }
-  });
-
   if (dataToDisplay.lessonTitle && contentBlocksToProcess.length > 0) {
     const firstBlock = contentBlocksToProcess[0];
     if (firstBlock.type === 'headline' &&
@@ -445,6 +429,10 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
       return (dataToDisplay?.contentBlocks || []).findIndex(cb => cb === blockToFind);
   };
 
+  const lastHeadlineBlock = [...(dataToDisplay.contentBlocks || [])]
+    .reverse()
+    .find(block => block.type === 'headline');
+  
   const styledLessonTitle = parseAndStyleText(dataToDisplay.lessonTitle);
 
   return (
@@ -484,7 +472,7 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
           let showDividerBeforeItem = false; 
           if (index > 0) { 
             const previousItem = renderableItems[index - 1];
-            if (isSectionHeader(item)) {
+            if (item.type === 'major_section' || (item.type === 'standalone_block' && item.content.type === 'headline') || item.type === 'mini_section') {
               let prevItemExemptsDivider = false;
               if (previousItem.type === 'mini_section') prevItemExemptsDivider = true;
               else if (previousItem.type === 'standalone_block' && previousItem.content.type === 'numbered_list') prevItemExemptsDivider = true;
@@ -497,7 +485,7 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
           if (index === renderableItems.length - 1) { isCurrentItemEffectivelyLast = true; } 
           else {
             const nextItem = renderableItems[index + 1]; let dividerWillBeBeforeNextItem = false;
-            if (isSectionHeader(nextItem)) { 
+            if (nextItem.type === 'major_section' || (nextItem.type === 'standalone_block' && nextItem.content.type === 'headline') || nextItem.type === 'mini_section') { 
                 let currentItemExemptsNextDivider = false;
                 if (item.type === 'mini_section') currentItemExemptsNextDivider = true;
                 else if (item.type === 'standalone_block' && item.content.type === 'numbered_list') currentItemExemptsNextDivider = true;
@@ -505,11 +493,6 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
             }
             isCurrentItemEffectivelyLast = dividerWillBeBeforeNextItem;
           }
-          
-          // Show star icon for the last headline of any level
-          const isLastHeaderForStar = item.type === 'major_section' && 
-            item.headline && 
-            findOriginalIndex(item.headline) === lastHeadlineIndex;
 
           return (
             <React.Fragment key={fragmentKey}>
@@ -523,34 +506,32 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
                         isLastInBox={item.items.length === 0 && isCurrentItemEffectivelyLast} 
                         isEditing={isEditing} onTextChange={onTextChange} 
                         basePath={['contentBlocks', findOriginalIndex(item.headline)]} 
-                        isLastSectionHeaderWithStar={isLastHeaderForStar}
+                        isLastSectionHeaderWithStar={item.headline === lastHeadlineBlock}
                     />
                   } 
                   {item.items.map((subItem, subIndex) => {
-                    const isLastSubItemInMajor = subIndex === item.items.length - 1;
-                    if (typeof subItem === 'object' && 'type' in subItem && subItem.type === "mini_section") {
-                      const miniSec = subItem as MiniSection;
-                      const miniSectionIsEffectivelyLastHeader = isLastHeaderForStar && item.items.length === 1 && subIndex === 0; 
-                      return (
-                        <div key={`major-${index}-mini-${subIndex}`} className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
-                          <RenderBlock 
-                              block={miniSec.headline} 
-                              isFirstInBox={true} isLastInBox={false} isMiniSectionHeadline={true} 
-                              isEditing={isEditing} onTextChange={onTextChange} 
-                              basePath={['contentBlocks', findOriginalIndex(miniSec.headline)]}
-                              isLastSectionHeaderWithStar={miniSectionIsEffectivelyLastHeader} 
-                          />
-                          <RenderBlock block={miniSec.list} isFirstInBox={false} isLastInBox={true} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(miniSec.list)]} isMiniSectionList={true}/>
-                        </div>);
-                    } else {
-                      return <RenderBlock key={`major-${index}-block-${subIndex}`} block={subItem as AnyContentBlock} isLastInBox={isLastSubItemInMajor && isCurrentItemEffectivelyLast} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(subItem as AnyContentBlock)]}/>;
-                    }
+                      const isLastSubItemInMajor = subIndex === item.items.length - 1;
+                      if (typeof subItem === 'object' && 'type' in subItem && subItem.type === "mini_section") {
+                        const miniSec = subItem as MiniSection;
+                        return (
+                          <div key={`major-${index}-mini-${subIndex}`} className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
+                            <RenderBlock 
+                                block={miniSec.headline} 
+                                isFirstInBox={true} isLastInBox={false} isMiniSectionHeadline={true} 
+                                isEditing={isEditing} onTextChange={onTextChange} 
+                                basePath={['contentBlocks', findOriginalIndex(miniSec.headline)]}
+                                isLastSectionHeaderWithStar={miniSec.headline === lastHeadlineBlock}
+                            />
+                            <RenderBlock block={miniSec.list} isFirstInBox={false} isLastInBox={true} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(miniSec.list)]} isMiniSectionList={true}/>
+                          </div>);
+                      } else {
+                        return <RenderBlock key={`major-${index}-block-${subIndex}`} block={subItem as AnyContentBlock} isLastInBox={isLastSubItemInMajor && isCurrentItemEffectivelyLast} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(subItem as AnyContentBlock)]}/>;
+                      }
                   })}
                 </div>
               )}
               {item.type === "mini_section" && (
-                (() => {
-                    const miniSectionIsEffectivelyLastHeader = isLastHeaderForStar;
+                 (() => {
                     return (
                         <div className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
                         <RenderBlock 
@@ -558,7 +539,7 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
                             isFirstInBox={true} isLastInBox={false} isMiniSectionHeadline={true} 
                             isEditing={isEditing} onTextChange={onTextChange} 
                             basePath={['contentBlocks', findOriginalIndex(item.headline)]}
-                            isLastSectionHeaderWithStar={miniSectionIsEffectivelyLastHeader}
+                            isLastSectionHeaderWithStar={item.headline === lastHeadlineBlock}
                         />
                         <RenderBlock block={item.list} isFirstInBox={false} isLastInBox={true} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(item.list)]} isMiniSectionList={true}/>
                         </div> );
@@ -570,7 +551,7 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
                     isLastInBox={isCurrentItemEffectivelyLast} 
                     isEditing={isEditing} onTextChange={onTextChange} 
                     basePath={['contentBlocks', findOriginalIndex(item.content)]}
-                    isLastSectionHeaderWithStar={isLastHeaderForStar && item.content.type === 'headline' && findOriginalIndex(item.content) === lastHeadlineIndex}
+                    isLastSectionHeaderWithStar={item.content.type === 'headline' && item.content === lastHeadlineBlock}
                 /> 
               )}
             </React.Fragment>
