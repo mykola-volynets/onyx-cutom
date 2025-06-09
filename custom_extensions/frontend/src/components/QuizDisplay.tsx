@@ -42,7 +42,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
   }
 
   const handleAnswerChange = (questionIndex: number, answer: any) => {
-    setUserAnswers(prev => ({
+    setUserAnswers((prev: Record<number, any>) => ({
       ...prev,
       [questionIndex]: answer
     }));
@@ -135,7 +135,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
               onChange={(e) => {
                 const newAnswer = e.target.checked
                   ? [...userAnswer, option.id]
-                  : userAnswer.filter(id => id !== option.id);
+                  : userAnswer.filter((id: string) => id !== option.id);
                 handleAnswerChange(index, newAnswer);
               }}
               disabled={isSubmitted}
@@ -164,7 +164,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
   const renderMatching = (question: MatchingQuestion, index: number) => {
     const userAnswer = userAnswers[index] || {};
     const isCorrect = Object.entries(question.correct_matches).every(
-      ([promptId, optionId]) => userAnswer[promptId] === optionId
+      ([promptId, optionId]: [string, string]) => userAnswer[promptId] === optionId
     );
     const showResult = isSubmitted && showAnswers;
 
@@ -196,13 +196,13 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                 className={`p-3 rounded-lg border ${
                   showResult
                     ? Object.entries(question.correct_matches).some(
-                        ([promptId, correctOptionId]) =>
+                        ([promptId, correctOptionId]: [string, string]) =>
                           correctOptionId === option.id && userAnswer[promptId] === option.id
                       )
                       ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
                       : Object.values(userAnswer).includes(option.id) &&
                         !Object.entries(question.correct_matches).some(
-                          ([promptId, correctOptionId]) =>
+                          ([promptId, correctOptionId]: [string, string]) =>
                             correctOptionId === option.id && userAnswer[promptId] === option.id
                         )
                       ? `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
@@ -257,7 +257,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
 
   const renderSorting = (question: SortingQuestion, index: number) => {
     const userAnswer = userAnswers[index] || [];
-    const isCorrect = JSON.stringify(userAnswer) === JSON.stringify(question.correct_order);
+    const isCorrect = question.items.every((item: SortableItem, i: number) => item.id === userAnswer[i]);
     const showResult = isSubmitted && showAnswers;
 
     const handleDragStart = (e: React.DragEvent, itemId: string) => {
