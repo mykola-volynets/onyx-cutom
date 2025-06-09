@@ -10,6 +10,7 @@ import {
   type SectionBreakBlock as SectionBreakBlockType
 } from './pdfLesson';
 import { VideoLessonData } from './videoLessonTypes'; // <-- Import the new VideoLessonData type
+import { QuizData } from './quizTypes';
 
 // --- TrainingPlan Specific Types (existing) ---
 export interface StatusInfo {
@@ -44,7 +45,7 @@ export interface TrainingPlanData {
 
 // Generic Content Type for MicroProducts
 // UPDATED to include VideoLessonData
-export type MicroProductContentData = TrainingPlanData | PdfLessonDataType | VideoLessonData | null;
+export type MicroProductContentData = TrainingPlanData | PdfLessonDataType | VideoLessonData | QuizData | null;
 
 
 // For fetching project details for the edit page

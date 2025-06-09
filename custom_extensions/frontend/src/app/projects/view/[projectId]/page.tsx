@@ -9,12 +9,14 @@ import {
   MicroProductContentData,
   TrainingPlanData,
   PdfLessonData,
+  QuizData,
 } from '@/types/projectSpecificTypes';
 import { VideoLessonData } from '@/types/videoLessonTypes';
 import { ProjectListItem } from '@/types/products';
 import TrainingPlanTableComponent from '@/components/TrainingPlanTable';
 import PdfLessonDisplayComponent from '@/components/PdfLessonDisplay';
 import VideoLessonDisplay from '@/components/VideoLessonDisplay';
+import QuizDisplay from '@/components/QuizDisplay';
 import { Save, Edit, ArrowDownToLine, Info, AlertTriangle, ArrowLeft, FolderOpen, MessageSquare } from 'lucide-react';
 
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
@@ -23,6 +25,7 @@ const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/c
 const COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanTable";
 const COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay";
 const COMPONENT_NAME_VIDEO_LESSON = "VideoLessonDisplay";
+const COMPONENT_NAME_QUIZ = "QuizDisplay";
 
 type ProjectViewParams = {
   projectId: string;
@@ -235,7 +238,12 @@ export default function ProjectInstanceViewPage() {
       alert("Error: Project instance data not loaded.");
       return;
     }
-    const editableComponentTypes = [COMPONENT_NAME_PDF_LESSON, COMPONENT_NAME_TRAINING_PLAN, COMPONENT_NAME_VIDEO_LESSON];
+    const editableComponentTypes = [
+      COMPONENT_NAME_PDF_LESSON,
+      COMPONENT_NAME_TRAINING_PLAN,
+      COMPONENT_NAME_VIDEO_LESSON,
+      COMPONENT_NAME_QUIZ
+    ];
     if (!editableComponentTypes.includes(projectInstanceData.component_name)) {
       setSaveError("Content editing is not supported for this component type on this page.");
       alert("Error: Cannot save. Content editing for this component type is not supported here.");
@@ -276,7 +284,12 @@ export default function ProjectInstanceViewPage() {
 
   const handleToggleEdit = () => {
     if (!projectInstanceData) { alert("Project data not loaded yet."); return; }
-    const editableComponentTypes = [COMPONENT_NAME_PDF_LESSON, COMPONENT_NAME_TRAINING_PLAN, COMPONENT_NAME_VIDEO_LESSON];
+    const editableComponentTypes = [
+      COMPONENT_NAME_PDF_LESSON,
+      COMPONENT_NAME_TRAINING_PLAN,
+      COMPONENT_NAME_VIDEO_LESSON,
+      COMPONENT_NAME_QUIZ
+    ];
     if (!editableComponentTypes.includes(projectInstanceData.component_name)) {
       alert(`Content editing is currently supported for ${editableComponentTypes.join(', ')} types on this page.`);
       return;
@@ -343,23 +356,41 @@ export default function ProjectInstanceViewPage() {
   }
 
   const displayContent = () => {
-    const currentDataForDisplay = isEditing ? editableData : projectInstanceData!.details;
-    const lang = projectInstanceData!.details?.detectedLanguage || projectInstanceData!.detectedLanguage || 'en';
+    if (!projectInstanceData) return null;
 
-
-    switch (projectInstanceData!.component_name) {
+    switch (projectInstanceData.component_name) {
       case COMPONENT_NAME_TRAINING_PLAN:
-        const tpData = currentDataForDisplay as TrainingPlanData ??
-          { mainTitle: projectInstanceData!.name || "Training Plan", sections: [], detectedLanguage: lang };
-        return <TrainingPlanTableComponent dataToDisplay={tpData} isEditing={isEditing} onTextChange={handleTextChange} allUserMicroproducts={allUserMicroproducts} parentProjectName={parentProjectNameForCurrentView}  sourceChatSessionId={projectInstanceData?.sourceChatSessionId} />;
+        return (
+          <TrainingPlanTableComponent
+            dataToDisplay={editableData as TrainingPlanData}
+            isEditing={isEditing}
+            onTextChange={handleTextChange}
+          />
+        );
       case COMPONENT_NAME_PDF_LESSON:
-        const pdfData = currentDataForDisplay as PdfLessonData ??
-          { lessonTitle: projectInstanceData!.name || "PDF Lesson", contentBlocks: [], detectedLanguage: lang };
-        return <PdfLessonDisplayComponent dataToDisplay={pdfData} isEditing={isEditing} onTextChange={handleTextChange} />;
+        return (
+          <PdfLessonDisplayComponent
+            dataToDisplay={editableData as PdfLessonData}
+            isEditing={isEditing}
+            onTextChange={handleTextChange}
+          />
+        );
       case COMPONENT_NAME_VIDEO_LESSON:
-        const vlData = currentDataForDisplay as VideoLessonData ??
-          { mainPresentationTitle: projectInstanceData!.name || "New Video Lesson", slides: [], detectedLanguage: lang };
-        return <VideoLessonDisplay dataToDisplay={vlData} isEditing={isEditing} onTextChange={handleTextChange} />;
+        return (
+          <VideoLessonDisplay
+            dataToDisplay={editableData as VideoLessonData}
+            isEditing={isEditing}
+            onTextChange={handleTextChange}
+          />
+        );
+      case COMPONENT_NAME_QUIZ:
+        return (
+          <QuizDisplay
+            dataToDisplay={editableData as QuizData}
+            isEditing={isEditing}
+            onTextChange={handleTextChange}
+          />
+        );
       default:
         return <DefaultDisplayComponent instanceData={projectInstanceData} />;
     }
@@ -367,7 +398,7 @@ export default function ProjectInstanceViewPage() {
 
   const displayName = projectInstanceData?.name || `Project ${projectId}`;
   const canEditContent = projectInstanceData &&
-                          [COMPONENT_NAME_TRAINING_PLAN, COMPONENT_NAME_PDF_LESSON, COMPONENT_NAME_VIDEO_LESSON].includes(projectInstanceData.component_name);
+                          [COMPONENT_NAME_TRAINING_PLAN, COMPONENT_NAME_PDF_LESSON, COMPONENT_NAME_VIDEO_LESSON, COMPONENT_NAME_QUIZ].includes(projectInstanceData.component_name);
 
   return (
     <main className="p-4 md:p-8 bg-gray-100 min-h-screen font-['Inter',_sans-serif]">

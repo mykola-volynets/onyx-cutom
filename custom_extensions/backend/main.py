@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
-from typing import List, Optional, Dict, Any, Union, Type, ForwardRef, Set
+from typing import List, Optional, Dict, Any, Union, Type, ForwardRef, Set, Literal
 from pydantic import BaseModel, Field, RootModel
 import re
 import os
@@ -34,6 +34,12 @@ else:
 CUSTOM_PROJECTS_DATABASE_URL = os.getenv("CUSTOM_PROJECTS_DATABASE_URL")
 ONYX_API_SERVER_URL = "http://api_server:8080" # Adjust if needed
 ONYX_SESSION_COOKIE_NAME = os.getenv("ONYX_SESSION_COOKIE_NAME", "fastapiusersauth")
+
+# Component name constants
+COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanDisplay"
+COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay"
+COMPONENT_NAME_VIDEO_LESSON = "VideoLessonDisplay"
+COMPONENT_NAME_QUIZ = "QuizDisplay"
 
 # --- LLM Configuration for JSON Parsing ---
 LLM_API_KEY = os.getenv("COHERE_API_KEY")
@@ -378,7 +384,80 @@ class VideoLessonData(BaseModel):
     detectedLanguage: Optional[str] = None
     model_config = {"from_attributes": True}
 
-MicroProductContentType = Union[TrainingPlanDetails, PdfLessonDetails, VideoLessonData, None]
+# --- Start: Add New Quiz Models ---
+
+class QuizQuestionOption(BaseModel):
+    id: str  # e.g., "A", "B", "C"
+    text: str
+    model_config = {"from_attributes": True}
+
+class MatchingPrompt(BaseModel):
+    id: str # e.g., "A", "B", "C"
+    text: str
+    model_config = {"from_attributes": True}
+
+class MatchingOption(BaseModel):
+    id: str # e.g., "1", "2", "3"
+    text: str
+    model_config = {"from_attributes": True}
+
+class SortableItem(BaseModel):
+    id: str # e.g., "step1", "step2"
+    text: str
+    model_config = {"from_attributes": True}
+
+class BaseQuestion(BaseModel):
+    question_text: str
+    explanation: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+class MultipleChoiceQuestion(BaseQuestion):
+    question_type: Literal["multiple-choice"]
+    options: List[QuizQuestionOption]
+    correct_option_id: str
+    model_config = {"from_attributes": True}
+
+class MultiSelectQuestion(BaseQuestion):
+    question_type: Literal["multi-select"]
+    options: List[QuizQuestionOption]
+    correct_option_ids: List[str]
+    model_config = {"from_attributes": True}
+
+class MatchingQuestion(BaseQuestion):
+    question_type: Literal["matching"]
+    prompts: List[MatchingPrompt]
+    options: List[MatchingOption]
+    correct_matches: Dict[str, str]  # Maps prompt.id to option.id, e.g. {"A": "3", "B": "1"}
+    model_config = {"from_attributes": True}
+
+class SortingQuestion(BaseQuestion):
+    question_type: Literal["sorting"]
+    items_to_sort: List[SortableItem]
+    correct_order: List[str]  # List of SortableItem.id in the correct sequence
+    model_config = {"from_attributes": True}
+
+class OpenAnswerQuestion(BaseQuestion):
+    question_type: Literal["open-answer"]
+    acceptable_answers: List[str]
+    model_config = {"from_attributes": True}
+
+AnyQuizQuestion = Union[
+    MultipleChoiceQuestion,
+    MultiSelectQuestion,
+    MatchingQuestion,
+    SortingQuestion,
+    OpenAnswerQuestion
+]
+
+class QuizData(BaseModel):
+    quizTitle: str
+    questions: List[AnyQuizQuestion] = Field(default_factory=list)
+    detectedLanguage: Optional[str] = None
+    model_config = {"from_attributes": True, "use_enum_values": True}
+
+# --- End: Add New Quiz Models ---
+
+MicroProductContentType = Union[TrainingPlanDetails, PdfLessonDetails, VideoLessonData, QuizData, None]
 
 class DesignTemplateBase(BaseModel):
     template_name: str
@@ -468,6 +547,7 @@ class ProjectUpdateRequest(BaseModel):
 BulletListBlock.model_rebuild()
 NumberedListBlock.model_rebuild()
 PdfLessonDetails.model_rebuild()
+QuizData.model_rebuild()
 ProjectDB.model_rebuild()
 MicroProductApiResponse.model_rebuild()
 ProjectDetailForEditResponse.model_rebuild()
@@ -987,9 +1067,6 @@ async def delete_design_template(template_id: int, pool: asyncpg.Pool = Depends(
 ALLOWED_MICROPRODUCT_TYPES_FOR_DESIGNS = [
     "Training Plan", "PDF Lesson"
 ]
-COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanTable"
-COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay"
-COMPONENT_NAME_VIDEO_LESSON = "VideoLessonDisplay"
 
 @app.get("/api/custom/microproduct_types", response_model=List[str])
 async def get_allowed_microproduct_types_list_for_design_templates():
@@ -1161,6 +1238,131 @@ Exact Text Extraction: All extracted text content must be preserved exactly as i
 Field Presence: If a field's bolded header is present in the input but the text following it is empty before the next header, the corresponding JSON field should be an empty string (""). Do not use null or omit fields that are defined as strings in the target schema if their labels are present in the input.
 Sequential Parsing: Process the text sequentially, extracting content associated with each bolded header until the next bolded header is encountered.
 Return ONLY the JSON object.
+            """
+        elif selected_design_template.component_name == COMPONENT_NAME_QUIZ:
+            target_content_model = QuizData
+            default_error_instance = QuizData(
+                quizTitle=f"LLM Parsing Error for {project_data.projectName}",
+                questions=[]
+            )
+            llm_json_example = selected_design_template.template_structuring_prompt or """
+{
+"quizTitle": "Advanced Sales Techniques Quiz",
+"detectedLanguage": "en",
+"questions": [
+{
+"question_type": "multiple-choice",
+"question_text": "Which technique involves assuming the sale is made?",
+"options": [
+{"id": "A", "text": "The 'Question Close'"},
+{"id": "B", "text": "The 'Presumptive Close'"}
+],
+"correct_option_id": "B",
+"explanation": "A presumptive close assumes the sale is made."
+},
+{
+"question_type": "multi-select",
+"question_text": "Which of the following are primary colors? (Select all that apply)",
+"options": [
+{"id": "A", "text": "Red"},
+{"id": "B", "text": "Green"},
+{"id": "C", "text": "Orange"},
+{"id": "D", "text": "Blue"}
+],
+"correct_option_ids": ["A", "D"],
+"explanation": "In the traditional subtractive model, the primary colors are Red, Yellow, and Blue."
+},
+{
+"question_type": "matching",
+"question_text": "Match each sales technique with its description:",
+"prompts": [
+{"id": "A", "text": "The 'Alternative Close'"},
+{"id": "B", "text": "The 'Summary Close"}
+],
+"options": [
+{"id": "1", "text": "Presenting two options to the customer"},
+{"id": "2", "text": "Recapping key benefits before asking for the sale"}
+],
+"correct_matches": {"A": "1", "B": "2"},
+"explanation": "The Alternative Close gives customers a choice between options, while the Summary Close reinforces value before closing."
+},
+{
+"question_type": "sorting",
+"question_text": "Arrange these steps in the correct order for a successful sales call:",
+"items_to_sort": [
+{"id": "step1", "text": "Identify customer needs"},
+{"id": "step2", "text": "Present solution"},
+{"id": "step3", "text": "Handle objections"},
+{"id": "step4", "text": "Close the sale"}
+],
+"correct_order": ["step1", "step2", "step3", "step4"],
+"explanation": "The sales process follows a logical sequence: first understand needs, then present solutions, address concerns, and finally close."
+},
+{
+"question_type": "open-answer",
+"question_text": "What are the three key elements of an effective elevator pitch?",
+"acceptable_answers": [
+"Problem, Solution, Call to Action",
+"Problem statement, Your solution, What you want them to do next",
+"The issue, How you solve it, What action to take"
+],
+"explanation": "An effective elevator pitch should clearly state the problem, present your solution, and include a clear call to action."
+}
+]
+}
+            """
+            component_specific_instructions = """
+            You are an expert text-to-JSON parsing assistant for 'Quiz' content.
+            Your output MUST be a single, valid JSON object. Strictly follow the JSON structure provided in the example.
+
+            **Overall Goal:** Convert the provided quiz content into a structured JSON object that captures all questions, their types, options, correct answers, and explanations.
+
+            **Global Fields:**
+            1. `quizTitle` (string): The main title of the quiz.
+            2. `questions` (array): An array of question objects.
+            3. `detectedLanguage` (string): e.g., "en", "ru".
+
+            **Question Types and Their Structures:**
+
+            1. **Multiple Choice (`question_type: "multiple-choice"`)**
+               * `question_text` (string): The question text.
+               * `options` (array): List of `QuizQuestionOption` objects with `id` and `text`.
+               * `correct_option_id` (string): The ID of the correct option.
+               * `explanation` (string, optional): Explanation of the correct answer.
+
+            2. **Multi-Select (`question_type: "multi-select"`)**
+               * `question_text` (string): The question text.
+               * `options` (array): List of `QuizQuestionOption` objects with `id` and `text`.
+               * `correct_option_ids` (array): Array of IDs of all correct options.
+               * `explanation` (string, optional): Explanation of the correct answers.
+
+            3. **Matching (`question_type: "matching"`)**
+               * `question_text` (string): The question text.
+               * `prompts` (array): List of `MatchingPrompt` objects with `id` and `text`.
+               * `options` (array): List of `MatchingOption` objects with `id` and `text`.
+               * `correct_matches` (object): Maps prompt IDs to option IDs.
+               * `explanation` (string, optional): Explanation of the correct matches.
+
+            4. **Sorting (`question_type: "sorting"`)**
+               * `question_text` (string): The question text.
+               * `items_to_sort` (array): List of `SortableItem` objects with `id` and `text`.
+               * `correct_order` (array): Array of item IDs in the correct sequence.
+               * `explanation` (string, optional): Explanation of the correct order.
+
+            5. **Open Answer (`question_type: "open-answer"`)**
+               * `question_text` (string): The question text.
+               * `acceptable_answers` (array): List of acceptable answer strings.
+               * `explanation` (string, optional): Explanation or additional context.
+
+            **Key Parsing Rules:**
+            1. Each question must have a unique type and appropriate fields for that type.
+            2. Option IDs should be consistent (e.g., "A", "B", "C" for multiple choice).
+            3. Maintain original language and formatting in all text fields.
+            4. Include explanations where available to help users understand correct answers.
+            5. Ensure all required fields are present for each question type.
+            6. Validate that correct answers reference valid option IDs.
+
+            Return ONLY the JSON object.
             """
         else:
             logger.warning(f"Unknown component_name '{selected_design_template.component_name}' for DT ID {selected_design_template.id}. Defaulting to TrainingPlanDetails for parsing.")
@@ -1595,6 +1797,29 @@ async def download_project_instance_pdf(
                     "mainPresentationTitle": f"Content Error: {mp_name_for_pdf_context}",
                     "slides": [], "detectedLanguage": detected_lang_for_pdf
                 }
+        elif component_name == COMPONENT_NAME_QUIZ: # Quiz handling
+            pdf_template_file = "quiz_pdf_template.html"
+            if content_json and isinstance(content_json, dict):
+                try:
+                    parsed_model = QuizData(**content_json)
+                    if parsed_model.detectedLanguage:
+                        detected_lang_for_pdf = parsed_model.detectedLanguage
+                        # Update locale strings if language detection changed
+                        current_pdf_locale_strings = VIDEO_SCRIPT_LANG_STRINGS.get(detected_lang_for_pdf, VIDEO_SCRIPT_LANG_STRINGS['en'])
+                    data_for_template_render = json.loads(json.dumps(parsed_model.model_dump(mode='json', exclude_none=True)))
+                except Exception as e_parse_dump:
+                    logger.error(f"Pydantic parsing/dumping failed for Quiz (Proj {project_id}): {e_parse_dump}", exc_info=not IS_PRODUCTION)
+                    data_for_template_render = {
+                        "quizTitle": f"Content Error: {mp_name_for_pdf_context}",
+                        "questions": [],
+                        "detectedLanguage": detected_lang_for_pdf
+                    }
+            else:
+                data_for_template_render = {
+                    "quizTitle": f"Content Error: {mp_name_for_pdf_context}",
+                    "questions": [],
+                    "detectedLanguage": detected_lang_for_pdf
+                }
         else:
             logger.warning(f"PDF: Unknown component_name '{component_name}' for project {project_id}. Defaulting to simple PDF Lesson structure.")
             pdf_template_file = "pdf_lesson_pdf_template.html" # Or a generic template
@@ -1680,3 +1905,8 @@ SectionBreakBlock.model_rebuild()
 BulletListBlock.model_rebuild()
 NumberedListBlock.model_rebuild()
 PdfLessonDetails.model_rebuild()
+QuizData.model_rebuild()
+ProjectDB.model_rebuild()
+MicroProductApiResponse.model_rebuild()
+ProjectDetailForEditResponse.model_rebuild()
+ProjectUpdateRequest.model_rebuild()
