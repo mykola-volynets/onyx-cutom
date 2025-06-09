@@ -92,7 +92,7 @@ export default function ProjectInstanceViewPage() {
     // Assuming 'Training Plan' is the type of the container project, we filter it out
     const courseMicroproducts = allUserMicroproducts
       .filter(mp => mp.projectName === parentProjectNameForCurrentView && mp.design_microproduct_type !== 'Training Plan')
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   
     const currentIndex = courseMicroproducts.findIndex(mp => mp.id === projectInstanceData.project_id);
 
