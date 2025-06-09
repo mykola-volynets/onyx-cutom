@@ -173,7 +173,7 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
   const sections = dataToDisplay?.sections;
   const mainTitle = dataToDisplay?.mainTitle;
   const lang = dataToDisplay?.detectedLanguage === 'en' ? 'en' : dataToDisplay?.detectedLanguage === 'uk' ? 'uk' : 'ru';
-  const localized = locales[lang].trainingPlan;
+  const localized = locales[lang as keyof typeof locales].trainingPlan;
 
   const handleGenericInputChange = (path: (string|number)[], event: React.ChangeEvent<HTMLInputElement>) => {
     if (onTextChange) onTextChange(path, event.target.value);

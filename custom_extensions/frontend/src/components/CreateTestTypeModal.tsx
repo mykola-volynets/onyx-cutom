@@ -90,7 +90,7 @@ export const CreateTestTypeModal = ({
   sourceChatSessionId,
   detectedLanguage = 'en'
 }: CreateTestTypeModalProps) => {
-  const localized = locales[detectedLanguage].modals.createTest;
+  const localized = locales[detectedLanguage as keyof typeof locales].modals.createTest;
 
   const handleTestCreate = (testType: string) => {
     if (!sourceChatSessionId) {

@@ -163,7 +163,7 @@ const VideoLessonDisplay = ({
   const { mainPresentationTitle, slides = [] } = dataToDisplay;
 
   const lang = dataToDisplay.detectedLanguage || 'en';
-  const localized = locales[lang].videoLesson;
+  const localized = locales[lang as keyof typeof locales].videoLesson;
   
   // NEW: A unified class for all content display boxes to ensure a consistent look and feel.
   const contentDisplayBoxClass = `p-3 border ${THEME_COLORS.lightBorder} rounded-md ${THEME_COLORS.contentBoxBg} min-h-[60px] ${THEME_COLORS.primaryText} text-base leading-relaxed whitespace-pre-wrap`;

@@ -90,7 +90,7 @@ export const CreateLessonTypeModal = ({
   sourceChatSessionId,
   detectedLanguage = 'en'
 }: CreateLessonTypeModalProps) => {
-  const localized = locales[detectedLanguage].modals.createLesson;
+  const localized = locales[detectedLanguage as keyof typeof locales].modals.createLesson;
 
   const handleLessonCreate = (lessonType: string) => {
     if (!sourceChatSessionId) {
