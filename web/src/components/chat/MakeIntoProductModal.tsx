@@ -15,6 +15,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, AlertTriangle, CheckCircle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { DesignTemplateResponse } from '@/types/designTemplates';
 
@@ -46,11 +53,26 @@ const MakeIntoProductModal: React.FC<MakeIntoProductModalProps> = ({
 }) => {
   const [designs, setDesigns] = useState<DesignTemplateResponse[]>([]);
   const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const forceWhiteBackgroundStyle = {
     backgroundColor: '#FFFFFF !important' as any,
+  };
+
+  const languages = [
+    { value: 'en', label: 'English' },
+    { value: 'uk', label: 'Ukrainian' },
+    { value: 'es', label: 'Spanish' },
+    { value: 'ru', label: 'Russian' },
+  ];
+
+  const messageTemplates: { [key: string]: string } = {
+    en: "Hi, I would like to create a",
+    uk: "Привіт, я хочу створити",
+    es: "Hola, me gustaría crear un",
+    ru: "Привет, я хочу создать",
   };
 
   const fetchDesigns = useCallback(async () => {
@@ -76,6 +98,7 @@ const MakeIntoProductModal: React.FC<MakeIntoProductModalProps> = ({
     if (isOpen) {
       fetchDesigns();
       setSelectedDesignId(null);
+      setSelectedLanguage('en');
     }
   }, [isOpen, fetchDesigns]);
 
@@ -83,7 +106,8 @@ const MakeIntoProductModal: React.FC<MakeIntoProductModalProps> = ({
     if (selectedDesignId) {
       const chosenDesign = designs.find(d => d.id.toString() === selectedDesignId);
       if (chosenDesign) {
-        const messageToSend = `Hi, I would like to create a ${chosenDesign.template_name}`;
+        const template = messageTemplates[selectedLanguage] || messageTemplates.en;
+        const messageToSend = `${template} ${chosenDesign.template_name}`;
         onApply(messageToSend);
       }
     }
@@ -171,19 +195,35 @@ const MakeIntoProductModal: React.FC<MakeIntoProductModalProps> = ({
             </div>
           )}
         </div>
-        <DialogFooter className="mt-4 pt-4 border-t">
-          <DialogClose asChild>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+        <DialogFooter className="mt-4 pt-4 border-t flex justify-between items-center">
+          <div className="w-40">
+            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {languages.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              onClick={handleApply}
+              disabled={!selectedDesignId || isLoading || designs.length === 0}
+            >
+              Choose & Start Chat
             </Button>
-          </DialogClose>
-          <Button
-            type="button"
-            onClick={handleApply}
-            disabled={!selectedDesignId || isLoading || designs.length === 0}
-          >
-            Choose & Start Chat
-          </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
