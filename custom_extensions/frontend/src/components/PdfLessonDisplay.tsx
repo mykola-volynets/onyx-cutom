@@ -373,6 +373,39 @@ export interface PdfLessonDisplayProps {
   lessonNumber?: number;
 }
 
+const processContentBlocks = (blocks: AnyContentBlock[]) => {
+  const renderableItems: RenderableItem[] = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const currentBlock = blocks[i];
+    const nextBlock = i + 1 < blocks.length ? blocks[i+1] : null;
+
+    if (currentBlock.type === 'section_break') {
+      i++;
+      continue;
+    }
+
+    let isImportantHeadline = currentBlock.type === 'headline' && (currentBlock as HeadlineBlock).isImportant;
+    let isListFollowing = nextBlock && (nextBlock.type === 'bullet_list' || nextBlock.type === 'numbered_list');
+
+    if (isImportantHeadline && isListFollowing) {
+      renderableItems.push({ 
+        type: "mini_section", 
+        headline: currentBlock as HeadlineBlock, 
+        list: nextBlock as BulletListBlock | NumberedListBlock 
+      });
+      i += 2;
+    } else {
+      renderableItems.push({ type: "standalone_block", content: currentBlock });
+      i++;
+    }
+  }
+
+  const lastMajorSectionIndex = blocks.map(b => b.type === 'headline' ? (b as HeadlineBlock).level === 2 : false).lastIndexOf(true);
+  
+  return { structuredContent: renderableItems, lastMajorSectionIndex };
+};
+
 const PdfLessonDisplayComponent = ({ dataToDisplay, isEditing, onTextChange, parentProjectName, lessonNumber }: PdfLessonDisplayProps) => {
   const searchParams = useSearchParams();
   const lang = dataToDisplay?.detectedLanguage || 'en';
