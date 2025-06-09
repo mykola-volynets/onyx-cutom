@@ -81,11 +81,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
       const multiSelectQuestion = question as MultiSelectQuestion;
       let currentCorrectIds: string[] = [];
       if (typeof multiSelectQuestion.correct_option_ids === 'string') {
-        try {
-          currentCorrectIds = JSON.parse(multiSelectQuestion.correct_option_ids);
-        } catch (e) {
-          currentCorrectIds = [];
-        }
+        currentCorrectIds = multiSelectQuestion.correct_option_ids.split(',').filter(id => id.trim() !== '');
       } else if (Array.isArray(multiSelectQuestion.correct_option_ids)) {
         currentCorrectIds = multiSelectQuestion.correct_option_ids;
       }
@@ -93,7 +89,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
       const newCorrectIds = isCorrect
         ? currentCorrectIds.filter(id => id !== optionId)
         : [...currentCorrectIds, optionId];
-      handleTextChange(['questions', questionIndex, 'correct_option_ids'], JSON.stringify(newCorrectIds));
+      handleTextChange(['questions', questionIndex, 'correct_option_ids'], newCorrectIds.join(','));
     }
   };
 
@@ -156,11 +152,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
 
     let correctIds: string[] = [];
     if (typeof question.correct_option_ids === 'string') {
-      try {
-        correctIds = JSON.parse(question.correct_option_ids);
-      } catch (e) {
-        correctIds = [];
-      }
+      correctIds = question.correct_option_ids.split(',').filter(id => id.trim() !== '');
     } else if (Array.isArray(question.correct_option_ids)) {
       correctIds = question.correct_option_ids;
     }

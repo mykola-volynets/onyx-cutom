@@ -32,7 +32,7 @@ export interface MultipleChoiceQuestion extends BaseQuestion {
 export interface MultiSelectQuestion extends BaseQuestion {
     question_type: "multi-select";
     options: QuizQuestionOption[];
-    correct_option_ids: string[];
+    correct_option_ids: string[] | string;
 }
 
 export interface MatchingQuestion extends BaseQuestion {
