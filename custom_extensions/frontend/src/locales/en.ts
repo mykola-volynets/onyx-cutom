@@ -1,4 +1,8 @@
 export const en = {
+  common: {
+    course: "COURSE",
+    lesson: "LESSON",
+  },
   trainingPlan: {
     moduleAndLessons: "Module and Lessons",
     knowledgeCheck: "Knowledge Check",

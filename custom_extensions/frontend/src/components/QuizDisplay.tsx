@@ -32,15 +32,16 @@ interface QuizDisplayProps {
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newText: string) => void;
   parentProjectName?: string;
+  lessonNumber?: number;
 }
 
-const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onTextChange, parentProjectName }) => {
+const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onTextChange, parentProjectName, lessonNumber }) => {
   const [userAnswers, setUserAnswers] = useState<Record<number, any>>({});
   const [showAnswers, setShowAnswers] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const searchParams = useSearchParams();
   const lang = dataToDisplay?.detectedLanguage || 'en';
-  const t = locales[lang as keyof typeof locales].quiz;
+  const t = locales[lang as keyof typeof locales];
 
   if (!dataToDisplay || !dataToDisplay.questions) {
     return null;
@@ -416,7 +417,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
       {parentProjectName && (
         <div style={{ borderLeft: '3px solid #FF1414', paddingLeft: '10px', marginBottom: '8px' }}>
           <h2 style={{ textTransform: 'uppercase', fontSize: '1.125rem', fontWeight: 500, color: 'black', margin: 0 }}>
-            <span style={{ color: '#FF1414' }}>COURSE:</span> {parentProjectName}
+            <span style={{ color: '#FF1414' }}>{t.common.course}:</span> {parentProjectName}
           </h2>
         </div>
       )}
@@ -427,10 +428,13 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
             value={dataToDisplay.quizTitle}
             onChange={(e) => handleTextChange(['quizTitle'], e.target.value)}
             className="w-full p-2 border rounded text-2xl font-bold mb-2 text-black"
-            placeholder={t.quizTitle}
+            placeholder={t.quiz.quizTitle}
           />
         ) : (
-          <h1 className="font-bold text-black mb-2" style={{ fontSize: '1.875rem', lineHeight: '2.25rem' }}>{dataToDisplay.quizTitle || t.quizTitle}</h1>
+          <h1 className="font-bold text-black mb-2" style={{ fontSize: '1.875rem', lineHeight: '2.25rem' }}>
+            {lessonNumber && <span style={{ color: '#FF1414' }}>{t.common.lesson} №{lessonNumber}: </span>}
+            {dataToDisplay.quizTitle || t.quiz.quizTitle}
+          </h1>
         )}
       </div>
 

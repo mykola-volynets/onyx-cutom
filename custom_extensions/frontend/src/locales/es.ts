@@ -1,6 +1,10 @@
 export const es = {
+  common: {
+    course: "CURSO",
+    lesson: "LECCIÓN",
+  },
   trainingPlan: {
-    moduleAndLessons: "Módulo y lecciones",
+    moduleAndLessons: "Módulo y Lecciones",
     knowledgeCheck: "Verificación de conocimientos",
     contentAvailability: "Disponibilidad de contenido",
     source: "Fuente de información",

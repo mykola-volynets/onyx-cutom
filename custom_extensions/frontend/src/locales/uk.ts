@@ -1,4 +1,8 @@
 export const uk = {
+  common: {
+    course: "КУРС",
+    lesson: "УРОК",
+  },
   trainingPlan: {
     moduleAndLessons: "Модуль та уроки",
     knowledgeCheck: "Перевірка знань",

@@ -1,4 +1,8 @@
 export const ru = {
+  common: {
+    course: "КУРС",
+    lesson: "УРОК",
+  },
   trainingPlan: {
     moduleAndLessons: "Модуль и уроки",
     knowledgeCheck: "Проверка знаний",

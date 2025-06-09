@@ -664,6 +664,8 @@ VIDEO_SCRIPT_LANG_STRINGS = {
         'VOICEOVER_TEXT_LABEL': 'Текст озвучки:',
         'NO_SLIDES_TEXT': 'Нет слайдов для отображения.',
         'EMPTY_CONTENT_PLACEHOLDER': '...',
+        'courseLabel': 'КУРС',
+        'lessonLabel': 'УРОК',
         'quiz': {
             'quizTitle': 'Название теста',
             'question': 'Вопрос',
@@ -693,6 +695,8 @@ VIDEO_SCRIPT_LANG_STRINGS = {
         'VOICEOVER_TEXT_LABEL': 'Voiceover Text:',
         'NO_SLIDES_TEXT': 'No slides to display.',
         'EMPTY_CONTENT_PLACEHOLDER': '...',
+        'courseLabel': 'COURSE',
+        'lessonLabel': 'LESSON',
         'quiz': {
             'quizTitle': 'Quiz Title',
             'question': 'Question',
@@ -722,6 +726,8 @@ VIDEO_SCRIPT_LANG_STRINGS = {
         'VOICEOVER_TEXT_LABEL': 'Текст озвучення:',
         'NO_SLIDES_TEXT': 'Немає слайдів для відображення.',
         'EMPTY_CONTENT_PLACEHOLDER': '...',
+        'courseLabel': 'КУРС',
+        'lessonLabel': 'УРОК',
         'quiz': {
             'quizTitle': 'Назва тесту',
             'question': 'Питання',
@@ -751,6 +757,8 @@ VIDEO_SCRIPT_LANG_STRINGS = {
         'VOICEOVER_TEXT_LABEL': 'Texto de voz en off:',
         'NO_SLIDES_TEXT': 'No hay diapositivas para mostrar.',
         'EMPTY_CONTENT_PLACEHOLDER': '...',
+        'courseLabel': 'CURSO',
+        'lessonLabel': 'LECCIÓN',
         'quiz': {
             'quizTitle': 'Título del cuestionario',
             'question': 'Pregunta',

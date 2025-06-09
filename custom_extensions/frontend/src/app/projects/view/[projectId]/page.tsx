@@ -393,11 +393,13 @@ export default function ProjectInstanceViewPage() {
           />
         );
       case COMPONENT_NAME_QUIZ:
+        const quizData = editableData as QuizData | null;
         return (
-          <QuizDisplay
-            dataToDisplay={editableData as QuizData}
-            isEditing={isEditing}
-            onTextChange={handleTextChange}
+          <QuizDisplay 
+            dataToDisplay={quizData} 
+            isEditing={isEditing} 
+            onTextChange={handleTextChange} 
+            parentProjectName={parentProjectNameForCurrentView}
           />
         );
       default:
