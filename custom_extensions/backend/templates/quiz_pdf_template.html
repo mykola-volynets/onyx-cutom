@@ -22,7 +22,7 @@
         .quiz-container { 
             width: 100%;
             max-width: 800px;
-            margin: 20px auto;
+            margin: 0 auto;
             background-color: #ffffff;
             padding: 30px;
             border-radius: 10px;
@@ -240,7 +240,7 @@
                                 </ul>
                             </td>
                             <td class="options-col">
-                                <strong>{{ locale.quiz.options | default('Options') }}:</strong>
+                                <strong>{{ locale.quiz.options }}:</strong>
                                 <ul style="list-style-type: none; padding-left: 0;">
                                 {% for option in question.options %}
                                     <li>{{ option.id }}. {{ option.text }}</li>
