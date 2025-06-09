@@ -37,12 +37,19 @@ const ProjectsTable = ({
   onProjectClick,
   detectedLanguage = 'en'
 }: ProjectsTableProps) => {
-  const localized = locales[detectedLanguage]?.projects || locales['en'].projects;
+  // Reverted to initial version without localization
+  const localized = {
+    name: 'Name',
+    description: 'Description',
+    status: 'Status',
+    createdAt: 'Created At',
+    noProjects: 'No projects found.'
+  };
 
   if (!projects.length) {
     return (
       <div className="text-center py-8 text-gray-500">
-        {localized.noProductsSelected}
+        {localized.noProjects}
       </div>
     );
   }
@@ -53,16 +60,16 @@ const ProjectsTable = ({
         <thead className="bg-gray-50">
           <tr>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {localized.name || 'Name'}
+              {localized.name}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {localized.description || 'Description'}
+              {localized.description}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {localized.status || 'Status'}
+              {localized.status}
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {localized.createdAt || 'Created At'}
+              {localized.createdAt}
             </th>
           </tr>
         </thead>
@@ -83,7 +90,7 @@ const ProjectsTable = ({
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                   project.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {localized[project.status as keyof typeof localized] || project.status || 'Unknown'}
+                  {project.status}
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
