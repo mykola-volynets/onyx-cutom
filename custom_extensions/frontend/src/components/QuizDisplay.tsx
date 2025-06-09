@@ -37,9 +37,11 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
   const [showAnswers, setShowAnswers] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  if (!dataToDisplay) {
+  if (!dataToDisplay || !dataToDisplay.questions) {
     return null;
   }
+
+  const questions = Array.isArray(dataToDisplay.questions) ? dataToDisplay.questions : [];
 
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     setUserAnswers((prev: Record<number, any>) => ({
@@ -402,7 +404,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-black mb-2">{dataToDisplay.quizTitle}</h1>
+        <h1 className="text-2xl font-bold text-black mb-2">{dataToDisplay.quizTitle || 'Untitled Quiz'}</h1>
         {!isSubmitted && (
           <p className="text-gray-600">
             Complete all questions and click "Submit" to check your answers.
@@ -411,7 +413,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
       </div>
 
       <div className="space-y-6">
-        {dataToDisplay.questions.map((question, index) => renderQuestion(question, index))}
+        {questions.map((question, index) => renderQuestion(question, index))}
       </div>
 
       <div className="mt-8 flex justify-center space-x-4">
