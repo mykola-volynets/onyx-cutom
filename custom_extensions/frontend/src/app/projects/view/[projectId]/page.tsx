@@ -365,6 +365,9 @@ export default function ProjectInstanceViewPage() {
             dataToDisplay={editableData as TrainingPlanData}
             isEditing={isEditing}
             onTextChange={handleTextChange}
+            sourceChatSessionId={projectInstanceData.sourceChatSessionId}
+            allUserMicroproducts={allUserMicroproducts}
+            parentProjectName={parentProjectNameForCurrentView}
           />
         );
       case COMPONENT_NAME_PDF_LESSON:
