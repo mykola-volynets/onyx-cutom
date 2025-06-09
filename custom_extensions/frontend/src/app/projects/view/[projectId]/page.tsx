@@ -362,7 +362,7 @@ export default function ProjectInstanceViewPage() {
       return null; 
     }
 
-    const parentProjectName = searchParams.get('parentProjectName');
+    const parentProjectName = searchParams.get('parentProjectName') || undefined;
     const lessonNumberStr = searchParams.get('lessonNumber');
     const lessonNumber = lessonNumberStr ? parseInt(lessonNumberStr, 10) : undefined;
 
