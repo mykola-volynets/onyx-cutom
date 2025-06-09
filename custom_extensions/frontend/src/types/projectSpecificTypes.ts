@@ -115,3 +115,6 @@ export type {
 // However, if videoLessonTypes.ts already exports them, this isn't strictly necessary
 // but makes projectSpecificTypes.ts a more complete "aggregator" if desired.
 export type { VideoLessonData, VideoLessonSlideData } from './videoLessonTypes';
+
+// Export Quiz types
+export type { QuizData } from './quizTypes';
