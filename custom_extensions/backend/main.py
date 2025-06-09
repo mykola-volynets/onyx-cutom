@@ -1817,19 +1817,28 @@ async def download_project_instance_pdf(
                         detected_lang_for_pdf = parsed_model.detectedLanguage
                         # Update locale strings if language detection changed
                         current_pdf_locale_strings = VIDEO_SCRIPT_LANG_STRINGS.get(detected_lang_for_pdf, VIDEO_SCRIPT_LANG_STRINGS['en'])
-                    data_for_template_render = json.loads(json.dumps(parsed_model.model_dump(mode='json', exclude_none=True)))
+                    data_for_template_render = {
+                        "details": parsed_model.model_dump(mode='json', exclude_none=True),
+                        "locale": current_pdf_locale_strings
+                    }
                 except Exception as e_parse_dump:
                     logger.error(f"Pydantic parsing/dumping failed for Quiz (Proj {project_id}): {e_parse_dump}", exc_info=not IS_PRODUCTION)
                     data_for_template_render = {
-                        "quizTitle": f"Content Error: {mp_name_for_pdf_context}",
-                        "questions": [],
-                        "detectedLanguage": detected_lang_for_pdf
+                        "details": {
+                            "quizTitle": f"Content Error: {mp_name_for_pdf_context}",
+                            "questions": [],
+                            "detectedLanguage": detected_lang_for_pdf
+                        },
+                        "locale": current_pdf_locale_strings
                     }
             else:
                 data_for_template_render = {
-                    "quizTitle": f"Content Error: {mp_name_for_pdf_context}",
-                    "questions": [],
-                    "detectedLanguage": detected_lang_for_pdf
+                    "details": {
+                        "quizTitle": f"Content Error: {mp_name_for_pdf_context}",
+                        "questions": [],
+                        "detectedLanguage": detected_lang_for_pdf
+                    },
+                    "locale": current_pdf_locale_strings
                 }
         else:
             logger.warning(f"PDF: Unknown component_name '{component_name}' for project {project_id}. Defaulting to simple PDF Lesson structure.")

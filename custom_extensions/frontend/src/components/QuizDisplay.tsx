@@ -429,24 +429,6 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
       <div className="space-y-6">
         {questions.map((question, index) => renderQuestion(question, index))}
       </div>
-
-      <div className="mt-8 flex justify-center space-x-4">
-        {!isSubmitted ? (
-          <button
-            onClick={handleSubmit}
-            className="px-6 py-2 bg-[#FF1414] text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            Submit Answers
-          </button>
-        ) : (
-          <button
-            onClick={handleReset}
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-          >
-            Try Again
-          </button>
-        )}
-      </div>
     </div>
   );
 };

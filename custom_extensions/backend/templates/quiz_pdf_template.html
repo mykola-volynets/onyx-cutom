@@ -132,10 +132,9 @@
 </head>
 <body>
     <div class="quiz-container">
-        {% set quiz = details.details %}
-        <div class="quiz-title">{{ quiz.quizTitle }}</div>
+        <div class="quiz-title">{{ details.details.quizTitle }}</div>
 
-        {% for question in quiz.questions %}
+        {% for question in details.details.questions %}
             <div class="question-block">
                 <div class="question-text">{{ details.locale.quiz.question }} {{ loop.index }}: {{ question.question_text }}</div>
 
@@ -190,7 +189,7 @@
 
         <div class="answer-key">
             <div class="answer-key-title">{{ details.locale.quiz.correctAnswer }}</div>
-            {% for question in quiz.questions %}
+            {% for question in details.details.questions %}
                 <div class="answer-block">
                     <div><strong>{{ details.locale.quiz.question }} {{ loop.index }}:</strong></div>
                     {% if question.question_type == 'multiple-choice' %}
