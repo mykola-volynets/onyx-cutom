@@ -7,6 +7,7 @@ import { TrainingPlanData, Section as SectionType, Lesson as LessonType } from '
 import { ProjectListItem } from '@/types/products';
 import { CreateLessonTypeModal } from './CreateLessonTypeModal';
 import { CreateTestTypeModal } from './CreateTestTypeModal';
+import { locales } from '@/locales';
 
 // --- Custom SVG Icons ---
 const NewPieChartIcon = ({ color = '#FF1414', className = '' }) => (
@@ -83,13 +84,7 @@ interface TrainingPlanTableProps {
   sourceChatSessionId?: string | null;
 }
 
-const localizationConfig = {
-  ru: { moduleAndLessons: "Модуль и уроки", knowledgeCheck: "Проверка знаний", contentAvailability: "Наличие контента", source: "Источник информации", time: "Время", timeUnitSingular: "ч", timeUnitDecimalPlural: "ч", timeUnitGeneralPlural: "ч", },
-  en: { moduleAndLessons: "Module and Lessons", knowledgeCheck: "Knowledge Check", contentAvailability: "Content Availability", source: "Information Source", time: "Time", timeUnitSingular: "h", timeUnitDecimalPlural: "h", timeUnitGeneralPlural: "h", },
-  uk: { moduleAndLessons: "Модуль та уроки", knowledgeCheck: "Перевірка знань", contentAvailability: "Наявність контенту", source: "Джерело інформації", time: "Час", timeUnitSingular: "год", timeUnitDecimalPlural: "год", timeUnitGeneralPlural: "год", },
-};
-
-const getRussianHourUnit = (hours: number, units: typeof localizationConfig['ru']) => {
+const getRussianHourUnit = (hours: number, units: typeof locales['ru']['trainingPlan']) => {
   const h_int = Math.floor(hours); const h_mod10 = h_int % 10; const h_mod100 = h_int % 100;
   if (units.timeUnitSingular === "ч" && units.timeUnitDecimalPlural === "ч" && units.timeUnitGeneralPlural === "ч") { return units.timeUnitSingular; }
   if (hours !== h_int) { return units.timeUnitDecimalPlural; }
@@ -98,7 +93,7 @@ const getRussianHourUnit = (hours: number, units: typeof localizationConfig['ru'
   if (h_mod10 >= 2 && h_mod10 <= 4) { return units.timeUnitDecimalPlural; }
   return units.timeUnitGeneralPlural;
 };
-const getUkrainianHourUnit = (hours: number, units: typeof localizationConfig['uk']) => {
+const getUkrainianHourUnit = (hours: number, units: typeof locales['uk']['trainingPlan']) => {
   const h_int = Math.floor(hours); const h_mod10 = h_int % 10; const h_mod100 = h_int % 100;
   if (hours !== h_int && hours > 0) { if (h_int === 1 || (h_int === 0 && hours * 10 % 10 === 1 && hours * 100 % 100 !== 11) ) { return units.timeUnitSingular; } return units.timeUnitDecimalPlural; }
   if (h_mod100 >= 11 && h_mod100 <= 14) { return units.timeUnitGeneralPlural; }
@@ -107,7 +102,7 @@ const getUkrainianHourUnit = (hours: number, units: typeof localizationConfig['u
   return units.timeUnitGeneralPlural;
 };
 
-const formatHoursDisplay = (hours: number | string, language: 'ru' | 'en' | 'uk', localized: typeof localizationConfig['ru'] | typeof localizationConfig['en'] | typeof localizationConfig['uk'], isEditingContext?: boolean) => {
+const formatHoursDisplay = (hours: number | string, language: 'ru' | 'en' | 'uk', localized: typeof locales['ru']['trainingPlan'] | typeof locales['en']['trainingPlan'] | typeof locales['uk']['trainingPlan'], isEditingContext?: boolean) => {
     const numHours = Number(hours);
     if (isNaN(numHours)) return isEditingContext ? "" : "-";
     if (numHours <= 0 && !isEditingContext) return '-';
@@ -116,8 +111,8 @@ const formatHoursDisplay = (hours: number | string, language: 'ru' | 'en' | 'uk'
 
     const numStr = numHours % 1 === 0 ? numHours.toFixed(0) : numHours.toFixed(1);
     if (language === 'en') { return `${numStr}${localized.timeUnitSingular}`; }
-    if (language === 'ru') { return `${numStr}${getRussianHourUnit(numHours, localized as typeof localizationConfig['ru'])}`; }
-    return `${numStr} ${getUkrainianHourUnit(numHours, localized as typeof localizationConfig['uk'])}`;
+    if (language === 'ru') { return `${numStr}${getRussianHourUnit(numHours, localized as typeof locales['ru']['trainingPlan'])}`; }
+    return `${numStr} ${getUkrainianHourUnit(numHours, localized as typeof locales['uk']['trainingPlan'])}`;
 };
 
 const MAX_SOURCE_LENGTH = 25;
@@ -178,7 +173,7 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
   const sections = dataToDisplay?.sections;
   const mainTitle = dataToDisplay?.mainTitle;
   const lang = dataToDisplay?.detectedLanguage === 'en' ? 'en' : dataToDisplay?.detectedLanguage === 'uk' ? 'uk' : 'ru';
-  const localized = localizationConfig[lang];
+  const localized = locales[lang].trainingPlan;
 
   const handleGenericInputChange = (path: (string|number)[], event: React.ChangeEvent<HTMLInputElement>) => {
     if (onTextChange) onTextChange(path, event.target.value);

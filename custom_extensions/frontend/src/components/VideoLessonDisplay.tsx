@@ -2,9 +2,10 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 // import Image from 'next/image';
 import { VideoLessonData, VideoLessonSlideData } from '@/types/videoLessonTypes'; // Adjust path
+import { locales } from '@/locales';
 
 // --- Theme Colors (consistent with PdfLessonDisplay & image) ---
 const THEME_COLORS = {
@@ -162,21 +163,7 @@ const VideoLessonDisplay = ({
   const { mainPresentationTitle, slides = [] } = dataToDisplay;
 
   const lang = dataToDisplay.detectedLanguage || 'en';
-  const localeStrings = useMemo(() => ({
-    slide: lang === 'ru' ? 'Слайд' : lang === 'uk' ? 'Слайд' : 'Slide',
-    displayedTextLabel: lang === 'ru' ? 'Отображаемый текст' : lang === 'uk' ? 'Текст, що відображається' : 'Displayed text',
-    displayingImageLabel: lang === 'ru' ? 'Изображение (описание)' : lang === 'uk' ? 'Зображення (опис)' : 'Image (description)',
-    displayedVideoLabel: lang === 'ru' ? 'Видео (описание)' : lang === 'uk' ? 'Відео (опис)' : 'Video (description)',
-    voiceoverTextLabel: lang === 'ru' ? 'Текст озвучки' : lang === 'uk' ? 'Текст озвучення' : 'Voiceover text',
-    noSlides: lang === 'ru' ? 'Слайды не найдены.' : lang === 'uk' ? 'Слайди не знайдено.' : 'No slides found.',
-    editMainTitlePlaceholder: lang === 'ru' ? 'Заголовок видео-урока' : lang === 'uk' ? 'Заголовок відео-уроку' : 'Video Lesson Title',
-    editSlideTitlePlaceholder: lang === 'ru' ? 'Заголовок слайда' : lang === 'uk' ? 'Заголовок слайду' : 'Slide Title',
-    editTextPlaceholder: lang === 'ru' ? 'Короткое предложение для слайда...' : lang === 'uk' ? 'Коротке речення для слайду...' : 'Short sentence for the slide...',
-    editImageDescPlaceholder: lang === 'ru' ? 'Краткое описание изображения...' : lang === 'uk' ? 'Стислий опис зображення...' : 'Concise image description...',
-    editVideoDescPlaceholder: lang === 'ru' ? 'Краткое описание видео/анимации...' : lang === 'uk' ? 'Стислий опис відео/анімації...' : 'Concise video/animation description...',
-    editVoiceoverPlaceholder: lang === 'ru' ? 'Текст озвучки (до 3 предложений)...' : lang === 'uk' ? 'Текст озвучення (до 3 речень)...' : 'Voiceover text (max 3 sentences)...',
-    emptyContent: "...",
-  }), [lang]);
+  const localized = locales[lang].videoLesson;
   
   // NEW: A unified class for all content display boxes to ensure a consistent look and feel.
   const contentDisplayBoxClass = `p-3 border ${THEME_COLORS.lightBorder} rounded-md ${THEME_COLORS.contentBoxBg} min-h-[60px] ${THEME_COLORS.primaryText} text-base leading-relaxed whitespace-pre-wrap`;
@@ -190,7 +177,7 @@ const VideoLessonDisplay = ({
             type="text"
             value={mainPresentationTitle}
             onChange={handleMainTitleChange}
-            placeholder={localeStrings.editMainTitlePlaceholder}
+            placeholder={localized.editMainTitlePlaceholder}
             className={`w-full text-xl md:text-2xl font-semibold ${THEME_COLORS.headingText} ${editingInputClass('border-b text-center')}`}
           />
         ) : (
@@ -244,7 +231,7 @@ const VideoLessonDisplay = ({
         {/* Right Content Pane */}
         <div className="w-full md:w-2/3 lg:w-3/4 p-4 sm:p-6 md:p-8 overflow-y-auto">
           {!currentSlide && slides.length > 0 && (
-             <div className={`text-center ${THEME_COLORS.mutedText} pt-10`}>{localeStrings.noSlides}</div>
+             <div className={`text-center ${THEME_COLORS.mutedText} pt-10`}>{localized.noSlides}</div>
           )}
           {currentSlide && (
             <article className="space-y-5">
@@ -255,7 +242,7 @@ const VideoLessonDisplay = ({
                       type="text"
                       value={currentSlide.slideTitle}
                       onChange={(e) => handleSlideTitleChange(currentSlide.slideId, e.target.value)}
-                      placeholder={localeStrings.editSlideTitlePlaceholder}
+                      placeholder={localized.editSlideTitlePlaceholder}
                       className={`text-lg sm:text-xl font-semibold ${THEME_COLORS.headingText} ${editingInputClass()}`}
                     />
                 ) : (
@@ -268,19 +255,19 @@ const VideoLessonDisplay = ({
               {/* Displayed Text */}
               <section>
                 <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.accentRed} mb-1.5`}>
-                  <DisplayedTextIcon /> {localeStrings.displayedTextLabel}
+                  <DisplayedTextIcon /> {localized.displayedTextLabel}
                 </h3>
                 {isEditing && onTextChange ? (
                   <input
                     type="text" // Single short sentence
                     value={currentSlide.displayedText || ''}
                     onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'displayedText', e.target.value)}
-                    placeholder={localeStrings.editTextPlaceholder}
+                    placeholder={localized.editTextPlaceholder}
                     className={`text-base leading-relaxed ${THEME_COLORS.primaryText} ${editingInputClass('p-3')}`}
                   />
                 ) : (
                   <div className={contentDisplayBoxClass}>
-                    {currentSlide.displayedText || <span className={THEME_COLORS.mutedText}>{localeStrings.emptyContent}</span>}
+                    {currentSlide.displayedText || <span className={THEME_COLORS.mutedText}>{localized.emptyContent}</span>}
                   </div>
                 )}
               </section>
@@ -288,19 +275,19 @@ const VideoLessonDisplay = ({
               {/* Displaying Image Description */}
               <section>
                 <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.accentRed} mb-1.5`}>
-                  <DisplayingImageIcon /> {localeStrings.displayingImageLabel}
+                  <DisplayingImageIcon /> {localized.displayingImageLabel}
                 </h3>
                 {isEditing && onTextChange ? (
                    <textarea
                      value={currentSlide.displayedPictureDescription || ''}
                      onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'displayedPictureDescription', e.target.value)}
-                     placeholder={localeStrings.editImageDescPlaceholder}
+                     placeholder={localized.editImageDescPlaceholder}
                      className={`min-h-[60px] text-sm ${THEME_COLORS.primaryText} ${editingInputClass('p-3', 'textarea')}`}
                      rows={2}
                  />
                 ) : (
                    <div className={contentDisplayBoxClass}>
-                     {currentSlide.displayedPictureDescription || <span className={THEME_COLORS.mutedText}>{localeStrings.emptyContent}</span>}
+                     {currentSlide.displayedPictureDescription || <span className={THEME_COLORS.mutedText}>{localized.emptyContent}</span>}
                   </div>
                 )}
               </section>
@@ -308,19 +295,19 @@ const VideoLessonDisplay = ({
               {/* Displayed Video Description */}
               <section>
                 <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.accentRed} mb-1.5`}>
-                  <DisplayedVideoIcon /> {localeStrings.displayedVideoLabel}
+                  <DisplayedVideoIcon /> {localized.displayedVideoLabel}
                 </h3>
                  {isEditing && onTextChange ? (
                    <textarea
                      value={currentSlide.displayedVideoDescription || ''}
                      onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'displayedVideoDescription', e.target.value)}
-                     placeholder={localeStrings.editVideoDescPlaceholder}
+                     placeholder={localized.editVideoDescPlaceholder}
                      className={`min-h-[60px] text-sm ${THEME_COLORS.primaryText} ${editingInputClass('p-3', 'textarea')}`}
                      rows={2}
                  />
                 ) : (
                    <div className={contentDisplayBoxClass}>
-                     {currentSlide.displayedVideoDescription || <span className={THEME_COLORS.mutedText}>{localeStrings.emptyContent}</span>}
+                     {currentSlide.displayedVideoDescription || <span className={THEME_COLORS.mutedText}>{localized.emptyContent}</span>}
                   </div>
                 )}
               </section>
@@ -328,19 +315,19 @@ const VideoLessonDisplay = ({
               {/* Voiceover Text */}
               <section className="pt-4 border-t border-dashed border-gray-200">
                 <h3 className={`flex items-center text-xs sm:text-sm font-medium ${THEME_COLORS.accentRed} mb-1.5`}>
-                  <VoiceoverTextIcon /> {localeStrings.voiceoverTextLabel}
+                  <VoiceoverTextIcon /> {localized.voiceoverTextLabel}
                 </h3>
                  {isEditing && onTextChange ? (
                   <textarea
                     value={currentSlide.voiceoverText || ''}
                     onChange={(e) => handleSlideFieldChange(currentSlide.slideId, 'voiceoverText', e.target.value)}
-                    placeholder={localeStrings.editVoiceoverPlaceholder}
+                    placeholder={localized.editVoiceoverPlaceholder}
                     className={`min-h-[80px] text-sm ${THEME_COLORS.mutedText} ${editingInputClass('p-2', 'textarea')}`}
                     rows={3}
                   />
                 ) : (
                   <div className={contentDisplayBoxClass}>
-                    {currentSlide.voiceoverText || <span className={THEME_COLORS.mutedText}>{localeStrings.emptyContent}</span>}
+                    {currentSlide.voiceoverText || <span className={THEME_COLORS.mutedText}>{localized.emptyContent}</span>}
                   </div>
                 )}
               </section>

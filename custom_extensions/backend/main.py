@@ -16,6 +16,7 @@ import json
 import uuid
 import shutil
 import logging
+from .locales import LANG_CONFIG
 
 # --- CONTROL VARIABLE FOR PRODUCTION LOGGING ---
 # SET THIS TO True FOR PRODUCTION, False FOR DEVELOPMENT
@@ -571,22 +572,6 @@ def create_slug(text: Optional[str]) -> str:
     text_processed = re.sub(r'\s+', '-', text_processed)
     text_processed = re.sub(r'[^\wа-яёa-z0-9\-]+', '', text_processed, flags=re.UNICODE | re.IGNORECASE)
     return text_processed or "generated-slug"
-
-LANG_CONFIG = {
-    'ru': {'MODULE_KEYWORD': "Модуль",
-           'TIME_UNIT_SINGULAR': "час",'TIME_UNIT_DECIMAL_PLURAL': "часа",'TIME_UNIT_GENERAL_PLURAL': "часов",
-           'LESSONS_HEADER_KEYWORD': "Уроки", 'TOTAL_TIME_KEYWORD': "Общее время", 'TIME_KEYWORD': "время"},
-    'en': {'MODULE_KEYWORD': "Module",
-           'TIME_UNIT_SINGULAR': "hour",'TIME_UNIT_DECIMAL_PLURAL': "hours",'TIME_UNIT_GENERAL_PLURAL': "hours",
-           'LESSONS_HEADER_KEYWORD': "Lessons", 'TOTAL_TIME_KEYWORD': "Total time", 'TIME_KEYWORD': "time"},
-    'uk': {'MODULE_KEYWORD': "Модуль",
-           'TIME_UNIT_SINGULAR': "година",
-           'TIME_UNIT_DECIMAL_PLURAL': "години",
-           'TIME_UNIT_GENERAL_PLURAL': "годин",
-           'LESSONS_HEADER_KEYWORD': "Уроки",
-           'TOTAL_TIME_KEYWORD': "Загальний час",
-           'TIME_KEYWORD': "час"}
-}
 
 VIDEO_SCRIPT_LANG_STRINGS = {
     'ru': {

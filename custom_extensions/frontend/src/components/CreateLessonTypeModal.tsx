@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { BookText, Video, Film, X } from 'lucide-react';
+import { locales } from '@/locales';
 
 interface CreateLessonTypeModalProps {
   isOpen: boolean;
@@ -11,24 +12,25 @@ interface CreateLessonTypeModalProps {
   moduleName: string;      // Added for context
   lessonNumber: number;    // Added for context
   sourceChatSessionId: string | null | undefined;
+  detectedLanguage?: 'en' | 'ru' | 'uk';
 }
 
 const lessonTypes = [
   { 
-    name: "Lesson Presentation", 
+    name: "lessonPresentation", 
     icon: <BookText className="w-6 h-6" />, 
     disabled: false 
   },
   { 
-    name: "Video Lesson Script", 
+    name: "videoLessonScript", 
     icon: <Video className="w-6 h-6" />, 
     disabled: false 
   },
   { 
-    name: "Video Lesson", 
+    name: "videoLesson", 
     icon: <Film className="w-6 h-6" />, 
     disabled: true,
-    tooltip: "Coming soon!" 
+    tooltipKey: "comingSoon"
   },
 ];
 
@@ -85,12 +87,14 @@ export const CreateLessonTypeModal = ({
   lessonTitle, 
   moduleName,
   lessonNumber,
-  sourceChatSessionId 
+  sourceChatSessionId,
+  detectedLanguage = 'en'
 }: CreateLessonTypeModalProps) => {
+  const localized = locales[detectedLanguage].modals.createLesson;
 
   const handleLessonCreate = (lessonType: string) => {
     if (!sourceChatSessionId) {
-      alert("Error: Source chat session ID is not available. Cannot create lesson.");
+      alert(localized.errorNoSessionId);
       onClose();
       return;
     }
@@ -108,7 +112,7 @@ export const CreateLessonTypeModal = ({
   }
 
   return (
-    <Modal title="Create a Lesson" onClose={onClose}>
+    <Modal title={localized.title} onClose={onClose}>
       <div className="px-6 pb-6">
         <div className="text-center mb-4">
           <p className="text-2xl font-bold text-indigo-600 break-words">
@@ -119,15 +123,15 @@ export const CreateLessonTypeModal = ({
           {lessonTypes.map((type) => (
             <StyledButton
               key={type.name}
-              onClick={() => handleLessonCreate(type.name)}
+              onClick={() => handleLessonCreate(localized[type.name as keyof typeof localized])}
               disabled={type.disabled}
-              title={type.tooltip}
+              title={type.tooltipKey ? localized[type.tooltipKey as keyof typeof localized] : undefined}
             >
                 <div className="w-1/4 flex justify-center items-center">
                     {type.icon}
                 </div>
                 <div className="w-3/4 text-left">
-                    {type.name}
+                    {localized[type.name as keyof typeof localized]}
                 </div>
             </StyledButton>
           ))}
