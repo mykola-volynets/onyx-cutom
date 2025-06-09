@@ -79,6 +79,7 @@ interface TrainingPlanTableProps {
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newValue: string | number | boolean) => void;
   allUserMicroproducts?: ProjectListItem[];
+  parentProjectName?: string;
   sourceChatSessionId?: string | null;
 }
 
@@ -154,6 +155,7 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
   isEditing,
   onTextChange,
   allUserMicroproducts,
+  parentProjectName,
   sourceChatSessionId,
 }) => {
   const [lessonModalState, setLessonModalState] = useState<{
@@ -294,7 +296,7 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
               {(section.lessons || []).map((lesson: LessonType, lessonIndex: number) => {
                 lessonCounter++;
                 const currentLessonNumber = lessonCounter;
-                const matchingMicroproduct = findMicroproductByTitle(lesson.title, mainTitle || undefined, allUserMicroproducts);
+                const matchingMicroproduct = findMicroproductByTitle(lesson.title, parentProjectName, allUserMicroproducts);
 
                 return (
                   <div key={lesson.id || `lesson-${sectionIdx}-${lessonIndex}`} className="grid grid-cols-10 gap-0 p-4 items-center border-t border-gray-300 hover:bg-gray-50 transition-colors duration-150 min-h-[50px]">
@@ -302,7 +304,7 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
                       {isEditing && onTextChange ? (
                         <input type="text" value={lesson.title} onChange={(e) => handleGenericInputChange(['sections', sectionIdx, 'lessons', lessonIndex, 'title'], e)} className={editingInputClass} placeholder="Lesson Title"/>
                       ) : matchingMicroproduct ? (
-                        <Link href={`/projects/view/${matchingMicroproduct.id}?parentProjectName=${encodeURIComponent(mainTitle || "")}&lessonNumber=${currentLessonNumber}`} className="text-blue-600 hover:underline">
+                        <Link href={`/projects/view/${matchingMicroproduct.id}?parentProjectName=${encodeURIComponent(parentProjectName || "")}&lessonNumber=${currentLessonNumber}`} className="text-blue-600 hover:underline">
                           {lesson.title}
                         </Link>
                       ) : (

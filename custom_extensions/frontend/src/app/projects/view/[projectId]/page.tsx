@@ -72,6 +72,7 @@ export default function ProjectInstanceViewPage() {
 
   const [projectInstanceData, setProjectInstanceData] = useState<ProjectInstanceDetail | null>(null);
   const [allUserMicroproducts, setAllUserMicroproducts] = useState<ProjectListItem[] | undefined>(undefined);
+  const [parentProjectNameForCurrentView, setParentProjectNameForCurrentView] = useState<string | undefined>(undefined);
 
   const [pageState, setPageState] = useState<'initial_loading' | 'fetching' | 'error' | 'success' | 'nodata'>('initial_loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -89,6 +90,7 @@ export default function ProjectInstanceViewPage() {
     setErrorMessage(null);
     setProjectInstanceData(null);
     setAllUserMicroproducts(undefined);
+    setParentProjectNameForCurrentView(undefined);
     setEditableData(null);
     setIsEditing(false);
     setSaveError(null);
@@ -131,6 +133,8 @@ export default function ProjectInstanceViewPage() {
       if (listRes.ok) {
         const allMicroproductsData: ProjectListItem[] = await listRes.json();
         setAllUserMicroproducts(allMicroproductsData);
+        const currentMicroproductInList = allMicroproductsData.find(mp => mp.id === instanceData.project_id);
+        setParentProjectNameForCurrentView(currentMicroproductInList?.projectName);
       } else {
           console.warn("Could not fetch full projects list to determine parent project name.");
       }
@@ -376,6 +380,7 @@ export default function ProjectInstanceViewPage() {
             onTextChange={handleTextChange}
             sourceChatSessionId={projectInstanceData.sourceChatSessionId}
             allUserMicroproducts={allUserMicroproducts}
+            parentProjectName={parentProjectNameForCurrentView}
           />
         );
       case COMPONENT_NAME_PDF_LESSON:
