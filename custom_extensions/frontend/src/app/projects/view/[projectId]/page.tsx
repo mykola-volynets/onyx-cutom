@@ -210,11 +210,24 @@ export default function ProjectInstanceViewPage() {
         }
 
         const finalKey = path[path.length - 1];
+        let processedValue = newValue;
+
+        if (typeof newValue === 'string') {
+          const trimmedValue = newValue.trim();
+          if ((trimmedValue.startsWith('{') && trimmedValue.endsWith('}')) || (trimmedValue.startsWith('[') && trimmedValue.endsWith(']'))) {
+            try {
+              processedValue = JSON.parse(newValue);
+            } catch (e) {
+              // Not a valid JSON string, treat as a regular string
+            }
+          }
+        }
+        
         if (typeof target === 'object' && target !== null && (typeof finalKey === 'string' || typeof finalKey === 'number')) {
-          target[finalKey] = newValue;
+          target[finalKey] = processedValue;
         } else if (Array.isArray(target) && typeof finalKey === 'number') {
           if (finalKey <= target.length) {
-              target[finalKey] = newValue;
+              target[finalKey] = processedValue;
           } else {
             console.warn("Index out of bounds for array update at path:", path, "Target length:", target.length, "Index:", finalKey);
             return currentData;
