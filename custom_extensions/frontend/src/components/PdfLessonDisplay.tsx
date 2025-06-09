@@ -507,7 +507,7 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
           }
           
           // Show star icon for the last headline of any level
-          const isLastHeaderForStar = (item.type === 'major_section' || item.type === 'mini_section') && 
+          const isLastHeaderForStar = item.type === 'major_section' && 
             item.headline && 
             findOriginalIndex(item.headline) === lastHeadlineIndex;
 
@@ -527,29 +527,29 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange }: PdfLessonD
                     />
                   } 
                   {item.items.map((subItem, subIndex) => {
-                      const isLastSubItemInMajor = subIndex === item.items.length - 1;
-                      if (typeof subItem === 'object' && 'type' in subItem && subItem.type === "mini_section") {
-                        const miniSec = subItem as MiniSection;
-                        const miniSectionIsEffectivelyLastHeader = isLastHeaderForStar && item.items.length === 1 && subIndex === 0; 
-                        return (
-                          <div key={`major-${index}-mini-${subIndex}`} className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
-                            <RenderBlock 
-                                block={miniSec.headline} 
-                                isFirstInBox={true} isLastInBox={false} isMiniSectionHeadline={true} 
-                                isEditing={isEditing} onTextChange={onTextChange} 
-                                basePath={['contentBlocks', findOriginalIndex(miniSec.headline)]}
-                                isLastSectionHeaderWithStar={miniSectionIsEffectivelyLastHeader} 
-                            />
-                            <RenderBlock block={miniSec.list} isFirstInBox={false} isLastInBox={true} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(miniSec.list)]} isMiniSectionList={true}/>
-                          </div>);
-                      } else {
-                        return <RenderBlock key={`major-${index}-block-${subIndex}`} block={subItem as AnyContentBlock} isLastInBox={isLastSubItemInMajor && isCurrentItemEffectivelyLast} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(subItem as AnyContentBlock)]}/>;
-                      }
+                    const isLastSubItemInMajor = subIndex === item.items.length - 1;
+                    if (typeof subItem === 'object' && 'type' in subItem && subItem.type === "mini_section") {
+                      const miniSec = subItem as MiniSection;
+                      const miniSectionIsEffectivelyLastHeader = isLastHeaderForStar && item.items.length === 1 && subIndex === 0; 
+                      return (
+                        <div key={`major-${index}-mini-${subIndex}`} className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
+                          <RenderBlock 
+                              block={miniSec.headline} 
+                              isFirstInBox={true} isLastInBox={false} isMiniSectionHeadline={true} 
+                              isEditing={isEditing} onTextChange={onTextChange} 
+                              basePath={['contentBlocks', findOriginalIndex(miniSec.headline)]}
+                              isLastSectionHeaderWithStar={miniSectionIsEffectivelyLastHeader} 
+                          />
+                          <RenderBlock block={miniSec.list} isFirstInBox={false} isLastInBox={true} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(miniSec.list)]} isMiniSectionList={true}/>
+                        </div>);
+                    } else {
+                      return <RenderBlock key={`major-${index}-block-${subIndex}`} block={subItem as AnyContentBlock} isLastInBox={isLastSubItemInMajor && isCurrentItemEffectivelyLast} isEditing={isEditing} onTextChange={onTextChange} basePath={['contentBlocks', findOriginalIndex(subItem as AnyContentBlock)]}/>;
+                    }
                   })}
                 </div>
               )}
               {item.type === "mini_section" && (
-                 (() => {
+                (() => {
                     const miniSectionIsEffectivelyLastHeader = isLastHeaderForStar;
                     return (
                         <div className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
