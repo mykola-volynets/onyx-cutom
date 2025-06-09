@@ -266,6 +266,10 @@
 
     <div class="pdf-container">
         {% set lesson_data = details.details %}
+        {% set parent_project_name = details.parentProjectName %}
+        {% set lesson_number = details.lessonNumber %}
+        {% set locale = details.locale %}
+        
         
         {% set first_block_is_title_duplicate = false %}
         {% if lesson_data is mapping and lesson_data.lessonTitle and lesson_data.contentBlocks and lesson_data.contentBlocks|length > 0 %}
