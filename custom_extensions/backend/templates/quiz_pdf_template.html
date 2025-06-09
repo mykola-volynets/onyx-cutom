@@ -108,18 +108,18 @@
 </head>
 <body>
     <div class="quiz-container">
-        {% set quiz_data = details %}
+        {% set quiz_data = details.details %}
         {% set locale = details.locale %}
 
-        {% if parentProjectName %}
+        {% if details.parentProjectName %}
             <div style="border-left: 3px solid #FF1414; padding-left: 10px; margin-bottom: 8px;">
                 <h2 style="text-transform: uppercase; font-size: 1.125rem; font-weight: 500; color: black; margin: 0;">
-                    <span style="color: #FF1414;">COURSE:</span> {{ parentProjectName }}
+                    <span style="color: #FF1414;">COURSE:</span> {{ details.parentProjectName }}
                 </h2>
             </div>
              <h1 class="quiz-title" style="text-align: left; font-size: 1.875rem; line-height: 2.25rem; margin-bottom: 24px; text-transform: none;">
-                {% if lessonNumber %}
-                    <span style="color: #FF1414;">LESSON №{{ lessonNumber }}:</span> 
+                {% if details.lessonNumber %}
+                    <span style="color: #FF1414;">LESSON №{{ details.lessonNumber }}:</span> 
                 {% endif %}
                 {{ quiz_data.quizTitle | default('Quiz') }}
             </h1>
