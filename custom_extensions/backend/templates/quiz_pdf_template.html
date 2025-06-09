@@ -109,6 +109,7 @@
 <body>
     <div class="quiz-container">
         {% set quiz_data = details.details.details %}
+        {% set locale = details.details.locale%}
         <div class="quiz-title">{{ quiz_data.quizTitle | default('Quiz') }}</div>
 
         {% for question in quiz_data.questions %}
