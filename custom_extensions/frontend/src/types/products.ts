@@ -26,6 +26,7 @@ export interface ProjectListItem {
   projectName: string;
   // projectSlug: string; // Frontend can derive this
   designTemplateName: string | null;
+  design_microproduct_type: string | null;
   microProductName: string | null; // User-defined name for this instance
   createdAt: string; // Assuming ISO string date
   viewLinkPath: string;
