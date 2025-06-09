@@ -109,8 +109,8 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
 
   const renderMultiSelect = (question: MultiSelectQuestion, index: number) => {
     const userAnswer = userAnswers[index] || [];
-    const isCorrect = question.correct_option_ids.every(id => userAnswer.includes(id)) &&
-                     userAnswer.every(id => question.correct_option_ids.includes(id));
+    const isCorrect = question.correct_option_ids.every((id: string) => userAnswer.includes(id)) &&
+                     userAnswer.every((id: string) => question.correct_option_ids.includes(id));
     const showResult = isSubmitted && showAnswers;
 
     return (
