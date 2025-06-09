@@ -2,39 +2,27 @@
 "use client";
 
 import React from 'react';
-import { BookText, Video, Film, X } from 'lucide-react';
-import { locales } from '@/locales';
+import { X, CheckSquare } from 'lucide-react';
 
 interface CreateTestTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
   lessonTitle: string;
-  moduleName: string;
-  lessonNumber: number;
+  moduleName: string;      // Added for context
+  lessonNumber: number;    // Added for context
   sourceChatSessionId: string | null | undefined;
-  detectedLanguage?: 'en' | 'ru' | 'uk';
 }
 
 const testTypes = [
   { 
-    name: "testPresentation", 
-    icon: <BookText className="w-6 h-6" />, 
-    disabled: false 
-  },
-  { 
-    name: "videoTestScript", 
-    icon: <Video className="w-6 h-6" />, 
-    disabled: false 
-  },
-  { 
-    name: "videoTest", 
-    icon: <Film className="w-6 h-6" />, 
-    disabled: true,
-    tooltipKey: "comingSoon"
+    name: "Quiz", 
+    icon: <CheckSquare className="w-6 h-6" />, 
+    disabled: false,
+    tooltip: "Create a quiz for this lesson"
   },
 ];
 
-// A self-contained, Tailwind-styled Modal to avoid cross-project imports.
+// Self-contained Modal component
 const Modal = ({ title, children, onClose }: { title: string, children: React.ReactNode, onClose: () => void }) => (
     <div 
         className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex justify-center items-center p-4"
@@ -47,6 +35,7 @@ const Modal = ({ title, children, onClose }: { title: string, children: React.Re
         <button 
             onClick={onClose} 
             className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors z-10"
+            aria-label="Close modal"
         >
             <X size={24} />
         </button>
@@ -60,7 +49,7 @@ const Modal = ({ title, children, onClose }: { title: string, children: React.Re
     </div>
 );
 
-// A self-contained, Tailwind-styled Button to match the UI.
+// Self-contained StyledButton component
 const StyledButton = ({ children, onClick, disabled, title, className = '' }: { children: React.ReactNode, onClick: () => void, disabled?: boolean, title?: string, className?: string }) => (
     <button
       onClick={onClick}
@@ -81,20 +70,18 @@ const StyledButton = ({ children, onClick, disabled, title, className = '' }: { 
     </button>
 );
 
+
 export const CreateTestTypeModal = ({ 
   isOpen, 
   onClose, 
-  lessonTitle,
+  lessonTitle, 
   moduleName,
   lessonNumber,
-  sourceChatSessionId,
-  detectedLanguage = 'en'
+  sourceChatSessionId 
 }: CreateTestTypeModalProps) => {
-  const localized = locales[detectedLanguage as keyof typeof locales].modals.createTest;
-
   const handleTestCreate = (testType: string) => {
     if (!sourceChatSessionId) {
-      alert(localized.errorNoSessionId);
+      alert("Error: Source chat session ID is not available. Cannot create test.");
       onClose();
       return;
     }
@@ -112,7 +99,7 @@ export const CreateTestTypeModal = ({
   }
 
   return (
-    <Modal title={localized.title} onClose={onClose}>
+    <Modal title="Create Test" onClose={onClose}>
       <div className="px-6 pb-6">
         <div className="text-center mb-4">
           <p className="text-2xl font-bold text-indigo-600 break-words">
@@ -123,15 +110,15 @@ export const CreateTestTypeModal = ({
           {testTypes.map((type) => (
             <StyledButton
               key={type.name}
-              onClick={() => handleTestCreate(localized[type.name as keyof typeof localized])}
+              onClick={() => handleTestCreate(type.name)}
               disabled={type.disabled}
-              title={type.tooltipKey ? localized[type.tooltipKey as keyof typeof localized] : undefined}
+              title={type.tooltip}
             >
                 <div className="w-1/4 flex justify-center items-center">
                     {type.icon}
                 </div>
                 <div className="w-3/4 text-left">
-                    {localized[type.name as keyof typeof localized]}
+                    {type.name}
                 </div>
             </StyledButton>
           ))}

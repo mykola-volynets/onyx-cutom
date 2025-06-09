@@ -8,7 +8,7 @@ import { ProjectListItem } from '@/types/products';
 import { CreateLessonTypeModal } from './CreateLessonTypeModal';
 import { CreateTestTypeModal } from './CreateTestTypeModal';
 
-// --- Custom SVG Icons (Unchanged) ---
+// --- Custom SVG Icons (Identical to VERSION 1) ---
 const NewPieChartIcon = ({ color = '#FF1414', className = '' }) => (
   <svg className={className} width="16" height="16" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.23618 4.45109C7.29889 4.52215 7.3286 4.62291 7.31771 4.71767C7.10348 6.58871 5.53656 8 3.67288 8C1.64747 8 0 6.35149 0 4.32497C0 2.45827 1.45205 0.852133 3.30583 0.668632C3.40056 0.658956 3.49167 0.690319 3.56065 0.75371C3.62964 0.817101 3.66991 0.906516 3.66991 1.0006V4.33332H6.98993C7.08401 4.33332 7.17379 4.38002 7.23618 4.45109ZM7.98647 3.24899C7.81515 1.47437 6.4981 0.172845 4.68889 0.0013554C4.59614 -0.00698556 4.50536 0.0233755 4.43671 0.0867668C4.36805 0.150158 4.33009 0.23924 4.33009 0.333326V0.341666V3.34441C4.33009 3.52858 4.47566 3.66604 4.65786 3.66604H7.62865H7.66331C7.66529 3.66604 7.6676 3.66604 7.66991 3.66604C7.85212 3.66604 8 3.52257 8 3.33841C8 3.30504 7.99538 3.27935 7.98647 3.24899Z" fill={color}/></svg>
 );
@@ -37,71 +37,43 @@ const editingInputSmallClass = `${editingInputClassBase} h-8 text-xs`;
 const editingInputTitleClass = `${editingInputClassBase} text-base font-semibold`;
 const editingInputMainTitleClass = `${editingInputClassBase} text-xl md:text-2xl font-bold bg-gray-700 text-white`;
 
-// --- MODIFIED: StatusBadge Component ---
+// --- StatusBadge Component (Identical to VERSION 1) ---
 const StatusBadge = ({
-  type, text, columnContext, isEditing, onTextChange, path, localized
+  type, text, columnContext, isEditing, onTextChange, path
 }: {
-  type: string;
-  text: string;
-  columnContext?: 'check' | 'contentAvailable';
+  type: string; text: string; columnContext?: 'check' | 'contentAvailable';
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newValue: string | number | boolean) => void;
   path?: (string | number)[];
-  localized: { types: Record<string, string> }; // Accept the localized strings
 }) => {
   const iconColor = '#FF1414';
   const defaultIconSize = "w-4 h-4";
 
-  // For editing, we always show the raw 'text' value from the data.
   if (isEditing && onTextChange && path && (columnContext === 'check' || columnContext === 'contentAvailable')) {
     return (
       <input
         type="text"
-        value={text} // Editing the original text
+        value={text}
         onChange={(e) => onTextChange(path, e.target.value)}
         className={`${editingInputSmallClass} w-full`}
         placeholder={columnContext === 'check' ? "Check text" : "Availability text"}
       />
     );
   }
-
-  // For display, we look up the translation for the 'type', and fall back to the 'text' prop.
-  const displayText = localized.types[type as keyof typeof localized.types] || text;
-
   if (columnContext === 'contentAvailable') {
-    return (
-      <div className="inline-flex items-center space-x-2">
-        <NewPieChartIcon color={iconColor} className={`${defaultIconSize} shrink-0`} />
-        <span className="text-xs font-medium text-gray-700">{displayText}</span>
-      </div>
+    return ( <div className="inline-flex items-center space-x-2"> <NewPieChartIcon color={iconColor} className={`${defaultIconSize} shrink-0`} /> <span className="text-xs font-medium text-gray-700">{text}</span> </div> );
+  }
+  switch (type) {
+    case 'test': case 'video_test': return ( <div className="inline-flex items-center space-x-2"> <NewTestIcon color={iconColor} className={`${defaultIconSize} shrink-0`} /> <span className="text-xs font-medium text-gray-700">{text}</span> </div> );
+    case 'practice': case 'practice_supervisor': case 'role_play': case 'demo_supervisor': case 'error_analysis_supervisor': case 'demo_practice': case 'practice_case': case 'practice_discussion': case 'oral_quiz': case 'photo_analysis': case 'other_check': return ( <div className="inline-flex items-center space-x-2"> <NewPracticeIcon color={iconColor} className={`${defaultIconSize} shrink-0`} /> <span className="text-xs font-medium text-gray-700">{text}</span> </div> );
+    default: return ( 
+        <div className="inline-flex items-center space-x-2">
+            <NewInfoIcon className={`${defaultIconSize} shrink-0`} /> 
+            <span className="text-xs font-medium text-gray-700">{text || type}</span> 
+        </div> 
     );
   }
-
-  switch (type) {
-    case 'test': case 'video_test':
-      return (
-        <div className="inline-flex items-center space-x-2">
-          <NewTestIcon color={iconColor} className={`${defaultIconSize} shrink-0`} />
-          <span className="text-xs font-medium text-gray-700">{displayText}</span>
-        </div>
-      );
-    case 'practice': case 'practice_supervisor': case 'role_play': case 'demo_supervisor': case 'error_analysis_supervisor': case 'demo_practice': case 'practice_case': case 'practice_discussion': case 'oral_quiz': case 'photo_analysis': case 'other_check':
-      return (
-        <div className="inline-flex items-center space-x-2">
-          <NewPracticeIcon color={iconColor} className={`${defaultIconSize} shrink-0`} />
-          <span className="text-xs font-medium text-gray-700">{displayText}</span>
-        </div>
-      );
-    default:
-      return (
-        <div className="inline-flex items-center space-x-2">
-          <NewInfoIcon className={`${defaultIconSize} shrink-0`} />
-          <span className="text-xs font-medium text-gray-700">{displayText || type}</span>
-        </div>
-      );
-  }
 };
-
 
 interface TrainingPlanTableProps {
   dataToDisplay?: TrainingPlanData | null;
@@ -112,82 +84,80 @@ interface TrainingPlanTableProps {
   sourceChatSessionId?: string | null;
 }
 
-// --- MODIFIED: Expanded Localization Configuration ---
+// --- CHANGE: Restructured localizationConfig ---
 const localizationConfig = {
     ru: {
-        moduleAndLessons: "Модуль и уроки", knowledgeCheck: "Проверка знаний", contentAvailability: "Наличие контента", source: "Источник информации", time: "Время", timeUnitSingular: "ч", timeUnitDecimalPlural: "ч", timeUnitGeneralPlural: "ч",
-        types: {
-            test: "Тест", video_test: "Видео-тест", practice: "Практика", practice_supervisor: "Практика с руководителем", role_play: "Ролевая игра", demo_supervisor: "Демонстрация руководителю", error_analysis_supervisor: "Разбор ошибок с руководителем", demo_practice: "Демо-практика", practice_case: "Практический кейс", practice_discussion: "Обсуждение практики", oral_quiz: "Устный опрос", photo_analysis: "Анализ фотографий", other_check: "Другая проверка",
-            content_available: "Контент готов", content_to_be_created: "Контент будет создан",
-        }
+        headers: { moduleAndLessons: "Модуль и уроки", knowledgeCheck: "Проверка знаний", contentAvailability: "Наличие контента", source: "Источник информации", time: "Время" },
+        timeUnits: { singular: "ч", decimalPlural: "ч", generalPlural: "ч" }
     },
     en: {
-        moduleAndLessons: "Module and Lessons", knowledgeCheck: "Knowledge Check", contentAvailability: "Content Availability", source: "Information Source", time: "Time", timeUnitSingular: "h", timeUnitDecimalPlural: "h", timeUnitGeneralPlural: "h",
-        types: {
-            test: "Test", video_test: "Video Test", practice: "Practice", practice_supervisor: "Practice with Supervisor", role_play: "Role Play", demo_supervisor: "Demo to Supervisor", error_analysis_supervisor: "Error Analysis with Supervisor", demo_practice: "Demo Practice", practice_case: "Practice Case", practice_discussion: "Practice Discussion", oral_quiz: "Oral Quiz", photo_analysis: "Photo Analysis", other_check: "Other Check",
-            content_available: "Content is ready", content_to_be_created: "Content will be created",
-        }
+        headers: { moduleAndLessons: "Module and Lessons", knowledgeCheck: "Knowledge Check", contentAvailability: "Content Availability", source: "Information Source", time: "Time" },
+        timeUnits: { singular: "h", decimalPlural: "h", generalPlural: "h" }
     },
     uk: {
-        moduleAndLessons: "Модуль та уроки", knowledgeCheck: "Перевірка знань", contentAvailability: "Наявність контенту", source: "Джерело інформації", time: "Час", timeUnitSingular: "год", timeUnitDecimalPlural: "год", timeUnitGeneralPlural: "год",
-        types: {
-            test: "Тест", video_test: "Відео-тест", practice: "Практика", practice_supervisor: "Практика з керівником", role_play: "Рольова гра", demo_supervisor: "Демонстрація керівнику", error_analysis_supervisor: "Розбір помилок з керівником", demo_practice: "Демо-практика", practice_case: "Практичний кейс", practice_discussion: "Обговорення практики", oral_quiz: "Усне опитування", photo_analysis: "Аналіз фотографій", other_check: "Інша перевірка",
-            content_available: "Контент готовий", content_to_be_created: "Контент буде створено",
-        }
+        headers: { moduleAndLessons: "Модуль та уроки", knowledgeCheck: "Перевірка знань", contentAvailability: "Наявність контенту", source: "Джерело інформації", time: "Час" },
+        timeUnits: { singular: "год", decimalPlural: "год", generalPlural: "год" }
     },
 };
 
-// --- Hour Formatting Logic (Unchanged) ---
-const getRussianHourUnit = (hours: number, units: typeof localizationConfig['ru']) => {
+// --- CHANGE: Updated Hour Formatting Logic to use new localizationConfig structure ---
+const getRussianHourUnit = (hours: number, units: typeof localizationConfig['ru']['timeUnits']) => {
   const h_int = Math.floor(hours); const h_mod10 = h_int % 10; const h_mod100 = h_int % 100;
-  if (units.timeUnitSingular === "ч" && units.timeUnitDecimalPlural === "ч" && units.timeUnitGeneralPlural === "ч") { return units.timeUnitSingular; }
-  if (hours !== h_int) { return units.timeUnitDecimalPlural; }
-  if (h_mod100 >= 11 && h_mod100 <= 14) { return units.timeUnitGeneralPlural; }
-  if (h_mod10 === 1) { return units.timeUnitSingular; }
-  if (h_mod10 >= 2 && h_mod10 <= 4) { return units.timeUnitDecimalPlural; }
-  return units.timeUnitGeneralPlural;
+  if (units.singular === "ч" && units.decimalPlural === "ч" && units.generalPlural === "ч") { return units.singular; }
+  if (hours !== h_int) { return units.decimalPlural; }
+  if (h_mod100 >= 11 && h_mod100 <= 14) { return units.generalPlural; }
+  if (h_mod10 === 1) { return units.singular; }
+  if (h_mod10 >= 2 && h_mod10 <= 4) { return units.decimalPlural; }
+  return units.generalPlural;
 };
-const getUkrainianHourUnit = (hours: number, units: typeof localizationConfig['uk']) => {
+const getUkrainianHourUnit = (hours: number, units: typeof localizationConfig['uk']['timeUnits']) => {
   const h_int = Math.floor(hours); const h_mod10 = h_int % 10; const h_mod100 = h_int % 100;
-  if (hours !== h_int && hours > 0) { if (h_int === 1 || (h_int === 0 && hours * 10 % 10 === 1 && hours * 100 % 100 !== 11) ) { return units.timeUnitSingular; } return units.timeUnitDecimalPlural; }
-  if (h_mod100 >= 11 && h_mod100 <= 14) { return units.timeUnitGeneralPlural; }
-  if (h_mod10 === 1) { return units.timeUnitSingular; }
-  if (h_mod10 >= 2 && h_mod10 <= 4) { return units.timeUnitDecimalPlural; }
-  return units.timeUnitGeneralPlural;
+  if (hours !== h_int && hours > 0) { if (h_int === 1 || (h_int === 0 && hours * 10 % 10 === 1 && hours * 100 % 100 !== 11) ) { return units.singular; } return units.decimalPlural; }
+  if (h_mod100 >= 11 && h_mod100 <= 14) { return units.generalPlural; }
+  if (h_mod10 === 1) { return units.singular; }
+  if (h_mod10 >= 2 && h_mod10 <= 4) { return units.decimalPlural; }
+  return units.generalPlural;
 };
-const formatHoursDisplay = (hours: number | string, language: 'ru' | 'en' | 'uk', localized: any, isEditingContext?: boolean) => {
+const formatHoursDisplay = (hours: number | string, language: 'ru' | 'en' | 'uk', localized: typeof localizationConfig['ru'] | typeof localizationConfig['en'] | typeof localizationConfig['uk'], isEditingContext?: boolean) => {
     const numHours = Number(hours);
     if (isNaN(numHours)) return isEditingContext ? "" : "-";
     if (numHours <= 0 && !isEditingContext) return '-';
     if (isEditingContext && numHours === 0 && (typeof hours === 'number' || hours === "0")) return "0";
     if (isEditingContext && hours === "") return "";
+
     const numStr = numHours % 1 === 0 ? numHours.toFixed(0) : numHours.toFixed(1);
-    if (language === 'en') { return `${numStr}${localized.timeUnitSingular}`; }
-    if (language === 'ru') { return `${numStr}${getRussianHourUnit(numHours, localized as typeof localizationConfig['ru'])}`; }
-    return `${numStr} ${getUkrainianHourUnit(numHours, localized as typeof localizationConfig['uk'])}`;
+    if (language === 'en') { return `${numStr}${localized.timeUnits.singular}`; }
+    if (language === 'ru') { return `${numStr}${getRussianHourUnit(numHours, localized.timeUnits)}`; }
+    return `${numStr} ${getUkrainianHourUnit(numHours, localized.timeUnits)}`;
 };
 
 const MAX_SOURCE_LENGTH = 25;
 
-// --- Helper Functions (Unchanged) ---
+// --- Helper Functions (Identical to VERSION 1) ---
 const findMicroproductByTitle = (
   titleToMatch: string | undefined | null,
   parentProjectName: string | undefined,
   allUserMicroproducts: ProjectListItem[] | undefined
 ): ProjectListItem | undefined => {
+
   if (!allUserMicroproducts || !parentProjectName || !titleToMatch) {
     return undefined;
   }
+
   const trimmedTitleToMatch = titleToMatch.trim();
   const trimmedParentProjectName = parentProjectName.trim();
+
   const found = allUserMicroproducts.find(
     (mp) => {
       const mpMicroName = mp.microProductName ?? (mp as any).microproduct_name;
+
       const projectMatch = mp.projectName?.trim() === trimmedParentProjectName;
       const nameMatch = mpMicroName?.trim() === trimmedTitleToMatch;
+      
       return projectMatch && nameMatch;
     }
   );
+
   return found;
 };
 
@@ -208,9 +178,8 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
     isOpen: boolean; lessonTitle: string; moduleName: string; lessonNumber: number;
   }>({ isOpen: false, lessonTitle: '', moduleName: '', lessonNumber: 0 });
 
-  // This logic is preserved and will work correctly because it uses the original `lesson` object
   const handleLessonClick = (lesson: LessonType, moduleName: string, lessonNumber: number) => {
-    if (lesson.check.type === 'test') { // This check remains valid
+    if (lesson.check.type === 'test') {
       setTestModalState({ isOpen: true, lessonTitle: lesson.title, moduleName, lessonNumber });
     } else {
       setLessonModalState({ isOpen: true, lessonTitle: lesson.title, moduleName, lessonNumber });
@@ -290,12 +259,13 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
           </div>
         )}
 
+        {/* --- CHANGE: Headers now use `localized.headers` --- */}
         <div className="grid grid-cols-10 gap-0 text-gray-500 p-4 text-xs font-semibold items-center border-b border-gray-300 uppercase tracking-wider">
-          <div className="col-span-10 sm:col-span-4 pr-2 border-r border-gray-400">{localized.moduleAndLessons}</div>
-          <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-400">{localized.knowledgeCheck}</div>
-          <div className="col-span-5 sm:col-span-1 text-left px-2 border-r border-gray-400">{localized.contentAvailability}</div>
-          <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-400">{localized.source}</div>
-          <div className="col-span-5 sm:col-span-1 text-left px-2">{localized.time}</div>
+          <div className="col-span-10 sm:col-span-4 pr-2 border-r border-gray-400">{localized.headers.moduleAndLessons}</div>
+          <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-400">{localized.headers.knowledgeCheck}</div>
+          <div className="col-span-5 sm:col-span-1 text-left px-2 border-r border-gray-400">{localized.headers.contentAvailability}</div>
+          <div className="col-span-5 sm:col-span-2 text-left px-2 border-r border-gray-400">{localized.headers.source}</div>
+          <div className="col-span-5 sm:col-span-1 text-left px-2">{localized.headers.time}</div>
         </div>
 
         <div className="text-sm">
@@ -339,7 +309,6 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
               {(section.lessons || []).map((lesson: LessonType, lessonIndex: number) => {
                 lessonCounter++;
                 const currentLessonNumber = lessonCounter;
-                // This function uses the original lesson.title, so linking will work correctly.
                 const matchingMicroproduct = findMicroproductByTitle(lesson.title, parentProjectName, allUserMicroproducts);
 
                 return (
@@ -361,10 +330,10 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
                       )}
                     </div>
                     <div className="col-span-5 sm:col-span-2 flex justify-start px-2 border-r border-gray-400">
-                      <StatusBadge type={lesson.check.type} text={lesson.check.text} columnContext="check" isEditing={isEditing} onTextChange={onTextChange} path={['sections', sectionIdx, 'lessons', lessonIndex, 'check', 'text']} localized={localized} />
+                      <StatusBadge type={lesson.check.type} text={lesson.check.text} columnContext="check" isEditing={isEditing} onTextChange={onTextChange} path={['sections', sectionIdx, 'lessons', lessonIndex, 'check', 'text']}/>
                     </div>
                     <div className="col-span-5 sm:col-span-1 flex justify-start px-2 border-r border-gray-400">
-                        <StatusBadge type={lesson.contentAvailable.type} text={lesson.contentAvailable.text} columnContext="contentAvailable" isEditing={isEditing} onTextChange={onTextChange} path={['sections', sectionIdx, 'lessons', lessonIndex, 'contentAvailable', 'text']} localized={localized} />
+                      <StatusBadge type={lesson.contentAvailable.type} text={lesson.contentAvailable.text} columnContext="contentAvailable" isEditing={isEditing} onTextChange={onTextChange} path={['sections', sectionIdx, 'lessons', lessonIndex, 'contentAvailable', 'text']}/>
                     </div>
                     <div className="col-span-10 sm:col-span-2 text-gray-600 px-2 border-r border-gray-400">
                         {isEditing && onTextChange ? (
