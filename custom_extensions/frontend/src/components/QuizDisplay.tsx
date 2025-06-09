@@ -245,7 +245,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                 ))}
               </div>
               <div>
-                <h4 className="font-medium mb-2 text-black">{t.quiz.options || 'Options'}</h4>
+                <h4 className="font-medium mb-2 text-black">{(t.quiz as any).options || 'Options'}</h4>
                 {question.options.map((option) => (
                   <div key={option.id} className="mb-2">
                     <input
@@ -373,21 +373,44 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     };
 
     if (isEditing) {
+        const handleAddItem = () => {
+          const newItemId = `item-${Date.now()}`;
+          const newItem = { id: newItemId, text: 'New Item' };
+          
+          const newItemsToSort = [...question.items_to_sort, newItem];
+          const newCorrectOrder = [...question.correct_order, newItemId];
+          
+          handleTextChange(['questions', index, 'items_to_sort'], newItemsToSort);
+          handleTextChange(['questions', index, 'correct_order'], newCorrectOrder);
+        };
+
+        const handleRemoveItem = (itemId: string) => {
+          const newItemsToSort = question.items_to_sort.filter(item => item.id !== itemId);
+          const newCorrectOrder = question.correct_order.filter(id => id !== itemId);
+
+          handleTextChange(['questions', index, 'items_to_sort'], newItemsToSort);
+          handleTextChange(['questions', index, 'correct_order'], newCorrectOrder);
+        };
+
         return (
           <div className="mt-4">
+            <h4 className="font-medium mb-2 text-black">{(t.quiz as any).itemsToSort || 'Items to sort (in correct order)'}</h4>
             <div className="space-y-2">
               {sortedItems.map((itemId, orderIndex) => {
                 const item = question.items_to_sort.find(i => i.id === itemId);
+                if (!item) return null;
                 return (
                   <div 
                     key={itemId} 
-                    className="flex items-center p-2 border rounded bg-white cursor-grab"
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, itemId)}
+                    className="flex items-center p-2 border rounded bg-white"
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleEditDrop(e, itemId)}
                   >
-                    <span className="w-6 h-6 flex items-center justify-center bg-[#FF1414] text-white rounded-full mr-3">
+                    <span 
+                        className="w-6 h-6 flex items-center justify-center bg-[#FF1414] text-white rounded-full mr-3 cursor-grab"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, itemId)}
+                    >
                       {orderIndex + 1}
                     </span>
                     <input
@@ -396,10 +419,13 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                       onChange={(e) => handleTextChange(['questions', index, 'items_to_sort', question.items_to_sort.findIndex(i => i.id === itemId), 'text'], e.target.value)}
                       className="flex-1 p-1 border-none rounded text-black bg-transparent focus:ring-0"
                     />
+                    <button type="button" onClick={() => handleRemoveItem(itemId)} className="ml-2 text-red-500 font-bold">X</button>
                   </div>
                 );
               })}
             </div>
+            <button type="button" onClick={handleAddItem} className="mt-4 p-2 border rounded text-white bg-[#FF1414]">{(t.quiz as any).addItem || 'Add Item'}</button>
+
              <div className="mt-4">
                 <label className="block text-sm font-medium text-black mb-1">{t.quiz.explanation}</label>
                 <input
@@ -429,18 +455,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
             );
           })}
         </div>
-        {isEditing ? (
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-black mb-1">{t.quiz.explanation}</label>
-            <input
-              type="text"
-              value={question.explanation || ''}
-              onChange={(e) => handleTextChange(['questions', index, 'explanation'], e.target.value)}
-              className="w-full p-2 border rounded text-black"
-              placeholder={t.quiz.explanation}
-            />
-          </div>
-        ) : question.explanation && (
+        {question.explanation && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
             <p className="text-sm text-black">{question.explanation}</p>
           </div>
