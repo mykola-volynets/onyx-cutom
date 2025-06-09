@@ -9,11 +9,26 @@ import ProjectsTable from '../../components/ProjectsTable';
 export default function ProjectsPage() {
   // This logic ensures the "Back to Chat" URL is absolute, fixing the redirect issue.
   const [chatUrl, setChatUrl] = useState("/chat");
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // This runs only on the client, where window.location.origin is available
     setChatUrl(`${window.location.origin}/chat`);
+    // Fetch projects data here if needed
+    // Example:
+    // fetch('/api/projects')
+    //   .then(res => res.json())
+    //   .then(data => setProjects(data))
+    //   .catch(err => setError(err.message))
+    //   .finally(() => setLoading(false));
   }, []);
+
+  const handleProjectClick = (projectId) => {
+    // Handle project click, e.g., navigate to project detail page
+    console.log('Project clicked:', projectId);
+  };
 
   return (
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen">
@@ -28,7 +43,7 @@ export default function ProjectsPage() {
             </Link>
         </div>
         <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading Projects...</div>}>
-            <ProjectsTable />
+            <ProjectsTable projects={projects} onProjectClick={handleProjectClick} />
         </Suspense>
       </div>
     </main>
