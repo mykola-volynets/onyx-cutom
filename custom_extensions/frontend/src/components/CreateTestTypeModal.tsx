@@ -8,9 +8,9 @@ import { locales } from '@/locales';
 interface CreateTestTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  testTitle: string;
-  moduleName: string;      // Added for context
-  testNumber: number;    // Added for context
+  lessonTitle: string;
+  moduleName: string;
+  lessonNumber: number;
   sourceChatSessionId: string | null | undefined;
   detectedLanguage?: 'en' | 'ru' | 'uk';
 }
@@ -84,9 +84,9 @@ const StyledButton = ({ children, onClick, disabled, title, className = '' }: { 
 export const CreateTestTypeModal = ({ 
   isOpen, 
   onClose, 
-  testTitle, 
+  lessonTitle,
   moduleName,
-  testNumber,
+  lessonNumber,
   sourceChatSessionId,
   detectedLanguage = 'en'
 }: CreateTestTypeModalProps) => {
@@ -99,7 +99,7 @@ export const CreateTestTypeModal = ({
       return;
     }
 
-    const message = `Please create a ${testType} for the ${testTitle} (module: ${moduleName}, test: ${testNumber})`;
+    const message = `Please create a ${testType} for the ${lessonTitle} (module: ${moduleName}, lesson: ${lessonNumber})`;
     
     const chatUrl = `/chat?chatId=${sourceChatSessionId}&user-prompt=${encodeURIComponent(message)}&send-on-load=true`;
     
@@ -116,7 +116,7 @@ export const CreateTestTypeModal = ({
       <div className="px-6 pb-6">
         <div className="text-center mb-4">
           <p className="text-2xl font-bold text-indigo-600 break-words">
-            {testTitle}
+            {lessonTitle}
           </p>
         </div>
         <div className="space-y-4">
