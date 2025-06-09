@@ -294,7 +294,7 @@ const TrainingPlanTable: React.FC<TrainingPlanTableProps> = ({
               {(section.lessons || []).map((lesson: LessonType, lessonIndex: number) => {
                 lessonCounter++;
                 const currentLessonNumber = lessonCounter;
-                const matchingMicroproduct = findMicroproductByTitle(lesson.title, mainTitle, allUserMicroproducts);
+                const matchingMicroproduct = findMicroproductByTitle(lesson.title, mainTitle || undefined, allUserMicroproducts);
 
                 return (
                   <div key={lesson.id || `lesson-${sectionIdx}-${lessonIndex}`} className="grid grid-cols-10 gap-0 p-4 items-center border-t border-gray-300 hover:bg-gray-50 transition-colors duration-150 min-h-[50px]">
