@@ -113,7 +113,7 @@
 
         {% for question in quiz_data.questions %}
             <div class="question-block">
-                <div class="question-text">{{ quiz_data.quiz.question }} {{ loop.index }}: {{ question.question_text }}</div>
+                <div class="question-text">{{ locale.quiz.question }} {{ loop.index }}: {{ question.question_text }}</div>
 
                 {# Multiple Choice or Multi-Select #}
                 {% if question.question_type in ['multiple-choice', 'multi-select'] %}
@@ -129,7 +129,7 @@
                     <table class="matching-table">
                         <tr>
                             <td class="prompts-col">
-                                <strong>{{ details.locale.quiz.prompts }}:</strong>
+                                <strong>{{ locale.quiz.prompts }}:</strong>
                                 <ul style="list-style-type: none; padding-left: 0;">
                                 {% for prompt in question.prompts %}
                                     <li>{{ prompt.id }}. {{ prompt.text }}</li>
@@ -137,7 +137,7 @@
                                 </ul>
                             </td>
                             <td class="options-col">
-                                <strong>{{ details.locale.quiz.correctMatches }}:</strong>
+                                <strong>{{ locale.quiz.correctMatches }}:</strong>
                                 <ul style="list-style-type: none; padding-left: 0;">
                                 {% for option in question.options %}
                                     <li>{{ option.id }}. {{ option.text }}</li>
@@ -165,16 +165,16 @@
         {% endfor %}
 
         <div class="answer-key">
-            <div class="answer-key-title">{{ details.locale.quiz.answerKey }}</div>
+            <div class="answer-key-title">{{ locale.quiz.answerKey }}</div>
             {% for question in quiz_data.questions %}
                 <div>
-                    <div><strong>{{ details.locale.quiz.question }} {{ loop.index }}:</strong></div>
+                    <div><strong>{{ locale.quiz.question }} {{ loop.index }}:</strong></div>
                     {% if question.question_type == 'multiple-choice' %}
-                        <div class="correct-answer">{{ details.locale.quiz.correctAnswer }}: {{ question.correct_option_id }}</div>
+                        <div class="correct-answer">{{ locale.quiz.correctAnswer }}: {{ question.correct_option_id }}</div>
                     {% elif question.question_type == 'multi-select' %}
-                        <div class="correct-answer">{{ details.locale.quiz.correctAnswers }}: {{ question.correct_option_ids | join(', ') }}</div>
+                        <div class="correct-answer">{{ locale.quiz.correctAnswers }}: {{ question.correct_option_ids | join(', ') }}</div>
                     {% elif question.question_type == 'matching' %}
-                        <div class="correct-answer">{{ details.locale.quiz.correctMatches }}:
+                        <div class="correct-answer">{{ locale.quiz.correctMatches }}:
                             <ul>
                             {% for prompt_id, option_id in question.correct_matches.items() %}
                                 <li>{{ prompt_id }} - {{ option_id }}</li>
@@ -182,7 +182,7 @@
                             </ul>
                         </div>
                     {% elif question.question_type == 'sorting' %}
-                        <div class="correct-answer">{{ details.locale.quiz.correctOrder }}:
+                        <div class="correct-answer">{{ locale.quiz.correctOrder }}:
                             <ol>
                                 {% for item_id in question.correct_order %}
                                     {% for item in question.items_to_sort if item.id == item_id %}
@@ -192,11 +192,11 @@
                             </ol>
                         </div>
                     {% elif question.question_type == 'open-answer' %}
-                        <div class="correct-answer">{{ details.locale.quiz.acceptableAnswers }}: {{ question.acceptable_answers | join(' / ') }}</div>
+                        <div class="correct-answer">{{ locale.quiz.acceptableAnswers }}: {{ question.acceptable_answers | join(' / ') }}</div>
                     {% endif %}
 
                     {% if question.explanation %}
-                        <div class="explanation"><strong>{{ details.locale.quiz.explanation }}:</strong> {{ question.explanation }}</div>
+                        <div class="explanation"><strong>{{ locale.quiz.explanation }}:</strong> {{ question.explanation }}</div>
                     {% endif %}
                 </div>
             {% endfor %}
