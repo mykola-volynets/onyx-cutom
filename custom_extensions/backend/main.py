@@ -16,7 +16,7 @@ import json
 import uuid
 import shutil
 import logging
-from .locales import LANG_CONFIG
+from locales.__init__ import LANG_CONFIG
 
 # --- CONTROL VARIABLE FOR PRODUCTION LOGGING ---
 # SET THIS TO True FOR PRODUCTION, False FOR DEVELOPMENT
