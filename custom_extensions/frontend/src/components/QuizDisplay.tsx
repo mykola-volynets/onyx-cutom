@@ -80,7 +80,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
       const newCorrectIds = isCorrect
         ? currentCorrectIds.filter(id => id !== optionId)
         : [...currentCorrectIds, optionId];
-      handleTextChange(['questions', questionIndex, 'correct_option_ids'], newCorrectIds);
+      handleTextChange(['questions', questionIndex, 'correct_option_ids'], JSON.stringify(newCorrectIds));
     }
   };
 
