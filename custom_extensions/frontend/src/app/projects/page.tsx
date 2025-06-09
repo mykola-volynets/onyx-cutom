@@ -25,7 +25,7 @@ export default function ProjectsPage() {
     //   .finally(() => setLoading(false));
   }, []);
 
-  const handleProjectClick = (projectId) => {
+  const handleProjectClick = (projectId: string) => {
     // Handle project click, e.g., navigate to project detail page
     console.log('Project clicked:', projectId);
   };
