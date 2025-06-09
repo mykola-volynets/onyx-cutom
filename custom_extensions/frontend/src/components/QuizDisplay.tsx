@@ -7,6 +7,7 @@ import {
   MatchingQuestion, SortingQuestion, OpenAnswerQuestion, SortableItem
 } from '@/types/quizTypes';
 import { CheckCircle, XCircle, Info, ArrowRight } from 'lucide-react';
+import { locales } from '@/locales';
 
 const THEME_COLORS = {
   primaryText: 'text-[#4B4B4B]',
@@ -36,6 +37,9 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
   const [userAnswers, setUserAnswers] = useState<Record<number, any>>({});
   const [showAnswers, setShowAnswers] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const searchParams = useSearchParams();
+  const lang = dataToDisplay?.detectedLanguage || 'en';
+  const t = locales[lang as keyof typeof locales].quiz;
 
   if (!dataToDisplay || !dataToDisplay.questions) {
     return null;
@@ -61,48 +65,46 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     setShowAnswers(false);
   };
 
+  const handleTextChange = (path: (string | number)[], newValue: string) => {
+    if (onTextChange) {
+      onTextChange(path, newValue);
+    }
+  };
+
   const renderMultipleChoice = (question: MultipleChoiceQuestion, index: number) => {
     const isCorrect = userAnswers[index] === question.correct_option_id;
     const showResult = isSubmitted && showAnswers;
 
     return (
-      <div className="space-y-2">
-        {question.options.map((option) => (
-          <label
-            key={option.id}
-            className={`flex items-center p-3 rounded-lg border ${
-              showResult
-                ? option.id === question.correct_option_id
-                  ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
-                  : userAnswers[index] === option.id
-                  ? `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
-                  : THEME_COLORS.lightBorder
-                : THEME_COLORS.lightBorder
-            } cursor-pointer hover:bg-gray-50`}
-          >
-            <input
-              type="radio"
-              name={`question-${index}`}
-              value={option.id}
-              checked={userAnswers[index] === option.id}
-              onChange={(e) => handleAnswerChange(index, e.target.value)}
-              disabled={isSubmitted}
-              className="mr-3"
-            />
-            <span className={THEME_COLORS.primaryText}>{option.text}</span>
-            {showResult && option.id === question.correct_option_id && (
-              <CheckCircle className="ml-auto text-green-500" size={20} />
-            )}
-            {showResult && userAnswers[index] === option.id && option.id !== question.correct_option_id && (
-              <XCircle className="ml-auto text-red-500" size={20} />
-            )}
-          </label>
-        ))}
-        {showResult && question.explanation && (
-          <div className={`mt-2 p-3 rounded-lg ${isCorrect ? THEME_COLORS.successBg : THEME_COLORS.errorBg}`}>
-            <p className={isCorrect ? THEME_COLORS.successText : THEME_COLORS.errorText}>
-              {question.explanation}
-            </p>
+      <div className="mt-4">
+        <div className="space-y-2">
+          {question.options.map((option) => (
+            <div key={option.id} className="flex items-start">
+              <div className={`flex items-center h-5 ${isEditing ? 'cursor-pointer' : ''}`}>
+                <div className={`w-4 h-4 rounded-full border ${option.id === question.correct_option_id ? 'border-[#FF1414] bg-[#FF1414]' : 'border-gray-300'}`}>
+                  {option.id === question.correct_option_id && (
+                    <div className="w-2 h-2 rounded-full bg-white m-auto" />
+                  )}
+                </div>
+              </div>
+              <div className="ml-3 flex-1">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={option.text}
+                    onChange={(e) => handleTextChange(['questions', index, 'options', question.options.findIndex(o => o.id === option.id), 'text'], e.target.value)}
+                    className="w-full p-2 border rounded"
+                  />
+                ) : (
+                  <span className="text-gray-700">{option.text}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        {question.explanation && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -116,47 +118,35 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     const showResult = isSubmitted && showAnswers;
 
     return (
-      <div className="space-y-2">
-        {question.options.map((option) => (
-          <label
-            key={option.id}
-            className={`flex items-center p-3 rounded-lg border ${
-              showResult
-                ? question.correct_option_ids.includes(option.id)
-                  ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
-                  : userAnswer.includes(option.id)
-                  ? `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
-                  : THEME_COLORS.lightBorder
-                : THEME_COLORS.lightBorder
-            } cursor-pointer hover:bg-gray-50`}
-          >
-            <input
-              type="checkbox"
-              value={option.id}
-              checked={userAnswer.includes(option.id)}
-              onChange={(e) => {
-                const newAnswer = e.target.checked
-                  ? [...userAnswer, option.id]
-                  : userAnswer.filter((id: string) => id !== option.id);
-                handleAnswerChange(index, newAnswer);
-              }}
-              disabled={isSubmitted}
-              className="mr-3"
-            />
-            <span className={THEME_COLORS.primaryText}>{option.text}</span>
-            {showResult && question.correct_option_ids.includes(option.id) && (
-              <CheckCircle className="ml-auto text-green-500" size={20} />
-            )}
-            {showResult && userAnswer.includes(option.id) && !question.correct_option_ids.includes(option.id) && (
-              <XCircle className="ml-auto text-red-500" size={20} />
-            )}
-          </label>
-        ))}
-        {showResult && question.explanation && (
-          <div className={`mt-2 p-3 rounded-lg ${isCorrect ? THEME_COLORS.successBg : THEME_COLORS.errorBg}`}>
-            <p className={isCorrect ? THEME_COLORS.successText : THEME_COLORS.errorText}>
-              {question.explanation}
-            </p>
+      <div className="mt-4">
+        <div className="space-y-2">
+          {question.options.map((option) => (
+            <div key={option.id} className="flex items-start">
+              <div className={`flex items-center h-5 ${isEditing ? 'cursor-pointer' : ''}`}>
+                <div className={`w-4 h-4 rounded border ${question.correct_option_ids.includes(option.id) ? 'border-[#FF1414] bg-[#FF1414]' : 'border-gray-300'}`}>
+                  {question.correct_option_ids.includes(option.id) && (
+                    <div className="w-2 h-2 bg-white m-auto" />
+                  )}
+                </div>
+              </div>
+              <div className="ml-3 flex-1">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={option.text}
+                    onChange={(e) => handleTextChange(['questions', index, 'options', question.options.findIndex(o => o.id === option.id), 'text'], e.target.value)}
+                    className="w-full p-2 border rounded"
+                  />
+                ) : (
+                  <span className="text-gray-700">{option.text}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        {question.explanation && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -171,86 +161,49 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     const showResult = isSubmitted && showAnswers;
 
     return (
-      <div className="space-y-4">
+      <div className="mt-4">
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <h4 className="font-medium mb-2">Prompts</h4>
+          <div>
+            <h4 className="font-medium mb-2">{t.prompts}</h4>
             {question.prompts.map((prompt) => (
-              <div
-                key={prompt.id}
-                className={`p-3 rounded-lg border ${
-                  showResult
-                    ? userAnswer[prompt.id] === question.correct_matches[prompt.id]
-                      ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
-                      : `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
-                    : THEME_COLORS.lightBorder
-                }`}
-              >
-                <span className={THEME_COLORS.primaryText}>{prompt.text}</span>
+              <div key={prompt.id} className="mb-2">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={prompt.text}
+                    onChange={(e) => handleTextChange(['questions', index, 'prompts', question.prompts.findIndex(p => p.id === prompt.id), 'text'], e.target.value)}
+                    className="w-full p-2 border rounded"
+                  />
+                ) : (
+                  <span className="text-gray-700">{prompt.text}</span>
+                )}
               </div>
             ))}
           </div>
-          <div className="space-y-2">
-            <h4 className="font-medium mb-2">Options</h4>
-            {question.options.map((option) => (
-              <div
-                key={option.id}
-                className={`p-3 rounded-lg border ${
-                  showResult
-                    ? Object.entries(question.correct_matches).some(
-                        ([promptId, correctOptionId]: [string, string]) =>
-                          correctOptionId === option.id && userAnswer[promptId] === option.id
-                      )
-                      ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
-                      : Object.values(userAnswer).includes(option.id) &&
-                        !Object.entries(question.correct_matches).some(
-                          ([promptId, correctOptionId]: [string, string]) =>
-                            correctOptionId === option.id && userAnswer[promptId] === option.id
-                        )
-                      ? `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
-                      : THEME_COLORS.lightBorder
-                    : THEME_COLORS.lightBorder
-                }`}
-              >
-                <span className={THEME_COLORS.primaryText}>{option.text}</span>
-              </div>
-            ))}
+          <div>
+            <h4 className="font-medium mb-2">{t.correctMatches}</h4>
+            {question.prompts.map((prompt) => {
+              const matchedOption = question.options.find(opt => opt.id === question.correct_matches[prompt.id]);
+              return (
+                <div key={prompt.id} className="mb-2">
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={matchedOption?.text || ''}
+                      onChange={(e) => handleTextChange(['questions', index, 'options', question.options.findIndex(o => o.id === question.correct_matches[prompt.id]), 'text'], e.target.value)}
+                      className="w-full p-2 border rounded"
+                    />
+                  ) : (
+                    <span className="text-gray-700">{matchedOption?.text}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
-        <div className="space-y-2">
-          {question.prompts.map((prompt) => (
-            <div key={prompt.id} className="flex items-center space-x-2">
-              <span className="font-medium">{prompt.id}:</span>
-              <select
-                value={userAnswer[prompt.id] || ''}
-                onChange={(e) => {
-                  const newAnswer = { ...userAnswer, [prompt.id]: e.target.value };
-                  handleAnswerChange(index, newAnswer);
-                }}
-                disabled={isSubmitted}
-                className={`flex-1 p-2 rounded-lg border ${
-                  showResult
-                    ? userAnswer[prompt.id] === question.correct_matches[prompt.id]
-                      ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
-                      : `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
-                    : THEME_COLORS.lightBorder
-                }`}
-              >
-                <option value="">Select an option</option>
-                {question.options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.text}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
-        </div>
-        {showResult && question.explanation && (
-          <div className={`mt-2 p-3 rounded-lg ${isCorrect ? THEME_COLORS.successBg : THEME_COLORS.errorBg}`}>
-            <p className={isCorrect ? THEME_COLORS.successText : THEME_COLORS.errorText}>
-              {question.explanation}
-            </p>
+        {question.explanation && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -284,41 +237,32 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     };
 
     return (
-      <div className="space-y-4">
+      <div className="mt-4">
         <div className="space-y-2">
-          {question.items_to_sort.map((item, i) => (
-            <div
-              key={item.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, item.id)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, i)}
-              className={`p-3 rounded-lg border ${
-                showResult
-                  ? item.id === question.correct_order[i]
-                    ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
-                    : `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
-                  : THEME_COLORS.lightBorder
-              } cursor-move hover:bg-gray-50`}
-            >
-              <div className="flex items-center">
-                <span className="mr-2 text-gray-500">{i + 1}.</span>
-                <span className={THEME_COLORS.primaryText}>{item.text}</span>
-                {showResult && item.id === question.correct_order[i] && (
-                  <CheckCircle className="ml-auto text-green-500" size={20} />
-                )}
-                {showResult && item.id !== question.correct_order[i] && (
-                  <XCircle className="ml-auto text-red-500" size={20} />
+          {question.correct_order.map((itemId, orderIndex) => {
+            const item = question.items_to_sort.find(i => i.id === itemId);
+            return (
+              <div key={itemId} className="flex items-center">
+                <span className="w-6 h-6 flex items-center justify-center bg-[#FF1414] text-white rounded-full mr-3">
+                  {orderIndex + 1}
+                </span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={item?.text || ''}
+                    onChange={(e) => handleTextChange(['questions', index, 'items_to_sort', question.items_to_sort.findIndex(i => i.id === itemId), 'text'], e.target.value)}
+                    className="flex-1 p-2 border rounded"
+                  />
+                ) : (
+                  <span className="text-gray-700">{item?.text}</span>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-        {showResult && question.explanation && (
-          <div className={`mt-2 p-3 rounded-lg ${isCorrect ? THEME_COLORS.successBg : THEME_COLORS.errorBg}`}>
-            <p className={isCorrect ? THEME_COLORS.successText : THEME_COLORS.errorText}>
-              {question.explanation}
-            </p>
+        {question.explanation && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -333,47 +277,27 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     const showResult = isSubmitted && showAnswers;
 
     return (
-      <div className="space-y-2">
-        <textarea
-          value={userAnswer}
-          onChange={(e) => handleAnswerChange(index, e.target.value)}
-          disabled={isSubmitted}
-          className={`w-full p-3 rounded-lg border ${
-            showResult
-              ? isCorrect
-                ? `${THEME_COLORS.successBg} ${THEME_COLORS.successBorder}`
-                : `${THEME_COLORS.errorBg} ${THEME_COLORS.errorBorder}`
-              : THEME_COLORS.lightBorder
-          } min-h-[100px] resize-y`}
-          placeholder="Type your answer here..."
-        />
-        {showResult && (
-          <div className={`mt-2 p-3 rounded-lg ${isCorrect ? THEME_COLORS.successBg : THEME_COLORS.errorBg}`}>
-            <p className={isCorrect ? THEME_COLORS.successText : THEME_COLORS.errorText}>
-              {isCorrect ? (
-                <span className="flex items-center">
-                  <CheckCircle className="mr-2" size={20} />
-                  Correct!
-                </span>
+      <div className="mt-4">
+        <div className="space-y-2">
+          <h4 className="font-medium">{t.acceptableAnswers}:</h4>
+          {question.acceptable_answers.map((answer, answerIndex) => (
+            <div key={answerIndex}>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={answer}
+                  onChange={(e) => handleTextChange(['questions', index, 'acceptable_answers', answerIndex], e.target.value)}
+                  className="w-full p-2 border rounded"
+                />
               ) : (
-                <span className="flex items-center">
-                  <XCircle className="mr-2" size={20} />
-                  Incorrect. Acceptable answers:
-                </span>
+                <p className="text-gray-700">{answer}</p>
               )}
-            </p>
-            {!isCorrect && (
-              <ul className="mt-2 list-disc list-inside">
-                {question.acceptable_answers.map((answer, i) => (
-                  <li key={i} className={THEME_COLORS.primaryText}>{answer}</li>
-                ))}
-              </ul>
-            )}
-            {question.explanation && (
-              <p className={`mt-2 ${isCorrect ? THEME_COLORS.successText : THEME_COLORS.errorText}`}>
-                {question.explanation}
-              </p>
-            )}
+            </div>
+          ))}
+        </div>
+        {question.explanation && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -390,7 +314,18 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
           <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF1414] text-white font-semibold mr-3">
             {questionNumber}
           </span>
-          <h3 className="text-lg font-semibold text-black flex-1">{question.question_text}</h3>
+          <div className="flex-1">
+            {isEditing ? (
+              <input
+                type="text"
+                value={question.question_text}
+                onChange={(e) => handleTextChange(['questions', index, 'question_text'], e.target.value)}
+                className="w-full p-2 border rounded text-lg font-semibold"
+              />
+            ) : (
+              <h3 className="text-lg font-semibold text-black">{question.question_text}</h3>
+            )}
+          </div>
         </div>
         {questionType === 'multiple-choice' && renderMultipleChoice(question as MultipleChoiceQuestion, index)}
         {questionType === 'multi-select' && renderMultiSelect(question as MultiSelectQuestion, index)}
@@ -404,11 +339,16 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-black mb-2">{dataToDisplay.quizTitle || 'Untitled Quiz'}</h1>
-        {!isSubmitted && (
-          <p className="text-gray-600">
-            Complete all questions and click "Submit" to check your answers.
-          </p>
+        {isEditing ? (
+          <input
+            type="text"
+            value={dataToDisplay.quizTitle}
+            onChange={(e) => handleTextChange(['quizTitle'], e.target.value)}
+            className="w-full p-2 border rounded text-2xl font-bold mb-2"
+            placeholder={t.quizTitle}
+          />
+        ) : (
+          <h1 className="text-2xl font-bold text-black mb-2">{dataToDisplay.quizTitle || t.quizTitle}</h1>
         )}
       </div>
 

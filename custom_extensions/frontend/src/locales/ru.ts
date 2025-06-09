@@ -24,6 +24,22 @@ export const ru = {
     editVoiceoverPlaceholder: "Текст озвучки (до 3 предложений)...",
     emptyContent: "...",
   },
+  quiz: {
+    quizTitle: "Название теста",
+    question: "Вопрос",
+    correctAnswer: "Правильный ответ",
+    acceptableAnswers: "Допустимые ответы",
+    prompts: "Подсказки",
+    correctMatches: "Правильные соответствия",
+    itemsToSort: "Элементы для сортировки",
+    explanation: "Объяснение",
+    multipleChoice: "Один правильный ответ",
+    multiSelect: "Несколько правильных ответов",
+    matching: "Соответствие",
+    sorting: "Сортировка",
+    openAnswer: "Свободный ответ",
+    emptyContent: "...",
+  },
   modals: {
     createLesson: {
       title: "Создать урок",

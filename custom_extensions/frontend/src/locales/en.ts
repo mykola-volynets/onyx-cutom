@@ -24,6 +24,22 @@ export const en = {
     editVoiceoverPlaceholder: "Voiceover text (max 3 sentences)...",
     emptyContent: "...",
   },
+  quiz: {
+    quizTitle: "Quiz Title",
+    question: "Question",
+    correctAnswer: "Correct Answer",
+    acceptableAnswers: "Acceptable Answers",
+    prompts: "Prompts",
+    correctMatches: "Correct Matches",
+    itemsToSort: "Items to Sort",
+    explanation: "Explanation",
+    multipleChoice: "Multiple Choice",
+    multiSelect: "Multi-Select",
+    matching: "Matching",
+    sorting: "Sorting",
+    openAnswer: "Open Answer",
+    emptyContent: "...",
+  },
   modals: {
     createLesson: {
       title: "Create a Lesson",

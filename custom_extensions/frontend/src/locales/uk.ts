@@ -24,6 +24,22 @@ export const uk = {
     editVoiceoverPlaceholder: "Текст озвучення (до 3 речень)...",
     emptyContent: "...",
   },
+  quiz: {
+    quizTitle: "Назва тесту",
+    question: "Питання",
+    correctAnswer: "Правильна відповідь",
+    acceptableAnswers: "Допустимі відповіді",
+    prompts: "Підказки",
+    correctMatches: "Правильні відповідності",
+    itemsToSort: "Елементи для сортування",
+    explanation: "Пояснення",
+    multipleChoice: "Одна правильна відповідь",
+    multiSelect: "Декілька правильних відповідей",
+    matching: "Відповідність",
+    sorting: "Сортування",
+    openAnswer: "Вільна відповідь",
+    emptyContent: "...",
+  },
   modals: {
     createLesson: {
       title: "Створити урок",

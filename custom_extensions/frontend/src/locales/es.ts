@@ -24,6 +24,22 @@ export const es = {
     editVoiceoverPlaceholder: "Texto de voz en off (máx. 3 frases)...",
     emptyContent: "...",
   },
+  quiz: {
+    quizTitle: "Título del cuestionario",
+    question: "Pregunta",
+    correctAnswer: "Respuesta correcta",
+    acceptableAnswers: "Respuestas aceptables",
+    prompts: "Indicaciones",
+    correctMatches: "Correspondencias correctas",
+    itemsToSort: "Elementos para ordenar",
+    explanation: "Explicación",
+    multipleChoice: "Opción múltiple",
+    multiSelect: "Selección múltiple",
+    matching: "Correspondencia",
+    sorting: "Ordenamiento",
+    openAnswer: "Respuesta abierta",
+    emptyContent: "...",
+  },
   modals: {
     createLesson: {
       title: "Crear una lección",
