@@ -71,6 +71,19 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     }
   };
 
+  const handleCorrectAnswerChange = (questionIndex: number, optionId: string, isCorrect: boolean) => {
+    const question = questions[questionIndex];
+    if (question.question_type === 'multiple-choice') {
+      handleTextChange(['questions', questionIndex, 'correct_option_id'], optionId);
+    } else if (question.question_type === 'multi-select') {
+      const currentCorrectIds = (question as MultiSelectQuestion).correct_option_ids || [];
+      const newCorrectIds = isCorrect
+        ? currentCorrectIds.filter(id => id !== optionId)
+        : [...currentCorrectIds, optionId];
+      handleTextChange(['questions', questionIndex, 'correct_option_ids'], newCorrectIds);
+    }
+  };
+
   const renderMultipleChoice = (question: MultipleChoiceQuestion, index: number) => {
     const isCorrect = userAnswers[index] === question.correct_option_id;
     const showResult = isSubmitted && showAnswers;
@@ -81,7 +94,10 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
           {question.options.map((option) => (
             <div key={option.id} className="flex items-start">
               <div className={`flex items-center h-5 ${isEditing ? 'cursor-pointer' : ''}`}>
-                <div className={`w-4 h-4 rounded-full border ${option.id === question.correct_option_id ? 'border-[#FF1414] bg-[#FF1414]' : 'border-gray-300'}`}>
+                <div 
+                  className={`w-4 h-4 rounded-full border ${option.id === question.correct_option_id ? 'border-[#FF1414] bg-[#FF1414]' : 'border-gray-300'}`}
+                  onClick={() => isEditing && handleCorrectAnswerChange(index, option.id, option.id === question.correct_option_id)}
+                >
                   {option.id === question.correct_option_id && (
                     <div className="w-2 h-2 rounded-full bg-white m-auto" />
                   )}
@@ -93,18 +109,29 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                     type="text"
                     value={option.text}
                     onChange={(e) => handleTextChange(['questions', index, 'options', question.options.findIndex(o => o.id === option.id), 'text'], e.target.value)}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-black"
                   />
                 ) : (
-                  <span className="text-gray-700">{option.text}</span>
+                  <span className="text-black">{option.text}</span>
                 )}
               </div>
             </div>
           ))}
         </div>
-        {question.explanation && (
+        {isEditing ? (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-black mb-1">{t.explanation}</label>
+            <input
+              type="text"
+              value={question.explanation || ''}
+              onChange={(e) => handleTextChange(['questions', index, 'explanation'], e.target.value)}
+              className="w-full p-2 border rounded text-black"
+              placeholder={t.explanation}
+            />
+          </div>
+        ) : question.explanation && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">{question.explanation}</p>
+            <p className="text-sm text-black">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -123,7 +150,10 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
           {question.options.map((option) => (
             <div key={option.id} className="flex items-start">
               <div className={`flex items-center h-5 ${isEditing ? 'cursor-pointer' : ''}`}>
-                <div className={`w-4 h-4 rounded border ${question.correct_option_ids.includes(option.id) ? 'border-[#FF1414] bg-[#FF1414]' : 'border-gray-300'}`}>
+                <div 
+                  className={`w-4 h-4 rounded border ${question.correct_option_ids.includes(option.id) ? 'border-[#FF1414] bg-[#FF1414]' : 'border-gray-300'}`}
+                  onClick={() => isEditing && handleCorrectAnswerChange(index, option.id, question.correct_option_ids.includes(option.id))}
+                >
                   {question.correct_option_ids.includes(option.id) && (
                     <div className="w-2 h-2 bg-white m-auto" />
                   )}
@@ -135,18 +165,29 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                     type="text"
                     value={option.text}
                     onChange={(e) => handleTextChange(['questions', index, 'options', question.options.findIndex(o => o.id === option.id), 'text'], e.target.value)}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-black"
                   />
                 ) : (
-                  <span className="text-gray-700">{option.text}</span>
+                  <span className="text-black">{option.text}</span>
                 )}
               </div>
             </div>
           ))}
         </div>
-        {question.explanation && (
+        {isEditing ? (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-black mb-1">{t.explanation}</label>
+            <input
+              type="text"
+              value={question.explanation || ''}
+              onChange={(e) => handleTextChange(['questions', index, 'explanation'], e.target.value)}
+              className="w-full p-2 border rounded text-black"
+              placeholder={t.explanation}
+            />
+          </div>
+        ) : question.explanation && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">{question.explanation}</p>
+            <p className="text-sm text-black">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -164,7 +205,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
       <div className="mt-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <h4 className="font-medium mb-2">{t.prompts}</h4>
+            <h4 className="font-medium mb-2 text-black">{t.prompts}</h4>
             {question.prompts.map((prompt) => (
               <div key={prompt.id} className="mb-2">
                 {isEditing ? (
@@ -172,16 +213,16 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                     type="text"
                     value={prompt.text}
                     onChange={(e) => handleTextChange(['questions', index, 'prompts', question.prompts.findIndex(p => p.id === prompt.id), 'text'], e.target.value)}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-black"
                   />
                 ) : (
-                  <span className="text-gray-700">{prompt.text}</span>
+                  <span className="text-black">{prompt.text}</span>
                 )}
               </div>
             ))}
           </div>
           <div>
-            <h4 className="font-medium mb-2">{t.correctMatches}</h4>
+            <h4 className="font-medium mb-2 text-black">{t.correctMatches}</h4>
             {question.prompts.map((prompt) => {
               const matchedOption = question.options.find(opt => opt.id === question.correct_matches[prompt.id]);
               return (
@@ -191,19 +232,30 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                       type="text"
                       value={matchedOption?.text || ''}
                       onChange={(e) => handleTextChange(['questions', index, 'options', question.options.findIndex(o => o.id === question.correct_matches[prompt.id]), 'text'], e.target.value)}
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border rounded text-black"
                     />
                   ) : (
-                    <span className="text-gray-700">{matchedOption?.text}</span>
+                    <span className="text-black">{matchedOption?.text}</span>
                   )}
                 </div>
               );
             })}
           </div>
         </div>
-        {question.explanation && (
+        {isEditing ? (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-black mb-1">{t.explanation}</label>
+            <input
+              type="text"
+              value={question.explanation || ''}
+              onChange={(e) => handleTextChange(['questions', index, 'explanation'], e.target.value)}
+              className="w-full p-2 border rounded text-black"
+              placeholder={t.explanation}
+            />
+          </div>
+        ) : question.explanation && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">{question.explanation}</p>
+            <p className="text-sm text-black">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -251,18 +303,29 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                     type="text"
                     value={item?.text || ''}
                     onChange={(e) => handleTextChange(['questions', index, 'items_to_sort', question.items_to_sort.findIndex(i => i.id === itemId), 'text'], e.target.value)}
-                    className="flex-1 p-2 border rounded"
+                    className="flex-1 p-2 border rounded text-black"
                   />
                 ) : (
-                  <span className="text-gray-700">{item?.text}</span>
+                  <span className="text-black">{item?.text}</span>
                 )}
               </div>
             );
           })}
         </div>
-        {question.explanation && (
+        {isEditing ? (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-black mb-1">{t.explanation}</label>
+            <input
+              type="text"
+              value={question.explanation || ''}
+              onChange={(e) => handleTextChange(['questions', index, 'explanation'], e.target.value)}
+              className="w-full p-2 border rounded text-black"
+              placeholder={t.explanation}
+            />
+          </div>
+        ) : question.explanation && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">{question.explanation}</p>
+            <p className="text-sm text-black">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -279,7 +342,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     return (
       <div className="mt-4">
         <div className="space-y-2">
-          <h4 className="font-medium">{t.acceptableAnswers}:</h4>
+          <h4 className="font-medium text-black">{t.acceptableAnswers}:</h4>
           {question.acceptable_answers.map((answer, answerIndex) => (
             <div key={answerIndex}>
               {isEditing ? (
@@ -287,17 +350,28 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                   type="text"
                   value={answer}
                   onChange={(e) => handleTextChange(['questions', index, 'acceptable_answers', answerIndex], e.target.value)}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-black"
                 />
               ) : (
-                <p className="text-gray-700">{answer}</p>
+                <p className="text-black">{answer}</p>
               )}
             </div>
           ))}
         </div>
-        {question.explanation && (
+        {isEditing ? (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-black mb-1">{t.explanation}</label>
+            <input
+              type="text"
+              value={question.explanation || ''}
+              onChange={(e) => handleTextChange(['questions', index, 'explanation'], e.target.value)}
+              className="w-full p-2 border rounded text-black"
+              placeholder={t.explanation}
+            />
+          </div>
+        ) : question.explanation && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">{question.explanation}</p>
+            <p className="text-sm text-black">{question.explanation}</p>
           </div>
         )}
       </div>
@@ -320,7 +394,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                 type="text"
                 value={question.question_text}
                 onChange={(e) => handleTextChange(['questions', index, 'question_text'], e.target.value)}
-                className="w-full p-2 border rounded text-lg font-semibold"
+                className="w-full p-2 border rounded text-lg font-semibold text-black"
               />
             ) : (
               <h3 className="text-lg font-semibold text-black">{question.question_text}</h3>
@@ -344,7 +418,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
             type="text"
             value={dataToDisplay.quizTitle}
             onChange={(e) => handleTextChange(['quizTitle'], e.target.value)}
-            className="w-full p-2 border rounded text-2xl font-bold mb-2"
+            className="w-full p-2 border rounded text-2xl font-bold mb-2 text-black"
             placeholder={t.quizTitle}
           />
         ) : (
