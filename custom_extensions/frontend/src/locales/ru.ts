@@ -2,6 +2,7 @@ export const ru = {
   common: {
     course: "КУРС",
     lesson: "УРОК",
+    save: "Сохранить",
   },
   trainingPlan: {
     moduleAndLessons: "Модуль и уроки",
@@ -38,6 +39,7 @@ export const ru = {
     correctMatches: "Правильные соответствия",
     itemsToSort: "Элементы для сортировки",
     explanation: "Объяснение",
+    selectOption: "Выберите вариант",
     multipleChoice: "Один правильный ответ",
     multiSelect: "Несколько правильных ответов",
     matching: "Соответствие",

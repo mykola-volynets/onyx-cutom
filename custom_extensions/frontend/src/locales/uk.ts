@@ -2,6 +2,7 @@ export const uk = {
   common: {
     course: "КУРС",
     lesson: "УРОК",
+    save: "Зберегти",
   },
   trainingPlan: {
     moduleAndLessons: "Модуль та уроки",
@@ -38,6 +39,7 @@ export const uk = {
     correctMatches: "Правильні відповідності",
     itemsToSort: "Елементи для сортування",
     explanation: "Пояснення",
+    selectOption: "Виберіть варіант",
     multipleChoice: "Одна правильна відповідь",
     multiSelect: "Декілька правильних відповідей",
     matching: "Відповідність",

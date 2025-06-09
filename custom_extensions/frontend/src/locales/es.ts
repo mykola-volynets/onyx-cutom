@@ -2,6 +2,7 @@ export const es = {
   common: {
     course: "CURSO",
     lesson: "LECCIÓN",
+    save: "Guardar",
   },
   trainingPlan: {
     moduleAndLessons: "Módulo y Lecciones",
@@ -35,9 +36,10 @@ export const es = {
     correctAnswers: "Respuestas correctas",
     acceptableAnswers: "Respuestas aceptables",
     prompts: "Indicaciones",
-    correctMatches: "Correspondencias correctas",
-    itemsToSort: "Elementos para ordenar",
+    correctMatches: "Coincidencias Correctas",
+    itemsToSort: "Elementos a Ordenar",
     explanation: "Explicación",
+    selectOption: "Seleccione una opción",
     multipleChoice: "Opción múltiple",
     multiSelect: "Selección múltiple",
     matching: "Correspondencia",
