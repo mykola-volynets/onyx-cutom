@@ -85,6 +85,20 @@ export default function ProjectInstanceViewPage() {
   // State for the absolute chat URL
   const [chatRedirectUrl, setChatRedirectUrl] = useState<string | null>(null);
 
+  const findLessonNumberForCurrentProject = useCallback((): number | undefined => {
+    if (!projectInstanceData || !allUserMicroproducts || !parentProjectNameForCurrentView) {
+      return undefined;
+    }
+    // Assuming 'Training Plan' is the type of the container project, we filter it out
+    const courseMicroproducts = allUserMicroproducts
+      .filter(mp => mp.projectName === parentProjectNameForCurrentView && mp.design_microproduct_type !== 'Training Plan')
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  
+    const currentIndex = courseMicroproducts.findIndex(mp => mp.id === projectInstanceData.project_id);
+
+    return currentIndex !== -1 ? currentIndex + 1 : undefined;
+  }, [projectInstanceData, allUserMicroproducts, parentProjectNameForCurrentView]);
+
   const fetchPageData = useCallback(async (currentProjectIdStr: string) => {
     setPageState('fetching');
     setErrorMessage(null);
