@@ -1432,6 +1432,9 @@ Return ONLY the JSON object.
                 elif component_name_from_db == COMPONENT_NAME_VIDEO_LESSON:
                     final_content_for_response = VideoLessonData(**db_content_dict)
                     logger.info("Re-parsed as VideoLessonData.")
+                elif component_name_from_db == COMPONENT_NAME_QUIZ:
+                    final_content_for_response = QuizData(**db_content_dict)
+                    logger.info("Re-parsed as QuizData.")
                 else:
                     logger.warning(f"Unknown component_name '{component_name_from_db}' when re-parsing content from DB on add. Attempting generic TrainingPlanDetails fallback.")
                     final_content_for_response = TrainingPlanDetails(**db_content_dict)
@@ -1501,8 +1504,10 @@ async def get_project_details_for_edit(project_id: int, onyx_user_id: str = Depe
                     parsed_content_for_response = TrainingPlanDetails(**db_content_json)
                 elif component_name == COMPONENT_NAME_VIDEO_LESSON:
                     parsed_content_for_response = VideoLessonData(**db_content_json)
+                elif component_name == COMPONENT_NAME_QUIZ:
+                    parsed_content_for_response = QuizData(**db_content_json)
                 else:
-                    logger.warning(f"Unknown component_name '{component_name}' for project {project_id}. Attempting fallbacks.", exc_info=not IS_PRODUCTION)
+                    logger.warning(f"Unknown component_name '{component_name}' for project {project_id}. Trying fallbacks.", exc_info=not IS_PRODUCTION)
                     try: parsed_content_for_response = TrainingPlanDetails(**db_content_json)
                     except:
                         try: parsed_content_for_response = PdfLessonDetails(**db_content_json)
@@ -1579,6 +1584,8 @@ async def update_project_in_db(project_id: int, project_update_data: ProjectUpda
                     final_content_for_model = TrainingPlanDetails(**db_content)
                 elif current_component_name == COMPONENT_NAME_VIDEO_LESSON:
                     final_content_for_model = VideoLessonData(**db_content)
+                elif current_component_name == COMPONENT_NAME_QUIZ:
+                    final_content_for_model = QuizData(**db_content)
                 else:
                     final_content_for_model = TrainingPlanDetails(**db_content)
             except Exception as e_parse:
@@ -1655,6 +1662,8 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
                     details_data = TrainingPlanDetails(**microproduct_content_json)
                 elif component_name == COMPONENT_NAME_VIDEO_LESSON:
                     details_data = VideoLessonData(**microproduct_content_json)
+                elif component_name == COMPONENT_NAME_QUIZ:
+                    details_data = QuizData(**microproduct_content_json)
                 else:
                     logger.warning(f"Unknown component_name '{component_name}' for project {project_id} view. Trying fallbacks.", exc_info=not IS_PRODUCTION)
                     try: details_data = TrainingPlanDetails(**microproduct_content_json)
@@ -1670,6 +1679,8 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
             lang_fallback = detect_language(project_instance_name)
             if component_name == COMPONENT_NAME_PDF_LESSON:
                 details_data = PdfLessonDetails(lessonTitle=f"No/Invalid content for {project_instance_name}", contentBlocks=[], detectedLanguage=lang_fallback)
+            elif component_name == COMPONENT_NAME_QUIZ:
+                details_data = QuizData(quizTitle=f"No/Invalid content for {project_instance_name}", questions=[], detectedLanguage=lang_fallback)
             else:
                 details_data = TrainingPlanDetails(mainTitle=f"No/Invalid content for {project_instance_name}", sections=[], detectedLanguage=lang_fallback)
 
