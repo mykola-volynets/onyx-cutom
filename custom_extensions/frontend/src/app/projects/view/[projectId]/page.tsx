@@ -190,7 +190,7 @@ export default function ProjectInstanceViewPage() {
   }, [projectId, params, fetchPageData, pageState, projectInstanceData]);
 
 
-  const handleTextChange = useCallback((path: (string | number)[], newValue: string | number | boolean) => {
+  const handleTextChange = useCallback((path: (string | number)[], newValue: any) => {
     setEditableData(currentData => {
       if (currentData === null || currentData === undefined) {
         console.warn("Attempted to update null or undefined editableData at path:", path);
@@ -210,24 +210,11 @@ export default function ProjectInstanceViewPage() {
         }
 
         const finalKey = path[path.length - 1];
-        let processedValue = newValue;
-
-        if (typeof newValue === 'string') {
-          const trimmedValue = newValue.trim();
-          if ((trimmedValue.startsWith('{') && trimmedValue.endsWith('}')) || (trimmedValue.startsWith('[') && trimmedValue.endsWith(']'))) {
-            try {
-              processedValue = JSON.parse(newValue);
-            } catch (e) {
-              // Not a valid JSON string, treat as a regular string
-            }
-          }
-        }
-        
         if (typeof target === 'object' && target !== null && (typeof finalKey === 'string' || typeof finalKey === 'number')) {
-          target[finalKey] = processedValue;
+          target[finalKey] = newValue;
         } else if (Array.isArray(target) && typeof finalKey === 'number') {
           if (finalKey <= target.length) {
-              target[finalKey] = processedValue;
+              target[finalKey] = newValue;
           } else {
             console.warn("Index out of bounds for array update at path:", path, "Target length:", target.length, "Index:", finalKey);
             return currentData;

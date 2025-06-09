@@ -30,7 +30,7 @@ const THEME_COLORS = {
 interface QuizDisplayProps {
   dataToDisplay: QuizData | null;
   isEditing?: boolean;
-  onTextChange?: (path: (string | number)[], newText: string) => void;
+  onTextChange?: (path: (string | number)[], newValue: any) => void;
   parentProjectName?: string;
   lessonNumber?: number;
 }
@@ -67,7 +67,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     setShowAnswers(false);
   };
 
-  const handleTextChange = (path: (string | number)[], newValue: string) => {
+  const handleTextChange = (path: (string | number)[], newValue: any) => {
     if (onTextChange) {
       onTextChange(path, newValue);
     }
@@ -80,16 +80,16 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     } else if (question.question_type === 'multi-select') {
       const multiSelectQuestion = question as MultiSelectQuestion;
       let currentCorrectIds: string[] = [];
-      if (typeof multiSelectQuestion.correct_option_ids === 'string') {
-        currentCorrectIds = multiSelectQuestion.correct_option_ids.split(',').filter(id => id.trim() !== '');
-      } else if (Array.isArray(multiSelectQuestion.correct_option_ids)) {
+      if (Array.isArray(multiSelectQuestion.correct_option_ids)) {
         currentCorrectIds = multiSelectQuestion.correct_option_ids;
+      } else if (typeof multiSelectQuestion.correct_option_ids === 'string') {
+        currentCorrectIds = multiSelectQuestion.correct_option_ids.split(',').filter(id => id.trim() !== '');
       }
 
       const newCorrectIds = isCorrect
         ? currentCorrectIds.filter(id => id !== optionId)
         : [...currentCorrectIds, optionId];
-      handleTextChange(['questions', questionIndex, 'correct_option_ids'], newCorrectIds.join(','));
+      handleTextChange(['questions', questionIndex, 'correct_option_ids'], newCorrectIds);
     }
   };
 
@@ -151,10 +151,10 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     const userAnswer = userAnswers[index] || [];
 
     let correctIds: string[] = [];
-    if (typeof question.correct_option_ids === 'string') {
-      correctIds = question.correct_option_ids.split(',').filter(id => id.trim() !== '');
-    } else if (Array.isArray(question.correct_option_ids)) {
+    if (Array.isArray(question.correct_option_ids)) {
       correctIds = question.correct_option_ids;
+    } else if (typeof question.correct_option_ids === 'string') {
+      correctIds = question.correct_option_ids.split(',').filter(id => id.trim() !== '');
     }
 
     const isCorrect = correctIds.every((id: string) => userAnswer.includes(id)) &&
@@ -218,13 +218,21 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     );
     const showResult = isSubmitted && showAnswers;
 
+    const handleMatchChange = (promptId: string, newOptionId: string) => {
+      const newCorrectMatches = {
+        ...question.correct_matches,
+        [promptId]: newOptionId,
+      };
+      handleTextChange(['questions', index, 'correct_matches'], newCorrectMatches);
+    };
+
     return (
       <div className="mt-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <h4 className="font-medium mb-2 text-black">{t.quiz.prompts}</h4>
             {question.prompts.map((prompt) => (
-              <div key={prompt.id} className="mb-2">
+              <div key={prompt.id} className="mb-2 flex items-center">
                 {isEditing ? (
                   <input
                     type="text"
@@ -233,7 +241,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                     className="w-full p-2 border rounded text-black"
                   />
                 ) : (
-                  <span className="text-black">{prompt.text}</span>
+                  <span className="text-black flex-1">{prompt.text}</span>
                 )}
               </div>
             ))}
@@ -241,19 +249,26 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
           <div>
             <h4 className="font-medium mb-2 text-black">{t.quiz.correctMatches}</h4>
             {question.prompts.map((prompt) => {
+              if (isEditing) {
+                return (
+                  <div key={prompt.id} className="mb-2">
+                    <select
+                      value={question.correct_matches[prompt.id] || ''}
+                      onChange={(e) => handleMatchChange(prompt.id, e.target.value)}
+                      className="w-full p-2 border rounded text-black bg-white"
+                    >
+                      <option value="" disabled>{t.quiz.selectOption}</option>
+                      {question.options.map(opt => (
+                        <option key={opt.id} value={opt.id}>{opt.text}</option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              }
               const matchedOption = question.options.find(opt => opt.id === question.correct_matches[prompt.id]);
               return (
                 <div key={prompt.id} className="mb-2">
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={matchedOption?.text || ''}
-                      onChange={(e) => handleTextChange(['questions', index, 'options', question.options.findIndex(o => o.id === question.correct_matches[prompt.id]), 'text'], e.target.value)}
-                      className="w-full p-2 border rounded text-black"
-                    />
-                  ) : (
-                    <span className="text-black">{matchedOption?.text}</span>
-                  )}
+                  <span className="text-black">{matchedOption?.text}</span>
                 </div>
               );
             })}
@@ -283,6 +298,14 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
     const userAnswer = userAnswers[index] || [];
     const isCorrect = question.items_to_sort.every((item: SortableItem, i: number) => item.id === userAnswer[i]);
     const showResult = isSubmitted && showAnswers;
+    
+    // Use component state to manage the order during editing
+    const [sortedItems, setSortedItems] = useState(question.correct_order);
+    
+    React.useEffect(() => {
+        setSortedItems(question.correct_order);
+    }, [question.correct_order]);
+
 
     const handleDragStart = (e: React.DragEvent, itemId: string) => {
       e.dataTransfer.setData('text/plain', itemId);
@@ -292,18 +315,78 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
       e.preventDefault();
     };
 
-    const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    const handleDrop = (e: React.DragEvent, targetItemId: string) => {
       e.preventDefault();
-      const itemId = e.dataTransfer.getData('text/plain');
-      const newAnswer = [...userAnswer];
-      const currentIndex = newAnswer.indexOf(itemId);
+      const sourceItemId = e.dataTransfer.getData('text/plain');
+      if (sourceItemId === targetItemId) return;
+
+      const newSortedItems = [...(userAnswer as string[])]; // Use userAnswer which is the state for sorting
+      const sourceIndex = newSortedItems.indexOf(sourceItemId);
+      const targetIndex = newSortedItems.indexOf(targetItemId);
+
+      newSortedItems.splice(sourceIndex, 1);
+      newSortedItems.splice(targetIndex, 0, sourceItemId);
       
-      if (currentIndex !== -1) {
-        newAnswer.splice(currentIndex, 1);
-      }
-      newAnswer.splice(targetIndex, 0, itemId);
-      handleAnswerChange(index, newAnswer);
+      handleAnswerChange(index, newSortedItems); // This updates user answers for taking the quiz
     };
+    
+    const handleEditDrop = (e: React.DragEvent, targetItemId: string) => {
+      e.preventDefault();
+      const sourceItemId = e.dataTransfer.getData('text/plain');
+      if (sourceItemId === targetItemId) return;
+
+      const newSortedItems = [...sortedItems];
+      const sourceIndex = newSortedItems.indexOf(sourceItemId);
+      const targetIndex = newSortedItems.indexOf(targetItemId);
+
+      newSortedItems.splice(sourceIndex, 1);
+      newSortedItems.splice(targetIndex, 0, sourceItemId);
+      
+      setSortedItems(newSortedItems);
+      handleTextChange(['questions', index, 'correct_order'], newSortedItems);
+    };
+
+    if (isEditing) {
+        return (
+          <div className="mt-4">
+            <div className="space-y-2">
+              {sortedItems.map((itemId, orderIndex) => {
+                const item = question.items_to_sort.find(i => i.id === itemId);
+                return (
+                  <div 
+                    key={itemId} 
+                    className="flex items-center p-2 border rounded bg-white cursor-grab"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, itemId)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleEditDrop(e, itemId)}
+                  >
+                    <span className="w-6 h-6 flex items-center justify-center bg-[#FF1414] text-white rounded-full mr-3">
+                      {orderIndex + 1}
+                    </span>
+                    <input
+                      type="text"
+                      value={item?.text || ''}
+                      onChange={(e) => handleTextChange(['questions', index, 'items_to_sort', question.items_to_sort.findIndex(i => i.id === itemId), 'text'], e.target.value)}
+                      className="flex-1 p-1 border-none rounded text-black bg-transparent focus:ring-0"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+             <div className="mt-4">
+                <label className="block text-sm font-medium text-black mb-1">{t.quiz.explanation}</label>
+                <input
+                  type="text"
+                  value={question.explanation || ''}
+                  onChange={(e) => handleTextChange(['questions', index, 'explanation'], e.target.value)}
+                  className="w-full p-2 border rounded text-black"
+                  placeholder={t.quiz.explanation}
+                />
+              </div>
+          </div>
+        )
+    }
 
     return (
       <div className="mt-4">
@@ -315,16 +398,7 @@ const QuizDisplay: React.FC<QuizDisplayProps> = ({ dataToDisplay, isEditing, onT
                 <span className="w-6 h-6 flex items-center justify-center bg-[#FF1414] text-white rounded-full mr-3">
                   {orderIndex + 1}
                 </span>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={item?.text || ''}
-                    onChange={(e) => handleTextChange(['questions', index, 'items_to_sort', question.items_to_sort.findIndex(i => i.id === itemId), 'text'], e.target.value)}
-                    className="flex-1 p-2 border rounded text-black"
-                  />
-                ) : (
-                  <span className="text-black">{item?.text}</span>
-                )}
+                <span className="text-black">{item?.text}</span>
               </div>
             );
           })}
