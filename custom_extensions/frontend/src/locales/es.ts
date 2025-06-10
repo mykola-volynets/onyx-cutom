@@ -3,6 +3,7 @@ export const es = {
     course: "CURSO",
     lesson: "LECCIÓN",
     save: "Guardar",
+    confirmCancelEdit: "¿Estás seguro de que quieres cancelar? Cualquier cambio no guardado se perderá."
   },
   trainingPlan: {
     moduleAndLessons: "Módulo y Lecciones",

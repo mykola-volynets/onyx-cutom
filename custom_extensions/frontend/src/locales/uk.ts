@@ -3,6 +3,7 @@ export const uk = {
     course: "КУРС",
     lesson: "УРОК",
     save: "Зберегти",
+    confirmCancelEdit: "Ви впевнені, що хочете скасувати? Будь-які незбережені зміни буде втрачено."
   },
   trainingPlan: {
     moduleAndLessons: "Модуль та уроки",
