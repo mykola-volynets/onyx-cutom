@@ -781,10 +781,22 @@ export const AIMessage = ({
                                     currentPage={currentMessageInd + 1}
                                     totalPages={otherMessagesCanSwitchTo.length}
                                     handlePrevious={() => {
-                                      onMessageSelection(otherMessage!);
+                                      const prevMessageId =
+                                        otherMessagesCanSwitchTo[
+                                          currentMessageInd - 1
+                                        ];
+                                      if (prevMessageId !== undefined) {
+                                        onMessageSelection(prevMessageId);
+                                      }
                                     }}
                                     handleNext={() => {
-                                      onMessageSelection(otherMessage!);
+                                      const nextMessageId =
+                                        otherMessagesCanSwitchTo[
+                                          currentMessageInd + 1
+                                        ];
+                                      if (nextMessageId !== undefined) {
+                                        onMessageSelection(nextMessageId);
+                                      }
                                     }}
                                   />
                                 </div>
@@ -896,18 +908,22 @@ export const AIMessage = ({
                                     currentPage={currentMessageInd! + 1}
                                     totalPages={otherMessagesCanSwitchTo!.length}
                                     handlePrevious={() => {
-                                      onMessageSelection!(
+                                      const prevMessageId =
                                         otherMessagesCanSwitchTo![
                                           currentMessageInd! - 1
-                                        ]
-                                      );
+                                        ];
+                                      if (prevMessageId !== undefined) {
+                                        onMessageSelection!(prevMessageId);
+                                      }
                                     }}
                                     handleNext={() => {
-                                      onMessageSelection!(
+                                      const nextMessageId =
                                         otherMessagesCanSwitchTo![
                                           currentMessageInd! + 1
-                                        ]
-                                      );
+                                        ];
+                                      if (nextMessageId !== undefined) {
+                                        onMessageSelection!(nextMessageId);
+                                      }
                                     }}
                                   />
                                 </div>
