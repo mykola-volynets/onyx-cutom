@@ -3042,7 +3042,7 @@ export function ChatPage({
                                           ) || []
                                         }
                                         agenticDocs={
-                                          message.agentic_docs || agenticDocs
+                                          message.agentic_docs || agenticDocsFromHistory
                                         }
                                         docs={
                                           message?.documents &&
