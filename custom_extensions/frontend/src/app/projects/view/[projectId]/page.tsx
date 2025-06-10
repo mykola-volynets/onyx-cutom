@@ -86,13 +86,6 @@ function ProjectInstanceViewPageContent() {
   
   const [chatRedirectUrl, setChatRedirectUrl] = useState<string | null>(null);
 
-  const lang = useMemo(() => {
-    const data = isEditing ? editableData : projectInstanceData?.details;
-    return data?.detectedLanguage || 'en';
-  }, [projectInstanceData, editableData, isEditing]);
-
-  const locale = useMemo(() => locales[lang as keyof typeof locales] || locales.en, [lang]);
-
   const fetchPageData = useCallback(async (currentProjectIdStr: string) => {
     setPageState('fetching');
     setErrorMessage(null);
@@ -439,14 +432,14 @@ function ProjectInstanceViewPageContent() {
                 }`}
             >
                 <Edit size={18} />
-                <span className="hidden sm:inline-block">{isEditing ? (locale.common.cancelEdit || "Cancel") : (locale.common.edit || "Edit")}</span>
+                <span className="hidden sm:inline-block">{isEditing ? "Cancel" : "Edit"}</span>
             </button>
              <button
                 onClick={handlePdfDownload}
                 className="flex items-center gap-2 text-sm font-medium p-2 rounded-md transition-colors bg-green-100 text-green-700 hover:bg-green-200"
             >
                 <ArrowDownToLine size={18} />
-                <span className="hidden sm:inline-block">{locale.common.downloadPdf || "Download PDF"}</span>
+                <span className="hidden sm:inline-block">Download PDF</span>
             </button>
             {isEditing && (
               <button
@@ -455,7 +448,7 @@ function ProjectInstanceViewPageContent() {
                 className="flex items-center gap-2 text-sm font-medium p-2 rounded-md transition-colors bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
               >
                 <Save size={18} />
-                <span className="hidden sm:inline-block">{isSaving ? (locale.common.saving || "Saving...") : (locale.common.save || "Save")}</span>
+                <span className="hidden sm:inline-block">{isSaving ? "Saving..." : "Save"}</span>
               </button>
             )}
           </div>
@@ -463,7 +456,7 @@ function ProjectInstanceViewPageContent() {
 
          {saveError && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
-            <strong className="font-bold">{locale.common.saveErrorTitle || "Save Error:"} </strong>
+            <strong className="font-bold">Save Error: </strong>
             <span className="block sm:inline">{saveError}</span>
           </div>
         )}
