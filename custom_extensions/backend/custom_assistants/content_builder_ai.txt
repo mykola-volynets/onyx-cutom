@@ -274,12 +274,13 @@ Main Title (Optional): The entire document can have a main title. If the user pr
 
 Headlines: Must be preceded by `##`, `###`, or `####`, corresponding to levels 2, 3, and 4. Level 2 is for major sections, while Levels 3 and 4 are for sub-sections or specific points within a list.
 
-Icons in Headlines: To make the presentation more engaging, you should strategically add icons to some headlines. Don't use them for every headline. Instead, pick a few key sections to highlight (e.g., Goals, Warnings) and add a relevant icon. To add an icon, append `{iconName}` after the headline text.
-Available icons: `info`, `check`, `alertTriangle`, `xCircle`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `target`, `trendingUp`, `flag`, `shield`, `activity`, `anchor`, `aperture`, `archive`, `atSign`.
-Example: `### Key Features {award}`
+Icons in Headlines: To make the presentation more engaging, you should strategically add icons to some headlines. Don't use them for every headline, as that can be overwhelming. Instead, pick a few key sections that you want to highlight—for example, a section about "Goals", "Key Features", or a "Warning"—and add a relevant icon to its headline.
+To add an icon, append `{iconName}` after the headline text.
+Available icons: `goal`, `key`, `idea`, `warning`, `info`, `question`, `summary`, `star`, `check`, `alertTriangle`, `xCircle`.
+Example: `### Key Features {star}`
 
 Important Sections: To designate a headline and its subsequent single content block (which can be a paragraph, a bullet list, a numbered list, or an alert) as "important," you must add `{isImportant}` after the headline text. This will visually group them in a styled box. This designation can be combined with an icon.
-Example: `### Critical Update {isImportant} {alertTriangle}`
+Example: `### Critical Update {isImportant} {warning}`
 You MUST NOT mark two consecutive headlines as important. An important section consists of the marked headline and only the single block that immediately follows it.
 
 Paragraphs: Are standard text. No special formatting is needed.
@@ -476,7 +477,7 @@ Avoiding Title Duplication:
 
 Content Body:
 - Use `###` for primary subheadings and `####` for secondary subheadings.
-- You can associate an icon with a subheading. The available icons are: `alertCircle`, `checkCircle`, `info`, `xCircle`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `edit3`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `star`, `zap`, `trendingDown`, `target`, `trendingUp`, `flag`, `shield`, `activity`, `anchor`, `aperture`, `archive`, `atSign`.
+- You can associate an icon with a subheading. The available icons are: `goal`, `key`, `idea`, `warning`, `info`, `question`, `summary`, `star`, `check`, `alertTriangle`, `xCircle`.
 - Paragraphs are plain text.
 - Use `*` for bullet points for unordered lists.
 - Use `1.`, `2.`, `3.` for numbered lists.
@@ -485,12 +486,12 @@ Content Body:
 - Create section breaks using `---` on a new line.
 
 Icons in Headlines: To make the presentation more engaging, you should strategically add icons to some headlines. Don't use them for every headline. Instead, pick a few key sections to highlight (e.g., Goals, Warnings) and add a relevant icon. To add an icon, append `{iconName}` after the headline text.
-Available icons: `info`, `check`, `alertTriangle`, `xCircle`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `star`, `zap`, `trendingDown`, `target`, `trendingUp`, `flag`, `shield`, `activity`, `anchor`, `aperture`, `archive`, `atSign`.
-Example: `### Key Features {award}`
+Available icons: `goal`, `key`, `idea`, `warning`, `info`, `question`, `summary`, `star`, `check`, `alertTriangle`, `xCircle`.
+Example: `### Key Features {star}`
 
 Important Sections: To designate a headline and its subsequent single content block (which can be a paragraph, a bullet list, a numbered list, or an alert) as "important," you must add `{isImportant}` after the headline text. This will visually group them in a styled box. This designation can be combined with an icon.
 
-Example: `### Critical Update {isImportant} {alertTriangle}`
+Example: `### Critical Update {isImportant} {warning}`
 You MUST NOT mark two consecutive headlines as important. An important section consists of the marked headline and only the single block that immediately follows it.
 
 Paragraphs: Are standard text. No special formatting is needed.

@@ -1279,7 +1279,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             1.  **`type: "headline"`**
                 * `level` (integer): `2`, `3`, or `4`.
                 * `text` (string): Headline text.
-                * `iconName` (string, optional): If the raw text includes an icon name like `{iconName}`, extract it. Permissible Icon Names: `info`, `check`, `alertTriangle`, `xCircle`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `star`, `zap`, `trendingDown`, `target`, `trendingUp`, `flag`, `shield`, `activity`, `anchor`, `aperture`, `archive`, `atSign`.
+                * `iconName` (string, optional): If the raw text includes an icon name like `{iconName}`, extract it. Permissible Icon Names: `goal`, `key`, `idea`, `warning`, `info`, `question`, `summary`, `star`, `check`, `alertTriangle`, `xCircle`.
                 * `isImportant` (boolean, optional): If the raw text includes `{isImportant}`, set this to `true`. If `true`, this headline AND its *immediately following single block* will be grouped into a visually distinct highlighted box.
 
             2.  **`type: "paragraph"`**
@@ -1305,7 +1305,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             *   Parse `{isImportant}` on headlines to the `isImportant` boolean field.
             *   Parse `{iconName}` on headlines to the `iconName` string field.
             *   Use `isRecommendation` on paragraphs that should be highlighted as a recommendation.
-            *   Do NOT remove the `**` from the text; treat it as part of the text.
+            *   Do NOT remove the `**` from the text; treat it as part of the text. It is critical that you preserve the double-asterisk (`**`) markdown for bold text within all `text` fields.
             *   You are encouraged to use a diverse range of the available `iconName` values to make the presentation visually engaging.
             *   If the raw text starts with `# Title`, this becomes the `textTitle`. The `contentBlocks` should not include this Level 1 headline. All other headlines (`##`, `###`, `####`) are content blocks.
 
