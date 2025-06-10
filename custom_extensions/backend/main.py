@@ -1259,16 +1259,22 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
     Return ONLY the JSON object. 
             """
         elif selected_design_template.component_name == COMPONENT_NAME_TEXT_PRESENTATION:
-            target_model = TextPresentationDetails
-            default_error_model_instance = TextPresentationDetails(textTitle=f"Error during parsing of '{project_data.projectName}'", contentBlocks=[])
-            
-            # Instructions for the Text Presentation parser
+            target_content_model = TextPresentationDetails
+            default_error_instance = TextPresentationDetails(textTitle=f"LLM Parsing Error for {project_data.projectName}", contentBlocks=[])
+            llm_json_example = selected_design_template.template_structuring_prompt or DEFAULT_PDF_LESSON_JSON_EXAMPLE_FOR_LLM # Can reuse this example structure
             component_specific_instructions = """
-            You are a JSON parser. Your task is to analyze the provided raw text, which represents a "Text Presentation," and convert it into a structured JSON object based on the `TextPresentationDetails` Pydantic model.
+            You are an expert text-to-JSON parsing assistant for 'Text Presentation' content.
+            This product is for general text like introductions, goal descriptions, etc.
+            Your output MUST be a single, valid JSON object. Strictly follow the JSON structure provided in the example.
 
-            The JSON object must have a `textTitle` and a `contentBlocks` array.
+            **Overall Goal:** Convert the *entirety* of the "Raw text to parse" into a structured JSON. Capture all information and hierarchical relationships. Maintain original language.
 
-            The `contentBlocks` array can contain the following object types:
+            **Global Fields:**
+            1.  `textTitle` (string, optional): Main title for the document. This should be derived from a Level 1 headline (`#`).
+            2.  `contentBlocks` (array): Ordered array of content block objects that form the body of the lesson.
+            3.  `detectedLanguage` (string): e.g., "en", "ru".
+
+            **Content Block Instructions (`contentBlocks` array items):**
 
             1.  **`type: "headline"`**
                 * `level` (integer): `2`, `3`, or `4`.
@@ -1278,11 +1284,10 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
 
             2.  **`type: "paragraph"`**
                 * `text` (string): Full paragraph text.
-                * `isRecommendation` (boolean, optional): If the raw text for a paragraph begins with the exact string `**Recommendation:**`, set this field to `true` and remove the `**Recommendation:**` prefix (and any leading/trailing whitespace) from the `text` field.
- 
+                * `isRecommendation` (boolean, optional): Set to `true` if this paragraph should be styled as a recommendation (e.g., with a side border).
+
             3.  **`type: "bullet_list"`**
-                * `iconName` (string, optional): The icon to use for all bullets in this list.
-                * `items` (array of `ListItem`): Can be simple strings or nested `HeadlineBlock` and `ParagraphBlock` objects.
+                * `items` (array of `ListItem`): Can be simple strings. Nested lists are not supported in the raw format, so parse them as flat lists.
 
             4.  **`type: "numbered_list"`**
                 * `items` (array of `ListItem`): Can be simple strings.
@@ -1299,7 +1304,8 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             **Key Parsing Rules:**
             *   Parse `{isImportant}` on headlines to the `isImportant` boolean field.
             *   Parse `{iconName}` on headlines to the `iconName` string field.
-            *   Do NOT remove the `**` from the text for bolding; treat it as part of the text. It is critical that you preserve the double-asterisk (`**`) markdown for bold text within all `text` fields.
+            *   Use `isRecommendation` on paragraphs that should be highlighted as a recommendation.
+            *   Do NOT remove the `**` from the text; treat it as part of the text. It is critical that you preserve the double-asterisk (`**`) markdown for bold text within all `text` fields.
             *   You are encouraged to use a diverse range of the available `iconName` values to make the presentation visually engaging.
             *   If the raw text starts with `# Title`, this becomes the `textTitle`. The `contentBlocks` should not include this Level 1 headline. All other headlines (`##`, `###`, `####`) are content blocks.
 
