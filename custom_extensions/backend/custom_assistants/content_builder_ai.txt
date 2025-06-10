@@ -478,12 +478,10 @@ Avoiding Title Duplication:
 Content Body:
 - Use `###` for primary subheadings and `####` for secondary subheadings.
 - You can associate an icon with a subheading. The available icons are: `info`, `goal`, `star`, `apple`, `award`, `boxes`, `calendar`, `chart`, `clock`, `globe`.
-- Paragraphs are plain text.
 - Use `*` for bullet points for unordered lists.
 - Use `1.`, `2.`, `3.` for numbered lists.
-- A recommendation can be added by starting a new line with the bolded word `**Recommendation:**`. Use this feature sparingly to highlight only the most critical advice.
-- Create alerts using the blockquote syntax: `> [!TYPE] Optional Title` followed by `> Alert text.`.
-- Create section breaks using `---` on a new line.
+- To create a recommendation, start a new line with the exact tag `**Recommendation:**`. This tag will be automatically removed, and the paragraph will be styled as a recommendation. Do NOT repeat the word "Recommendation" in the text itself. Use this feature sparingly.
+- Create alerts using the blockquote syntax: `> [!TYPE] Optional Title` followed by `> Alert text.`.\n- Create section breaks using `---` on a new line.
 
 Icons in Headlines: To make the presentation more engaging, you should strategically add icons to some headlines. Don't use them for every headline. Instead, pick a few key sections to highlight (e.g., Goals, Warnings) and add a relevant icon. To add an icon, append `{iconName}` after the headline text.
 Available icons: `info`, `goal`, `star`, `apple`, `award`, `boxes`, `calendar`, `chart`, `clock`, `globe`.
