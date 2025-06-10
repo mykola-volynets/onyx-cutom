@@ -66,7 +66,8 @@ const DefaultDisplayComponent = ({ instanceData }: { instanceData: ProjectInstan
   </div>
 );
 
-function ProjectInstanceViewPageContent() {
+
+export default function ProjectInstanceViewPage() {
   const params = useParams<ProjectViewParams>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,6 +85,7 @@ function ProjectInstanceViewPageContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   
+  // State for the absolute chat URL
   const [chatRedirectUrl, setChatRedirectUrl] = useState<string | null>(null);
 
   const fetchPageData = useCallback(async (currentProjectIdStr: string) => {
@@ -156,17 +158,17 @@ function ProjectInstanceViewPageContent() {
           setEditableData(copiedDetails); 
         }
       } else {
-        const detectedLang = instanceData.detectedLanguage || 'en'; 
+        const lang = instanceData.detectedLanguage || 'en'; 
         if (instanceData.component_name === COMPONENT_NAME_TRAINING_PLAN) {
-          setEditableData({ mainTitle: instanceData.name || "New Training Plan", sections: [], detectedLanguage: detectedLang });
+          setEditableData({ mainTitle: instanceData.name || "New Training Plan", sections: [], detectedLanguage: lang });
         } else if (instanceData.component_name === COMPONENT_NAME_PDF_LESSON) {
-          setEditableData({ lessonTitle: instanceData.name || "New PDF Lesson", contentBlocks: [], detectedLanguage: detectedLang });
+          setEditableData({ lessonTitle: instanceData.name || "New PDF Lesson", contentBlocks: [], detectedLanguage: lang });
         } else if (instanceData.component_name === COMPONENT_NAME_VIDEO_LESSON) {
-          setEditableData({ mainPresentationTitle: instanceData.name || "New Video Lesson", slides: [], detectedLanguage: detectedLang });
+          setEditableData({ mainPresentationTitle: instanceData.name || "New Video Lesson", slides: [], detectedLanguage: lang });
         } else if (instanceData.component_name === COMPONENT_NAME_QUIZ) {
-          setEditableData({ quizTitle: instanceData.name || "New Quiz", questions: [], detectedLanguage: detectedLang });
+          setEditableData({ quizTitle: instanceData.name || "New Quiz", questions: [], detectedLanguage: lang });
         } else if (instanceData.component_name === COMPONENT_NAME_TEXT_PRESENTATION) {
-            setEditableData({ textTitle: instanceData.name || "New Text Presentation", contentBlocks: [], detectedLanguage: detectedLang });
+          setEditableData({ textTitle: instanceData.name || "New Text Presentation", contentBlocks: [], detectedLanguage: lang });
         } else {
           setEditableData(null);
         }
@@ -247,232 +249,283 @@ function ProjectInstanceViewPageContent() {
       alert("Error: Project instance data not loaded.");
       return;
     }
+    const editableComponentTypes = [
+      COMPONENT_NAME_PDF_LESSON,
+      COMPONENT_NAME_TRAINING_PLAN,
+      COMPONENT_NAME_VIDEO_LESSON,
+      COMPONENT_NAME_QUIZ,
+      COMPONENT_NAME_TEXT_PRESENTATION,
+    ];
+    if (!editableComponentTypes.includes(projectInstanceData.component_name)) {
+      setSaveError("Content editing is not supported for this component type on this page.");
+      alert("Error: Cannot save. Content editing for this component type is not supported here.");
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
+
+    const saveOperationHeaders: HeadersInit = { 'Content-Type': 'application/json' };
+    const devUserId = typeof window !== "undefined" ? sessionStorage.getItem("dev_user_id") || "dummy-onyx-user-id-for-testing" : "dummy-onyx-user-id-for-testing";
+    if (devUserId && process.env.NODE_ENV === 'development') {
+      saveOperationHeaders['X-Dev-Onyx-User-ID'] = devUserId;
+    }
+
     try {
-      const apiUrl = `${CUSTOM_BACKEND_URL}/projects/update/${projectId}`;
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      const devUserId = sessionStorage.getItem("dev_user_id");
-      if (devUserId && process.env.NODE_ENV === 'development') {
-        headers['X-Dev-Onyx-User-ID'] = devUserId;
-      }
-      const response = await fetch(apiUrl, {
-        method: 'PUT',
-        headers: headers,
-        body: JSON.stringify({ microProductContent: editableData }),
+      const payload = { microProductContent: editableData };
+      const response = await fetch(`${CUSTOM_BACKEND_URL}/projects/update/${projectId}`, {
+        method: 'PUT', headers: saveOperationHeaders, body: JSON.stringify(payload),
       });
       if (!response.ok) {
-        const errorText = await response.text();
-        let errorDetail = `Failed to save changes (HTTP ${response.status}).`;
-        try { const errorJson = JSON.parse(errorText); errorDetail = errorJson.detail || errorDetail; }
-        catch { errorDetail = `${errorDetail} - ${errorText.substring(0, 150)}`; }
+        const errorDataText = await response.text();
+        let errorDetail = `HTTP error ${response.status}`;
+        try { const errorJson = JSON.parse(errorDataText); errorDetail = errorJson.detail || errorDetail; }
+        catch (e) { /* ignore */ }
         throw new Error(errorDetail);
       }
-      const updatedProject = await response.json();
-      setProjectInstanceData(prev => prev ? { ...prev, details: updatedProject.microproduct_content } : null);
       setIsEditing(false);
+      await fetchPageData(projectId);
+      alert("Content saved successfully!");
     } catch (err: any) {
-      setSaveError(err.message || "An unknown error occurred while saving.");
+      setSaveError(err.message || "Could not save data.");
+      alert(`Save failed: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleToggleEdit = () => {
-    if (isEditing && projectInstanceData?.details) {
-      const confirmed = window.confirm("Are you sure you want to cancel? Any unsaved changes will be lost.");
-      if (confirmed) {
-        setEditableData(JSON.parse(JSON.stringify(projectInstanceData.details)));
-        setIsEditing(false);
-        setSaveError(null);
-      }
+    if (!projectInstanceData) { alert("Project data not loaded yet."); return; }
+    const editableComponentTypes = [
+      COMPONENT_NAME_PDF_LESSON,
+      COMPONENT_NAME_TRAINING_PLAN,
+      COMPONENT_NAME_VIDEO_LESSON,
+      COMPONENT_NAME_QUIZ,
+      COMPONENT_NAME_TEXT_PRESENTATION,
+    ];
+    if (!editableComponentTypes.includes(projectInstanceData.component_name)) {
+      alert(`Content editing is currently supported for ${editableComponentTypes.join(', ')} types on this page.`);
+      return;
+    }
+
+    if (isEditing) {
+      handleSave();
     } else {
+      const lang = projectInstanceData.details?.detectedLanguage || 'en';
+      if (projectInstanceData.details) {
+        setEditableData(JSON.parse(JSON.stringify(projectInstanceData.details)));
+      } else { 
+        if (projectInstanceData.component_name === COMPONENT_NAME_TRAINING_PLAN) {
+          setEditableData({ mainTitle: projectInstanceData.name || "New Training Plan", sections: [], detectedLanguage: lang });
+        } else if (projectInstanceData.component_name === COMPONENT_NAME_PDF_LESSON) {
+          setEditableData({ lessonTitle: projectInstanceData.name || "New PDF Lesson", contentBlocks: [], detectedLanguage: lang });
+        } else if (projectInstanceData.component_name === COMPONENT_NAME_TEXT_PRESENTATION) {
+          setEditableData({ textTitle: projectInstanceData.name || "New Text Presentation", contentBlocks: [], detectedLanguage: lang });
+        } else if (projectInstanceData.component_name === COMPONENT_NAME_VIDEO_LESSON) {
+          setEditableData({ mainPresentationTitle: projectInstanceData.name || "New Video Lesson", slides: [], detectedLanguage: lang });
+        } else if (projectInstanceData.component_name === COMPONENT_NAME_QUIZ) {
+          setEditableData({ quizTitle: projectInstanceData.name || "New Quiz", questions: [], detectedLanguage: lang });
+        } else {
+          setEditableData(null);
+        }
+      }
       setIsEditing(true);
     }
   };
 
   const handlePdfDownload = () => {
-    if (!projectInstanceData) {
-        alert("Project data not loaded yet.");
+    if (!projectInstanceData || typeof projectInstanceData.project_id !== 'number') {
+        alert("Project data or ID is not available for download.");
         return;
     }
-    const slug = slugify(projectInstanceData.name);
-    let downloadUrl = `${CUSTOM_BACKEND_URL}/pdf/${projectInstanceData.project_id}/${slug}`;
+    const nameForSlug = projectInstanceData.name || 'document';
+    const docNameSlug = slugify(nameForSlug);
+    const pdfProjectId = projectInstanceData.project_id;
+
+    const parentProjectName = searchParams.get('parentProjectName');
+    const lessonNumber = searchParams.get('lessonNumber');
+
+    let pdfUrl = `${CUSTOM_BACKEND_URL}/pdf/${pdfProjectId}/${docNameSlug}`;
     
     const queryParams = new URLSearchParams();
-    if (parentProjectNameForCurrentView) {
-      queryParams.append('parentProjectName', parentProjectNameForCurrentView);
+    if (parentProjectName) {
+        queryParams.append('parentProjectName', parentProjectName);
     }
     const details = projectInstanceData.details;
     if (details && 'lessonNumber' in details && typeof details.lessonNumber === 'number') {
        queryParams.append('lessonNumber', details.lessonNumber.toString());
     }
+    
     if (queryParams.toString()) {
-      downloadUrl += `?${queryParams.toString()}`;
+        pdfUrl += `?${queryParams.toString()}`;
     }
 
-    const devUserId = typeof window !== "undefined" ? sessionStorage.getItem("dev_user_id") : null;
-    if (devUserId && process.env.NODE_ENV === 'development') {
-      queryParams.append('X-Dev-Onyx-User-ID', devUserId);
-    }
-
-    window.open(downloadUrl, '_blank');
+    window.open(pdfUrl, '_blank');
   };
 
+  if (pageState === 'initial_loading' || pageState === 'fetching') {
+    return <div className="flex items-center justify-center min-h-screen bg-gray-100"><div className="p-8 text-center text-lg text-gray-600">Loading project details...</div></div>;
+  }
+  if (pageState === 'error') {
+    return <div className="flex items-center justify-center min-h-screen bg-red-50"><div className="p-8 text-center text-red-700 text-lg">Error: {errorMessage || "Failed to load project data."}</div></div>;
+  }
+    if (!projectInstanceData) {
+      return <div className="flex items-center justify-center min-h-screen bg-gray-100"><div className="p-8 text-center text-gray-500">Project not found or data unavailable.</div></div>;
+  }
+
   const displayContent = () => {
-    if (!projectInstanceData || editableData === undefined) {
-      return <div className="text-center p-4">Rendering content...</div>;
+    if (!projectInstanceData || pageState !== 'success') {
+      return null; 
     }
 
-    const componentName = projectInstanceData.component_name;
-    const dataToRender = isEditing ? editableData : projectInstanceData.details;
+    const parentProjectName = searchParams.get('parentProjectName') || parentProjectNameForCurrentView;
+    const lessonNumberStr = searchParams.get('lessonNumber');
+    let lessonNumber: number | undefined = lessonNumberStr ? parseInt(lessonNumberStr, 10) : undefined;
     
-    let lessonNumber: number | undefined = undefined;
-    if (projectInstanceData.details && 'lessonNumber' in projectInstanceData.details && typeof projectInstanceData.details.lessonNumber === 'number') {
+    if (lessonNumber === undefined && projectInstanceData.details && 'lessonNumber' in projectInstanceData.details && typeof projectInstanceData.details.lessonNumber === 'number') {
       lessonNumber = projectInstanceData.details.lessonNumber;
     }
 
-    switch (componentName) {
+    switch (projectInstanceData.component_name) {
       case COMPONENT_NAME_TRAINING_PLAN:
-        return <TrainingPlanTableComponent dataToDisplay={dataToRender as TrainingPlanData} isEditing={isEditing} onTextChange={handleTextChange} />;
+        const trainingPlanData = editableData as TrainingPlanData | null;
+        return (
+          <TrainingPlanTableComponent
+            dataToDisplay={trainingPlanData}
+            isEditing={isEditing}
+            onTextChange={handleTextChange}
+            sourceChatSessionId={projectInstanceData.sourceChatSessionId}
+            allUserMicroproducts={allUserMicroproducts}
+            parentProjectName={parentProjectNameForCurrentView}
+          />
+        );
       case COMPONENT_NAME_PDF_LESSON:
-        return <PdfLessonDisplayComponent dataToDisplay={dataToRender as PdfLessonData} isEditing={isEditing} onTextChange={handleTextChange} parentProjectName={parentProjectNameForCurrentView} lessonNumber={lessonNumber}/>;
+        const pdfLessonData = editableData as PdfLessonData | null;
+        return (
+          <PdfLessonDisplayComponent 
+            dataToDisplay={pdfLessonData} 
+            isEditing={isEditing} 
+            onTextChange={handleTextChange}
+            parentProjectName={parentProjectName}
+            lessonNumber={lessonNumber}
+          />
+        );
+       case COMPONENT_NAME_TEXT_PRESENTATION:
+        const textPresentationData = editableData as TextPresentationData | null;
+        return (
+          <TextPresentationDisplay
+            dataToDisplay={textPresentationData}
+            isEditing={isEditing}
+            onTextChange={handleTextChange}
+            parentProjectName={parentProjectName}
+          />
+        );
       case COMPONENT_NAME_VIDEO_LESSON:
-        return <VideoLessonDisplay dataToDisplay={dataToRender as VideoLessonData} isEditing={isEditing} onTextChange={handleTextChange} />;
+        const videoData = editableData as VideoLessonData | null;
+        return (
+          <VideoLessonDisplay
+            dataToDisplay={videoData}
+            isEditing={isEditing}
+            onTextChange={handleTextChange}
+            parentProjectName={parentProjectName}
+            lessonNumber={lessonNumber}
+          />
+        );
       case COMPONENT_NAME_QUIZ:
-        return <QuizDisplay dataToDisplay={dataToRender as QuizData} isEditing={isEditing} onTextChange={handleTextChange} />;
-      case COMPONENT_NAME_TEXT_PRESENTATION:
-        return <TextPresentationDisplay dataToDisplay={dataToRender as TextPresentationData} isEditing={isEditing} onTextChange={handleTextChange} parentProjectName={parentProjectNameForCurrentView} />;
+        const quizData = editableData as QuizData | null;
+        return (
+          <QuizDisplay 
+            dataToDisplay={quizData} 
+            isEditing={isEditing} 
+            onTextChange={handleTextChange} 
+            parentProjectName={parentProjectName}
+            lessonNumber={lessonNumber}
+          />
+        );
       default:
         return <DefaultDisplayComponent instanceData={projectInstanceData} />;
     }
   };
 
-  if (pageState === 'initial_loading' || (pageState === 'fetching' && !projectInstanceData)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center text-gray-500">
-          <svg className="animate-spin h-8 w-8 text-blue-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p className="font-medium text-lg">Loading Project...</p>
-        </div>
-      </div>
-    );
-  }
-  if (pageState === 'error') {
-    return (
-      <div className="p-6 border-l-4 border-red-500 bg-red-50 rounded-lg shadow-md max-w-4xl mx-auto my-8">
-        <div className="flex items-center">
-            <AlertTriangle size={24} className="text-red-600 mr-3" />
-            <h2 className="text-2xl font-bold text-red-800">Error Loading Project</h2>
-        </div>
-        <p className="text-red-700 mt-2">
-            There was a problem fetching the project data. Please try again later.
-        </p>
-        <p className="mt-2 text-sm text-red-600 bg-red-100 p-2 rounded border border-red-200">
-            <strong>Details:</strong> {errorMessage}
-        </p>
-         <button onClick={() => router.push('/projects')} className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-md hover:bg-blue-100">
-            <ArrowLeft size={16}/>
-            Return to Projects List
-        </button>
-      </div>
-    );
-  }
-   if (pageState === 'nodata' || !projectInstanceData) {
-    return (
-       <div className="p-6 border-l-4 border-yellow-500 bg-yellow-50 rounded-lg shadow-md max-w-4xl mx-auto my-8">
-        <div className="flex items-center">
-            <Info size={24} className="text-yellow-600 mr-3" />
-            <h2 className="text-2xl font-bold text-yellow-800">Project Not Found</h2>
-        </div>
-        <p className="text-yellow-700 mt-2">
-            The project you are looking for could not be found or you may not have permission to view it.
-        </p>
-        <button onClick={() => router.push('/projects')} className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-md hover:bg-blue-100">
-            <ArrowLeft size={16}/>
-            Return to Projects List
-        </button>
-      </div>
-    );
-  }
+  const displayName = projectInstanceData?.name || `Project ${projectId}`;
+  const canEditContent = projectInstanceData &&
+                          [COMPONENT_NAME_TRAINING_PLAN, COMPONENT_NAME_PDF_LESSON, COMPONENT_NAME_VIDEO_LESSON, COMPONENT_NAME_QUIZ, COMPONENT_NAME_TEXT_PRESENTATION].includes(projectInstanceData.component_name);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-6">
+    <main className="p-4 md:p-8 bg-gray-100 min-h-screen font-['Inter',_sans-serif]">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-4 flex items-center justify-between flex-wrap">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/projects" passHref>
-                <button className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-gray-100">
-                    <ArrowLeft size={18} />
-                    <FolderOpen size={18} className="hidden sm:inline-block"/>
-                    <span className="hidden sm:inline-block">All Projects</span>
-                </button>
+        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          
+          <div className="flex items-center gap-x-4">
+            <button
+              onClick={() => router.back()}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors cursor-pointer"
+            >
+              <ArrowLeft size={16} className="mr-2" />
+              Back
+            </button>
+            
+            <Link
+                href="/projects"
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                >
+                <FolderOpen size={16} className="mr-2" />
+                Open Products
             </Link>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800 truncate" title={projectInstanceData.name}>
-              {projectInstanceData.name}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2 mt-2 md:mt-0">
+
             {chatRedirectUrl && (
-              <a href={chatRedirectUrl} target="_blank" rel="noopener noreferrer" title="Go to the chat where this content was generated"
-                 className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-md hover:bg-blue-50">
-                <MessageSquare size={18}/>
-                <span className="hidden sm:inline-block">Source Chat</span>
-              </a>
+                <Link
+                  href={chatRedirectUrl}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                >
+                  <MessageSquare size={16} className="mr-2" />
+                  Open Chat
+                </Link>
             )}
-             <button
-                onClick={handleToggleEdit}
-                className={`flex items-center gap-2 text-sm font-medium p-2 rounded-md transition-all duration-200 ${
-                  isEditing
-                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                }`}
-            >
-                <Edit size={18} />
-                <span className="hidden sm:inline-block">{isEditing ? "Cancel" : "Edit"}</span>
-            </button>
-             <button
-                onClick={handlePdfDownload}
-                className="flex items-center gap-2 text-sm font-medium p-2 rounded-md transition-colors bg-green-100 text-green-700 hover:bg-green-200"
-            >
-                <ArrowDownToLine size={18} />
-                <span className="hidden sm:inline-block">Download PDF</span>
-            </button>
-            {isEditing && (
+          </div>
+
+          <div className="flex items-center space-x-3">
+            {projectInstanceData && (typeof projectInstanceData.project_id === 'number') && (
+                  <button
+                    onClick={handlePdfDownload}
+                    disabled={isSaving}
+                    className="px-4 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 flex items-center"
+                    title="Download content as PDF"
+                  >
+                   <ArrowDownToLine size={16} className="mr-2" /> Download PDF
+                  </button>
+            )}
+            {canEditContent && projectId && (
               <button
-                onClick={handleSave}
+                onClick={handleToggleEdit}
                 disabled={isSaving}
-                className="flex items-center gap-2 text-sm font-medium p-2 rounded-md transition-colors bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
+                className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 flex items-center
+                                ${isEditing ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' : 'bg-orange-500 hover:bg-orange-600 focus:ring-orange-500'}`}
+                title={isEditing ? "Save current changes" : "Edit content"}
               >
-                <Save size={18} />
-                <span className="hidden sm:inline-block">{isSaving ? "Saving..." : "Save"}</span>
+                {isEditing ? (
+                  <> <Save size={16} className="mr-2" /> {isSaving ? 'Saving...' : 'Save Content'} </>
+                ) : (
+                  <> <Edit size={16} className="mr-2" /> Edit Content </>
+                )}
               </button>
             )}
           </div>
-        </header>
+        </div>
 
-         {saveError && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
-            <strong className="font-bold">Save Error: </strong>
-            <span className="block sm:inline">{saveError}</span>
+        {saveError &&
+          <div className="mb-4 p-3 bg-red-100 text-red-700 border border-red-400 rounded-md text-sm flex items-center">
+            <AlertTriangle size={18} className="mr-2 flex-shrink-0" />
+            <span>{saveError}</span>
           </div>
-        )}
+        }
 
-        <main className="bg-white rounded-lg shadow-sm border border-gray-200">
-           {displayContent()}
-        </main>
+        <div className="bg-white p-4 sm:p-6 md:p-8 shadow-xl rounded-xl border border-gray-200">
+            <Suspense fallback={<div className="py-10 text-center text-gray-500">Loading content display...</div>}>
+              {displayContent()}
+            </Suspense>
+        </div>
       </div>
-    </div>
-  );
-}
-
-export default function ProjectInstanceViewPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ProjectInstanceViewPageContent />
-    </Suspense>
+    </main>
   );
 }
