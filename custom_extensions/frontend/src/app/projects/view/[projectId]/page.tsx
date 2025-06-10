@@ -20,7 +20,6 @@ import VideoLessonDisplay from '@/components/VideoLessonDisplay';
 import QuizDisplay from '@/components/QuizDisplay';
 import TextPresentationDisplay from '@/components/TextPresentationDisplay';
 import { Save, Edit, ArrowDownToLine, Info, AlertTriangle, ArrowLeft, FolderOpen, MessageSquare } from 'lucide-react';
-import { locales } from '@/locales';
 
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
 
@@ -288,7 +287,7 @@ function ProjectInstanceViewPageContent() {
 
   const handleToggleEdit = () => {
     if (isEditing && projectInstanceData?.details) {
-      const confirmed = window.confirm(locale.common.confirmCancelEdit);
+      const confirmed = window.confirm("Are you sure you want to cancel? Any unsaved changes will be lost.");
       if (confirmed) {
         setEditableData(JSON.parse(JSON.stringify(projectInstanceData.details)));
         setIsEditing(false);
@@ -329,7 +328,7 @@ function ProjectInstanceViewPageContent() {
 
   const displayContent = () => {
     if (!projectInstanceData || editableData === undefined) {
-      return <div className="text-center p-4">{locale.common.rendering || 'Rendering content...'}</div>;
+      return <div className="text-center p-4">Rendering content...</div>;
     }
 
     const componentName = projectInstanceData.component_name;
@@ -364,7 +363,7 @@ function ProjectInstanceViewPageContent() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <p className="font-medium text-lg">{locale.projects.loadingProject || "Loading Project..."}</p>
+          <p className="font-medium text-lg">Loading Project...</p>
         </div>
       </div>
     );
@@ -374,17 +373,17 @@ function ProjectInstanceViewPageContent() {
       <div className="p-6 border-l-4 border-red-500 bg-red-50 rounded-lg shadow-md max-w-4xl mx-auto my-8">
         <div className="flex items-center">
             <AlertTriangle size={24} className="text-red-600 mr-3" />
-            <h2 className="text-2xl font-bold text-red-800">{locale.projects.errorLoadingProjectTitle || "Error Loading Project"}</h2>
+            <h2 className="text-2xl font-bold text-red-800">Error Loading Project</h2>
         </div>
         <p className="text-red-700 mt-2">
-            {locale.projects.errorLoadingProjectMessage || "There was a problem fetching the project data. Please try again later."}
+            There was a problem fetching the project data. Please try again later.
         </p>
         <p className="mt-2 text-sm text-red-600 bg-red-100 p-2 rounded border border-red-200">
-            <strong>{locale.common.errorDetails || "Details:"}</strong> {errorMessage}
+            <strong>Details:</strong> {errorMessage}
         </p>
          <button onClick={() => router.push('/projects')} className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-md hover:bg-blue-100">
             <ArrowLeft size={16}/>
-            {locale.projects.returnToProjects || "Return to Projects List"}
+            Return to Projects List
         </button>
       </div>
     );
@@ -394,14 +393,14 @@ function ProjectInstanceViewPageContent() {
        <div className="p-6 border-l-4 border-yellow-500 bg-yellow-50 rounded-lg shadow-md max-w-4xl mx-auto my-8">
         <div className="flex items-center">
             <Info size={24} className="text-yellow-600 mr-3" />
-            <h2 className="text-2xl font-bold text-yellow-800">{locale.projects.projectNotFoundTitle || "Project Not Found"}</h2>
+            <h2 className="text-2xl font-bold text-yellow-800">Project Not Found</h2>
         </div>
         <p className="text-yellow-700 mt-2">
-            {locale.projects.projectNotFoundMessage || "The project you are looking for could not be found or you may not have permission to view it."}
+            The project you are looking for could not be found or you may not have permission to view it.
         </p>
         <button onClick={() => router.push('/projects')} className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-md hover:bg-blue-100">
             <ArrowLeft size={16}/>
-            {locale.projects.returnToProjects || "Return to Projects List"}
+            Return to Projects List
         </button>
       </div>
     );
@@ -416,7 +415,7 @@ function ProjectInstanceViewPageContent() {
                 <button className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-gray-100">
                     <ArrowLeft size={18} />
                     <FolderOpen size={18} className="hidden sm:inline-block"/>
-                    <span className="hidden sm:inline-block">{locale.projects.allProjects || "All Projects"}</span>
+                    <span className="hidden sm:inline-block">All Projects</span>
                 </button>
             </Link>
             <h1 className="text-xl md:text-2xl font-bold text-gray-800 truncate" title={projectInstanceData.name}>
@@ -425,10 +424,10 @@ function ProjectInstanceViewPageContent() {
           </div>
           <div className="flex items-center gap-2 mt-2 md:mt-0">
             {chatRedirectUrl && (
-              <a href={chatRedirectUrl} target="_blank" rel="noopener noreferrer" title={locale.common.sourceChatTooltip}
+              <a href={chatRedirectUrl} target="_blank" rel="noopener noreferrer" title="Go to the chat where this content was generated"
                  className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-md hover:bg-blue-50">
                 <MessageSquare size={18}/>
-                <span className="hidden sm:inline-block">{locale.common.sourceChat || "Source Chat"}</span>
+                <span className="hidden sm:inline-block">Source Chat</span>
               </a>
             )}
              <button

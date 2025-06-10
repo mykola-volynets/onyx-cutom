@@ -22,15 +22,7 @@ export const en = {
     time: "Time",
     timeUnitSingular: "h",
     timeUnitDecimalPlural: "h",
-    timeUnitGeneralPlural: "h",
-    updateError: "Error updating name: {error}",
-    errorLoadingProjectTitle: "Error Loading Project",
-    errorLoadingProjectMessage: "There was a problem fetching the project data. Please try again later.",
-    returnToProjects: "Return to Projects List",
-    projectNotFoundTitle: "Project Not Found",
-    projectNotFoundMessage: "The project you are looking for could not be found or you may not have permission to view it.",
-    allProjects: "All Projects",
-    loadingProject: "Loading Project..."
+    timeUnitGeneralPlural: "h"
   },
   videoLesson: {
     slide: "Slide",
@@ -46,6 +38,21 @@ export const en = {
     editVideoDescPlaceholder: "Concise video/animation description...",
     editVoiceoverPlaceholder: "Voiceover text (max 3 sentences)...",
     emptyContent: "...",
+    deleteError: "Error deleting projects: {error}",
+    updateError: "Error updating name: {error}",
+    errorLoadingProjectTitle: "Error Loading Project",
+    errorLoadingProjectMessage: "There was a problem fetching the project data. Please try again later.",
+    returnToProjects: "Return to Projects List",
+    projectNotFoundTitle: "Project Not Found",
+    projectNotFoundMessage: "The project you are looking for could not be found or you may not have permission to view it.",
+    allProjects: "All Projects",
+    loadingProject: "Loading Project...",
+    createTest: {
+      title: "Create Test",
+      quiz: "Quiz",
+      quizTooltip: "Create a quiz for this lesson",
+      errorNoSessionId: "Error: Source chat session ID is not available. Cannot create test."
+    }
   },
   quiz: {
     quizTitle: "Quiz Title",
@@ -90,6 +97,13 @@ export const en = {
     noProductsSelected: "No valid products selected for deletion.",
     confirmDelete: "Are you sure you want to delete {count} selected products?",
     deleteError: "Error deleting projects: {error}",
-    updateError: "Error updating name: {error}"
+    updateError: "Error updating name: {error}",
+    errorLoadingProjectTitle: "Error Loading Project",
+    errorLoadingProjectMessage: "There was a problem fetching the project data. Please try again later.",
+    returnToProjects: "Return to Projects List",
+    projectNotFoundTitle: "Project Not Found",
+    projectNotFoundMessage: "The project you are looking for could not be found or you may not have permission to view it.",
+    allProjects: "All Projects",
+    loadingProject: "Loading Project..."
   }
 }; 

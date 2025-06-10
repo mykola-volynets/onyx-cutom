@@ -22,15 +22,7 @@ export const es = {
     time: "Tiempo",
     timeUnitSingular: "h",
     timeUnitDecimalPlural: "h",
-    timeUnitGeneralPlural: "h",
-    updateError: "Error al actualizar el nombre: {error}",
-    errorLoadingProjectTitle: "Error al cargar el proyecto",
-    errorLoadingProjectMessage: "Hubo un problema al recuperar los datos del proyecto. Por favor, inténtalo de nuevo más tarde.",
-    returnToProjects: "Volver a la lista de proyectos",
-    projectNotFoundTitle: "Proyecto no encontrado",
-    projectNotFoundMessage: "El proyecto que buscas no se pudo encontrar o no tienes permiso para verlo.",
-    allProjects: "Todos los proyectos",
-    loadingProject: "Cargando proyecto..."
+    timeUnitGeneralPlural: "h"
   },
   videoLesson: {
     slide: "Diapositiva",
@@ -46,6 +38,18 @@ export const es = {
     editVideoDescPlaceholder: "Descripción concisa del video/animación...",
     editVoiceoverPlaceholder: "Texto de voz en off (máx. 3 frases)...",
     emptyContent: "...",
+    confirmDelete: "¿Estás seguro de que quieres eliminar {count} productos seleccionados?",
+    deleteError: "Error al eliminar proyectos: {error}",
+    updateError: "Error al actualizar el nombre: {error}",
+    errorLoadingProjectTitle: "Error al cargar el proyecto",
+    errorLoadingProjectMessage: "Hubo un problema al recuperar los datos del proyecto. Por favor, inténtalo de nuevo más tarde.",
+    returnToProjects: "Volver a la lista de proyectos",
+    projectNotFoundTitle: "Proyecto no encontrado",
+    projectNotFoundMessage: "El proyecto que buscas no se pudo encontrar o no tienes permiso para verlo.",
+    allProjects: "Todos los proyectos",
+    loadingProject: "Cargando proyecto...",
+    quizTooltip: "Crear un cuestionario para esta lección",
+    errorNoSessionId: "Error: El ID de la sesión de chat de origen no está disponible. No se puede crear la prueba."
   },
   quiz: {
     quizTitle: "Título del cuestionario",
@@ -87,9 +91,16 @@ export const es = {
   projects: {
     loading: "Cargando productos...",
     error: "Error: {error}",
-    noProductsSelected: "No hay productos válidos seleccionados para eliminar.",
-    confirmDelete: "¿Está seguro de que desea eliminar los {count} productos seleccionados?",
+    noProductsSelected: "No se han seleccionado productos válidos para eliminar.",
+    confirmDelete: "¿Estás seguro de que quieres eliminar {count} productos seleccionados?",
     deleteError: "Error al eliminar proyectos: {error}",
-    updateError: "Error al actualizar el nombre: {error}"
+    updateError: "Error al actualizar el nombre: {error}",
+    errorLoadingProjectTitle: "Error al cargar el proyecto",
+    errorLoadingProjectMessage: "Hubo un problema al recuperar los datos del proyecto. Por favor, inténtalo de nuevo más tarde.",
+    returnToProjects: "Volver a la lista de proyectos",
+    projectNotFoundTitle: "Proyecto no encontrado",
+    projectNotFoundMessage: "El proyecto que buscas no se pudo encontrar o no tienes permiso para verlo.",
+    allProjects: "Todos los proyectos",
+    loadingProject: "Cargando proyecto..."
   }
 }; 
