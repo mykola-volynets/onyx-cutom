@@ -3,7 +3,16 @@ export const uk = {
     course: "КУРС",
     lesson: "УРОК",
     save: "Зберегти",
-    confirmCancelEdit: "Ви впевнені, що хочете скасувати? Будь-які незбережені зміни буде втрачено."
+    saving: "Збереження...",
+    confirmCancelEdit: "Ви впевнені, що хочете скасувати? Будь-які незбережені зміни буде втрачено.",
+    errorDetails: "Деталі:",
+    sourceChatTooltip: "Перейти до чату, де було створено цей вміст",
+    sourceChat: "Вихідний чат",
+    cancelEdit: "Скасувати",
+    edit: "Редагувати",
+    downloadPdf: "Завантажити PDF",
+    saveErrorTitle: "Помилка збереження:",
+    rendering: "Відображення вмісту..."
   },
   trainingPlan: {
     moduleAndLessons: "Модуль та уроки",
@@ -14,6 +23,14 @@ export const uk = {
     timeUnitSingular: "год",
     timeUnitDecimalPlural: "год",
     timeUnitGeneralPlural: "год",
+    updateError: "Помилка оновлення імені: {error}",
+    errorLoadingProjectTitle: "Помилка завантаження проекту",
+    errorLoadingProjectMessage: "Виникла проблема під час отримання даних проекту. Будь ласка, спробуйте ще раз пізніше.",
+    returnToProjects: "Повернутися до списку проектів",
+    projectNotFoundTitle: "Проект не знайдено",
+    projectNotFoundMessage: "Проект, який ви шукаєте, не знайдено, або у вас немає дозволу на його перегляд.",
+    allProjects: "Усі проекти",
+    loadingProject: "Завантаження проекту..."
   },
   videoLesson: {
     slide: "Слайд",

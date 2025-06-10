@@ -3,7 +3,16 @@ export const es = {
     course: "CURSO",
     lesson: "LECCIÓN",
     save: "Guardar",
-    confirmCancelEdit: "¿Estás seguro de que quieres cancelar? Cualquier cambio no guardado se perderá."
+    saving: "Guardando...",
+    confirmCancelEdit: "¿Estás seguro de que quieres cancelar? Cualquier cambio no guardado se perderá.",
+    errorDetails: "Detalles:",
+    sourceChatTooltip: "Ir al chat donde se generó este contenido",
+    sourceChat: "Chat de origen",
+    cancelEdit: "Cancelar",
+    edit: "Editar",
+    downloadPdf: "Descargar PDF",
+    saveErrorTitle: "Error al guardar:",
+    rendering: "Generando contenido..."
   },
   trainingPlan: {
     moduleAndLessons: "Módulo y Lecciones",
@@ -13,7 +22,15 @@ export const es = {
     time: "Tiempo",
     timeUnitSingular: "h",
     timeUnitDecimalPlural: "h",
-    timeUnitGeneralPlural: "h"
+    timeUnitGeneralPlural: "h",
+    updateError: "Error al actualizar el nombre: {error}",
+    errorLoadingProjectTitle: "Error al cargar el proyecto",
+    errorLoadingProjectMessage: "Hubo un problema al recuperar los datos del proyecto. Por favor, inténtalo de nuevo más tarde.",
+    returnToProjects: "Volver a la lista de proyectos",
+    projectNotFoundTitle: "Proyecto no encontrado",
+    projectNotFoundMessage: "El proyecto que buscas no se pudo encontrar o no tienes permiso para verlo.",
+    allProjects: "Todos los proyectos",
+    loadingProject: "Cargando proyecto..."
   },
   videoLesson: {
     slide: "Diapositiva",

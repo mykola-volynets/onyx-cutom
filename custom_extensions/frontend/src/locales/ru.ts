@@ -3,7 +3,16 @@ export const ru = {
     course: "КУРС",
     lesson: "УРОК",
     save: "Сохранить",
-    confirmCancelEdit: "Вы уверены, что хотите отменить? Все несохраненные изменения будут потеряны."
+    saving: "Сохранение...",
+    confirmCancelEdit: "Вы уверены, что хотите отменить? Все несохраненные изменения будут потеряны.",
+    errorDetails: "Подробности:",
+    sourceChatTooltip: "Перейти в чат, где был создан этот контент",
+    sourceChat: "Исходный чат",
+    cancelEdit: "Отмена",
+    edit: "Редактировать",
+    downloadPdf: "Скачать PDF",
+    saveErrorTitle: "Ошибка сохранения:",
+    rendering: "Отрисовка содержимого..."
   },
   trainingPlan: {
     moduleAndLessons: "Модуль и уроки",
@@ -14,6 +23,14 @@ export const ru = {
     timeUnitSingular: "ч",
     timeUnitDecimalPlural: "ч",
     timeUnitGeneralPlural: "ч",
+    updateError: "Ошибка обновления имени: {error}",
+    errorLoadingProjectTitle: "Ошибка загрузки проекта",
+    errorLoadingProjectMessage: "Возникла проблема при получении данных проекта. Пожалуйста, повторите попытку позже.",
+    returnToProjects: "Вернуться к списку проектов",
+    projectNotFoundTitle: "Проект не найден",
+    projectNotFoundMessage: "Проект, который вы ищете, не найден или у вас нет прав на его просмотр.",
+    allProjects: "Все проекты",
+    loadingProject: "Загрузка проекта..."
   },
   videoLesson: {
     slide: "Слайд",

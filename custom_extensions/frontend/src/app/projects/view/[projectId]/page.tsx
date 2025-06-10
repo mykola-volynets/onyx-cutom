@@ -288,7 +288,7 @@ function ProjectInstanceViewPageContent() {
 
   const handleToggleEdit = () => {
     if (isEditing && projectInstanceData?.details) {
-      const confirmed = window.confirm(locale.confirmCancelEdit);
+      const confirmed = window.confirm(locale.common.confirmCancelEdit);
       if (confirmed) {
         setEditableData(JSON.parse(JSON.stringify(projectInstanceData.details)));
         setIsEditing(false);
@@ -330,7 +330,7 @@ function ProjectInstanceViewPageContent() {
 
   const displayContent = () => {
     if (!projectInstanceData || editableData === undefined) {
-      return <div className="text-center p-4">{locale.rendering || 'Rendering content...'}</div>;
+      return <div className="text-center p-4">{locale.common.rendering || 'Rendering content...'}</div>;
     }
 
     const componentName = projectInstanceData.component_name;
@@ -361,7 +361,7 @@ function ProjectInstanceViewPageContent() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <p className="font-medium text-lg">{locale.loadingProject || "Loading Project..."}</p>
+          <p className="font-medium text-lg">{locale.projects.loadingProject || "Loading Project..."}</p>
         </div>
       </div>
     );
@@ -371,17 +371,17 @@ function ProjectInstanceViewPageContent() {
       <div className="p-6 border-l-4 border-red-500 bg-red-50 rounded-lg shadow-md max-w-4xl mx-auto my-8">
         <div className="flex items-center">
             <AlertTriangle size={24} className="text-red-600 mr-3" />
-            <h2 className="text-2xl font-bold text-red-800">{locale.errorLoadingProjectTitle || "Error Loading Project"}</h2>
+            <h2 className="text-2xl font-bold text-red-800">{locale.projects.errorLoadingProjectTitle || "Error Loading Project"}</h2>
         </div>
         <p className="text-red-700 mt-2">
-            {locale.errorLoadingProjectMessage || "There was a problem fetching the project data. Please try again later."}
+            {locale.projects.errorLoadingProjectMessage || "There was a problem fetching the project data. Please try again later."}
         </p>
         <p className="mt-2 text-sm text-red-600 bg-red-100 p-2 rounded border border-red-200">
-            <strong>{locale.errorDetails || "Details:"}</strong> {errorMessage}
+            <strong>{locale.common.errorDetails || "Details:"}</strong> {errorMessage}
         </p>
          <button onClick={() => router.push('/projects')} className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-md hover:bg-blue-100">
             <ArrowLeft size={16}/>
-            {locale.returnToProjects || "Return to Projects List"}
+            {locale.projects.returnToProjects || "Return to Projects List"}
         </button>
       </div>
     );
@@ -391,14 +391,14 @@ function ProjectInstanceViewPageContent() {
        <div className="p-6 border-l-4 border-yellow-500 bg-yellow-50 rounded-lg shadow-md max-w-4xl mx-auto my-8">
         <div className="flex items-center">
             <Info size={24} className="text-yellow-600 mr-3" />
-            <h2 className="text-2xl font-bold text-yellow-800">{locale.projectNotFoundTitle || "Project Not Found"}</h2>
+            <h2 className="text-2xl font-bold text-yellow-800">{locale.projects.projectNotFoundTitle || "Project Not Found"}</h2>
         </div>
         <p className="text-yellow-700 mt-2">
-            {locale.projectNotFoundMessage || "The project you are looking for could not be found or you may not have permission to view it."}
+            {locale.projects.projectNotFoundMessage || "The project you are looking for could not be found or you may not have permission to view it."}
         </p>
         <button onClick={() => router.push('/projects')} className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-md hover:bg-blue-100">
             <ArrowLeft size={16}/>
-            {locale.returnToProjects || "Return to Projects List"}
+            {locale.projects.returnToProjects || "Return to Projects List"}
         </button>
       </div>
     );
@@ -413,7 +413,7 @@ function ProjectInstanceViewPageContent() {
                 <button className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-gray-100">
                     <ArrowLeft size={18} />
                     <FolderOpen size={18} className="hidden sm:inline-block"/>
-                    <span className="hidden sm:inline-block">{locale.allProjects || "All Projects"}</span>
+                    <span className="hidden sm:inline-block">{locale.projects.allProjects || "All Projects"}</span>
                 </button>
             </Link>
             <h1 className="text-xl md:text-2xl font-bold text-gray-800 truncate" title={projectInstanceData.name}>
@@ -422,10 +422,10 @@ function ProjectInstanceViewPageContent() {
           </div>
           <div className="flex items-center gap-2 mt-2 md:mt-0">
             {chatRedirectUrl && (
-              <a href={chatRedirectUrl} target="_blank" rel="noopener noreferrer" title={locale.sourceChatTooltip}
+              <a href={chatRedirectUrl} target="_blank" rel="noopener noreferrer" title={locale.common.sourceChatTooltip}
                  className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors p-2 rounded-md hover:bg-blue-50">
                 <MessageSquare size={18}/>
-                <span className="hidden sm:inline-block">{locale.sourceChat || "Source Chat"}</span>
+                <span className="hidden sm:inline-block">{locale.common.sourceChat || "Source Chat"}</span>
               </a>
             )}
              <button
@@ -437,14 +437,14 @@ function ProjectInstanceViewPageContent() {
                 }`}
             >
                 <Edit size={18} />
-                <span className="hidden sm:inline-block">{isEditing ? (locale.cancelEdit || "Cancel") : (locale.edit || "Edit")}</span>
+                <span className="hidden sm:inline-block">{isEditing ? (locale.common.cancelEdit || "Cancel") : (locale.common.edit || "Edit")}</span>
             </button>
              <button
                 onClick={handlePdfDownload}
                 className="flex items-center gap-2 text-sm font-medium p-2 rounded-md transition-colors bg-green-100 text-green-700 hover:bg-green-200"
             >
                 <ArrowDownToLine size={18} />
-                <span className="hidden sm:inline-block">{locale.downloadPdf || "Download PDF"}</span>
+                <span className="hidden sm:inline-block">{locale.common.downloadPdf || "Download PDF"}</span>
             </button>
             {isEditing && (
               <button
@@ -453,7 +453,7 @@ function ProjectInstanceViewPageContent() {
                 className="flex items-center gap-2 text-sm font-medium p-2 rounded-md transition-colors bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
               >
                 <Save size={18} />
-                <span className="hidden sm:inline-block">{isSaving ? (locale.saving || "Saving...") : (locale.save || "Save")}</span>
+                <span className="hidden sm:inline-block">{isSaving ? (locale.common.saving || "Saving...") : (locale.common.save || "Save")}</span>
               </button>
             )}
           </div>
@@ -461,7 +461,7 @@ function ProjectInstanceViewPageContent() {
 
          {saveError && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
-            <strong className="font-bold">{locale.saveErrorTitle || "Save Error:"} </strong>
+            <strong className="font-bold">{locale.common.saveErrorTitle || "Save Error:"} </strong>
             <span className="block sm:inline">{saveError}</span>
           </div>
         )}
