@@ -1138,7 +1138,9 @@ export const HumanMessage = ({
 
   useEffect(() => {
     if (textareaRef.current) {
+      // Focus the textarea
       textareaRef.current.focus();
+      // Move the cursor to the end of the text
       textareaRef.current.selectionStart = textareaRef.current.value.length;
       textareaRef.current.selectionEnd = textareaRef.current.value.length;
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
@@ -1185,17 +1187,17 @@ export const HumanMessage = ({
                   <div className="w-full">
                     <div
                       className={`
-                        opacity-100
-                        w-full
-                        flex
-                        flex-col
-                        border 
-                        border-border 
-                        rounded-lg 
-                        pb-2
-                        [&:has(textarea:focus)]::ring-1
-                        [&:has(textarea:focus)]::ring-black
-                      `}
+                      opacity-100
+                      w-full
+                      flex
+                      flex-col
+                      border 
+                      border-border 
+                      rounded-lg 
+                      pb-2
+                      [&:has(textarea:focus)]::ring-1
+                      [&:has(textarea:focus)]::ring-black
+                    `}
                     >
                       <textarea
                         ref={textareaRef}
@@ -1234,6 +1236,7 @@ export const HumanMessage = ({
                             setEditedContent(content);
                             setIsEditing(false);
                           }
+                          // Submit edit if "Command Enter" is pressed, like in ChatGPT
                           if (e.key === "Enter" && e.metaKey) {
                             handleEditSubmit();
                           }
@@ -1350,7 +1353,6 @@ export const HumanMessage = ({
               </div>
             </div>
           </div>
-        </div>
 
           <div className="flex flex-col md:flex-row gap-x-0.5 mt-1">
             {currentMessageInd !== undefined &&
