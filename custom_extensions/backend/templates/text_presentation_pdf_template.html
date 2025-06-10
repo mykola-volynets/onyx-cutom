@@ -130,39 +130,14 @@
         }
         .list-item-text-or-block { flex-grow: 1; }
 
-        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol { list-style: none; padding-left: 0; margin-top: var(--space-lg); counter-reset: numbered-box-li; }
-        
-        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li {
-            display: flex;
-            align-items: flex-start;
-            gap: var(--space-md);
-            border: 1px solid var(--color-primary-accent);
-            background-color: var(--color-primary-accent-light-bg);
-            padding: var(--space-lg);
-            margin-bottom: var(--space-lg);
-            border-radius: 5px;
-            line-height: 1.5;
-            letter-spacing: var(--letter-spacing-increased);
-        }
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol { counter-reset: item; list-style-type: none; margin: 0; padding: 0; }
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li { display: flex; align-items: flex-start; gap: var(--space-lg); padding: var(--space-lg); border-radius: var(--radius-md); }
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li:not(:last-child) { margin-bottom: var(--space-sm); }
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li { border: 1px solid #E5E7EB; background-color: #F9FAFB; }
+        .list-number-circle { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background-color: var(--color-primary-accent); color: white; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+        .list-number-circle::before { content: counter(item); counter-increment: item; }
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li > .list-content-column { display: flex; flex-direction: column; width: 100%; }
 
-        .list-number-circle {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: var(--list-number-circle-size);
-            height: var(--list-number-circle-size);
-            border-radius: 50%;
-            background-color: var(--color-primary-accent);
-            color: white;
-            font-weight: var(--font-weight-semibold);
-            font-size: var(--list-number-font-size);
-            line-height: var(--list-number-circle-size);
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        .list-number-circle::before { counter-increment: numbered-box-li; content: counter(numbered-box-li); }
-        .list-content-column { width: 100%; }
         .content-wrapper > .content-block-wrapper.type-numbered_list ol > li::before { display: none; content: ""; }
         .content-wrapper > .content-block-wrapper.type-numbered_list ol > li > .list-marker { display: none; }
         .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-item-text-or-block > .content-block-wrapper.type-bullet_list { margin-bottom: 0; }
@@ -198,7 +173,7 @@
         .paragraph-block.recommendation::before { content: ""; position: absolute; left: 0; top: 0.1em; height: calc(100% - 0.2em); width: 3px; background-color: var(--color-primary-accent); }
 
         .mini-section-box-wrapper { margin-top: var(--space-xl); margin-bottom: var(--space-xl); page-break-inside: avoid; }
-        .mini-section-box { background-color: var(--color-primary-accent-light-bg); border: 1px solid var(--color-primary-accent); border-radius: 5px; padding: var(--space-md) var(--space-xl); }
+        .mini-section-box { background-color: #FEF2F2; border-left: 4px solid #F87171; padding: var(--space-md) var(--space-xl); }
         .mini-section-box > .content-block-wrapper:first-child { margin-top: 0 !important; }
         .mini-section-box > .content-block-wrapper:first-child > .headline-block { margin-top: 0 !important; }
         .mini-section-box .content-block-wrapper, .mini-section-box .paragraph-block { max-width: 100%; }
@@ -265,7 +240,7 @@
             {% endif %}
         {% endmacro %}
 
-        {% macro render_list_items_recursive_macro(items_list, list_type_str, list_icon_name_str, depth) %}
+        {% macro render_list_items_recursive_macro(items_list, list_type_str, list_icon_name_str, depth, is_in_mini_section=false) %}
             {% if items_list is iterable and items_list is not string and items_list|length > 0 %}
                 {% for item_content in items_list %}
                     <li>
@@ -273,7 +248,7 @@
                             <span class="list-number-circle"></span>
                             <div class="list-content-column">
                                 {% if item_content is mapping %}
-                                    {{ render_single_block_recursive_macro(item_content, depth + 1) }}
+                                    {{ render_single_block_recursive_macro(item_content, depth + 1, is_in_mini_section) }}
                                 {% elif item_content is string %}
                                     <span>{% set segments = item_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
                                 {% else %}
@@ -288,7 +263,7 @@
                             {% if item_content is string %}
                                 <span>{% set segments = item_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
                             {% elif item_content is mapping %}
-                                {{ render_single_block_recursive_macro(item_content, depth + 1) }}
+                                {{ render_single_block_recursive_macro(item_content, depth + 1, is_in_mini_section) }}
                             {% else %}
                                 <span class="error-message">Item is not string or dict: {{ item_content }}</span>
                             {% endif %}
@@ -302,7 +277,7 @@
             {% endif %}
         {% endmacro %}
 
-        {% macro render_single_block_recursive_macro(block_data, depth=0) %}
+        {% macro render_single_block_recursive_macro(block_data, depth=0, is_in_mini_section=false) %}
             {% if block_data is mapping %}
                 {% set block_type = block_data.get('type') %}
                 {% set level = block_data.level | default(3) %}
@@ -312,7 +287,8 @@
                 <div class="content-block-wrapper type-{{block_type}}">
                     {% if block_type == 'headline' %}
                         <div class="headline-block h{{ level }}"
-                             style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% endif %}">
+                             style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% elif is_in_mini_section %}color: var(--color-primary-accent); fill: var(--color-primary-accent);{% endif %}">
+                            {% if is_in_mini_section %}{{ render_icon_svg_macro('info') }}{% endif %}
                             {{ render_icon_svg_macro(block_data.iconName) }}
                             <span>{% set segments = text_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
                         </div>
@@ -321,9 +297,9 @@
                     {% elif block_type == 'bullet_list' or block_type == 'numbered_list' %}
                         <div class="list-block-wrapper {{block_type}} depth-{{depth}}">
                             {% if block_type == 'bullet_list' %}
-                                <ul>{{ render_list_items_recursive_macro(block_data.get('items'), block_type, block_data.iconName, depth) }}</ul>
+                                <ul>{{ render_list_items_recursive_macro(block_data.get('items'), block_type, block_data.iconName, depth, is_in_mini_section) }}</ul>
                             {% else %} {# numbered_list #}
-                                <ol>{{ render_list_items_recursive_macro(block_data.get('items'), block_type, None, depth) }}</ol>
+                                <ol>{{ render_list_items_recursive_macro(block_data.get('items'), block_type, None, depth, is_in_mini_section) }}</ol>
                             {% endif %}
                         </div>
                     {% elif block_type == 'alert' %}
@@ -373,9 +349,9 @@
                     
                     {% if is_important_headline_check %} 
                         <div class="mini-section-box-wrapper"> <div class="mini-section-box">
-                            {{ render_single_block_recursive_macro(current_block_item, 0) }}
+                            {{ render_single_block_recursive_macro(current_block_item, 0, is_in_mini_section=true) }}
                             {% if is_relevant_content_following_for_box_check %}
-                                {{ render_single_block_recursive_macro(next_block_item, 0) }}
+                                {{ render_single_block_recursive_macro(next_block_item, 0, is_in_mini_section=true) }}
                                 {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(true) %}
                             {% endif %}
                         </div> </div>
