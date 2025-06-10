@@ -9,6 +9,9 @@ import {
   type AlertBlock as AlertBlockType,
   type SectionBreakBlock as SectionBreakBlockType
 } from './pdfLesson';
+import {
+  TextPresentationData as TextPresentationDataType
+} from './textPresentation';
 import { VideoLessonData } from './videoLessonTypes'; // <-- Import the new VideoLessonData type
 import { QuizData } from './quizTypes';
 
@@ -45,7 +48,7 @@ export interface TrainingPlanData {
 
 // Generic Content Type for MicroProducts
 // UPDATED to include VideoLessonData
-export type MicroProductContentData = TrainingPlanData | PdfLessonDataType | VideoLessonData | QuizData | null;
+export type MicroProductContentData = TrainingPlanData | PdfLessonDataType | VideoLessonData | QuizData | TextPresentationDataType | null;
 
 
 // For fetching project details for the edit page
@@ -118,3 +121,6 @@ export type { VideoLessonData, VideoLessonSlideData } from './videoLessonTypes';
 
 // Export Quiz types
 export type { QuizData } from './quizTypes';
+
+// Export TextPresentation types
+export type { TextPresentationDataType as TextPresentationData };

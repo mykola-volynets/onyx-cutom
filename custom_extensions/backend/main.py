@@ -40,6 +40,7 @@ COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanTable"
 COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay"
 COMPONENT_NAME_VIDEO_LESSON = "VideoLessonDisplay"
 COMPONENT_NAME_QUIZ = "QuizDisplay"
+COMPONENT_NAME_TEXT_PRESENTATION = "TextPresentationDisplay"
 
 # --- LLM Configuration for JSON Parsing ---
 LLM_API_KEY = os.getenv("COHERE_API_KEY")
@@ -457,7 +458,15 @@ class QuizData(BaseModel):
 
 # --- End: Add New Quiz Models ---
 
-MicroProductContentType = Union[TrainingPlanDetails, PdfLessonDetails, VideoLessonData, QuizData, None]
+# +++ NEW MODEL FOR TEXT PRESENTATION +++
+class TextPresentationDetails(BaseModel):
+    textTitle: str
+    contentBlocks: List[AnyContentBlockValue] = Field(default_factory=list)
+    detectedLanguage: Optional[str] = None
+    model_config = {"from_attributes": True}
+# +++ END NEW MODEL +++
+
+MicroProductContentType = Union[TrainingPlanDetails, PdfLessonDetails, VideoLessonData, QuizData, TextPresentationDetails, None]
 
 class DesignTemplateBase(BaseModel):
     template_name: str
@@ -548,6 +557,7 @@ class ProjectUpdateRequest(BaseModel):
 BulletListBlock.model_rebuild()
 NumberedListBlock.model_rebuild()
 PdfLessonDetails.model_rebuild()
+TextPresentationDetails.model_rebuild()
 QuizData.model_rebuild()
 ProjectDB.model_rebuild()
 MicroProductApiResponse.model_rebuild()
@@ -1164,7 +1174,7 @@ async def delete_design_template(template_id: int, pool: asyncpg.Pool = Depends(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail_msg)
 
 ALLOWED_MICROPRODUCT_TYPES_FOR_DESIGNS = [
-    "Training Plan", "PDF Lesson"
+    "Training Plan", "PDF Lesson", "Text Presentation"
 ]
 
 @app.get("/api/custom/microproduct_types", response_model=List[str])
@@ -1247,6 +1257,37 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
     * Make sure to analyze the numbered lists in depth to not break their logically intended structure.
 
     Return ONLY the JSON object. 
+            """
+        elif selected_design_template.component_name == COMPONENT_NAME_TEXT_PRESENTATION:
+            target_content_model = TextPresentationDetails
+            default_error_instance = TextPresentationDetails(textTitle=f"LLM Parsing Error for {project_data.projectName}", contentBlocks=[])
+            llm_json_example = selected_design_template.template_structuring_prompt or DEFAULT_PDF_LESSON_JSON_EXAMPLE_FOR_LLM # Can reuse this example structure
+            component_specific_instructions = """
+            You are an expert text-to-JSON parsing assistant for 'Text Presentation' content.
+            This product is for general text like introductions, goal descriptions, etc.
+            The JSON structure is similar to a PDF Lesson.
+
+            **Overall Goal:** Convert the *entirety* of the "Raw text to parse" into structured JSON. Maintain original language.
+
+            **Global Fields:**
+            1.  `textTitle` (string): Main title for the document.
+            2.  `contentBlocks` (array): Ordered array of content block objects.
+            3.  `detectedLanguage` (string): e.g., "en", "ru".
+
+            **Content Block Instructions:**
+            - **`headline`**: Contains `level`, `text`, and optional `iconName`, `backgroundColor`, `textColor`.
+            - **`isImportant`** (boolean, optional on headline): Set to `true` to highlight a section. If `true`, this headline AND its *immediately following single block* (like a paragraph or list) will be grouped into a visually distinct box. This can be used multiple times for any important sections.
+            - **`paragraph`**: Contains `text`.
+            - **`isRecommendation`** (boolean, optional on paragraph): Set to `true` if this paragraph is a "recommendation" to be styled distinctly (e.g., with a side border).
+            - The `contentBlocks` array can also contain `bullet_list`, `numbered_list`, and `alert` blocks.
+
+            **Key Parsing Rules:**
+            *   Use `isImportant` on headlines to create visually distinct, boxed-off sections.
+            *   Use `isRecommendation` on paragraphs that should be highlighted as a recommendation.
+            *   Focus on capturing the text and its basic structure (headings, lists, paragraphs).
+            *   Do NOT remove the '**' from the text, treat it as an equal part of the text. Moreover, ADD '**' around short parts of the text if you are sure that they should be bold.
+
+            Return ONLY the JSON object.
             """
         elif selected_design_template.component_name == COMPONENT_NAME_TRAINING_PLAN:
             target_content_model = TrainingPlanDetails
@@ -1525,6 +1566,9 @@ Return ONLY the JSON object.
                 if component_name_from_db == COMPONENT_NAME_PDF_LESSON:
                     final_content_for_response = PdfLessonDetails(**db_content_dict)
                     logger.info("Re-parsed as PdfLessonDetails.")
+                elif component_name_from_db == COMPONENT_NAME_TEXT_PRESENTATION:
+                    final_content_for_response = TextPresentationDetails(**db_content_dict)
+                    logger.info("Re-parsed as TextPresentationDetails.")
                 elif component_name_from_db == COMPONENT_NAME_TRAINING_PLAN:
                     final_content_for_response = TrainingPlanDetails(**db_content_dict)
                     logger.info("Re-parsed as TrainingPlanDetails.")
@@ -1599,6 +1643,8 @@ async def get_project_details_for_edit(project_id: int, onyx_user_id: str = Depe
             try:
                 if component_name == COMPONENT_NAME_PDF_LESSON:
                     parsed_content_for_response = PdfLessonDetails(**db_content_json)
+                elif component_name == COMPONENT_NAME_TEXT_PRESENTATION:
+                    parsed_content_for_response = TextPresentationDetails(**db_content_json)
                 elif component_name == COMPONENT_NAME_TRAINING_PLAN:
                     parsed_content_for_response = TrainingPlanDetails(**db_content_json)
                 elif component_name == COMPONENT_NAME_VIDEO_LESSON:
@@ -1679,6 +1725,8 @@ async def update_project_in_db(project_id: int, project_update_data: ProjectUpda
             try:
                 if current_component_name == COMPONENT_NAME_PDF_LESSON:
                     final_content_for_model = PdfLessonDetails(**db_content)
+                elif current_component_name == COMPONENT_NAME_TEXT_PRESENTATION:
+                    final_content_for_model = TextPresentationDetails(**db_content)
                 elif current_component_name == COMPONENT_NAME_TRAINING_PLAN:
                     final_content_for_model = TrainingPlanDetails(**db_content)
                 elif current_component_name == COMPONENT_NAME_VIDEO_LESSON:
@@ -1757,6 +1805,8 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
             try:
                 if component_name == COMPONENT_NAME_PDF_LESSON:
                     details_data = PdfLessonDetails(**microproduct_content_json)
+                elif component_name == COMPONENT_NAME_TEXT_PRESENTATION:
+                    details_data = TextPresentationDetails(**microproduct_content_json)
                 elif component_name == COMPONENT_NAME_TRAINING_PLAN:
                     details_data = TrainingPlanDetails(**microproduct_content_json)
                 elif component_name == COMPONENT_NAME_VIDEO_LESSON:
@@ -1778,6 +1828,8 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
             lang_fallback = detect_language(project_instance_name)
             if component_name == COMPONENT_NAME_PDF_LESSON:
                 details_data = PdfLessonDetails(lessonTitle=f"No/Invalid content for {project_instance_name}", contentBlocks=[], detectedLanguage=lang_fallback)
+            elif component_name == COMPONENT_NAME_TEXT_PRESENTATION:
+                details_data = TextPresentationDetails(textTitle=f"No/Invalid content for {project_instance_name}", contentBlocks=[], detectedLanguage=lang_fallback)
             elif component_name == COMPONENT_NAME_QUIZ:
                 details_data = QuizData(quizTitle=f"No/Invalid content for {project_instance_name}", questions=[], detectedLanguage=lang_fallback)
             else:
@@ -1864,6 +1916,17 @@ async def download_project_instance_pdf(
                 data_for_template_render = {
                     "lessonTitle": f"Content Unavailable/Invalid: {mp_name_for_pdf_context}",
                     "contentBlocks": [], "detectedLanguage": detected_lang_for_pdf}
+        elif component_name == COMPONENT_NAME_TEXT_PRESENTATION:
+            pdf_template_file = "text_presentation_pdf_template.html"
+            if content_json and isinstance(content_json, dict):
+                data_for_template_render = json.loads(json.dumps(content_json))
+                if not data_for_template_render.get('detectedLanguage'):
+                    data_for_template_render['detectedLanguage'] = detected_lang_for_pdf
+            else:
+                data_for_template_render = {
+                    "textTitle": f"Content Unavailable/Invalid: {mp_name_for_pdf_context}",
+                    "contentBlocks": [], "detectedLanguage": detected_lang_for_pdf
+                }
         elif component_name == COMPONENT_NAME_TRAINING_PLAN:
             pdf_template_file = "training_plan_pdf_template.html"
             temp_dumped_dict = None
@@ -2016,6 +2079,7 @@ SectionBreakBlock.model_rebuild()
 BulletListBlock.model_rebuild()
 NumberedListBlock.model_rebuild()
 PdfLessonDetails.model_rebuild()
+TextPresentationDetails.model_rebuild()
 QuizData.model_rebuild()
 ProjectDB.model_rebuild()
 MicroProductApiResponse.model_rebuild()

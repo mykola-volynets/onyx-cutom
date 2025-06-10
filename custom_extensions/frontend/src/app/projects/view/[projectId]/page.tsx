@@ -10,6 +10,7 @@ import {
   TrainingPlanData,
   PdfLessonData,
   QuizData,
+  TextPresentationData,
 } from '@/types/projectSpecificTypes';
 import { VideoLessonData } from '@/types/videoLessonTypes';
 import { ProjectListItem } from '@/types/products';
@@ -17,6 +18,7 @@ import TrainingPlanTableComponent from '@/components/TrainingPlanTable';
 import PdfLessonDisplayComponent from '@/components/PdfLessonDisplay';
 import VideoLessonDisplay from '@/components/VideoLessonDisplay';
 import QuizDisplay from '@/components/QuizDisplay';
+import TextPresentationDisplay from '@/components/TextPresentationDisplay';
 import { Save, Edit, ArrowDownToLine, Info, AlertTriangle, ArrowLeft, FolderOpen, MessageSquare } from 'lucide-react';
 
 const CUSTOM_BACKEND_URL = process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || '/api/custom-projects-backend';
@@ -26,6 +28,7 @@ const COMPONENT_NAME_TRAINING_PLAN = "TrainingPlanTable";
 const COMPONENT_NAME_PDF_LESSON = "PdfLessonDisplay";
 const COMPONENT_NAME_VIDEO_LESSON = "VideoLessonDisplay";
 const COMPONENT_NAME_QUIZ = "QuizDisplay";
+const COMPONENT_NAME_TEXT_PRESENTATION = "TextPresentationDisplay";
 
 type ProjectViewParams = {
   projectId: string;
@@ -149,6 +152,8 @@ export default function ProjectInstanceViewPage() {
           setEditableData(copiedDetails as VideoLessonData);
         } else if (instanceData.component_name === COMPONENT_NAME_QUIZ) {
           setEditableData(copiedDetails as QuizData);
+        } else if (instanceData.component_name === COMPONENT_NAME_TEXT_PRESENTATION) {
+          setEditableData(copiedDetails as TextPresentationData);
         } else {
           setEditableData(copiedDetails); 
         }
@@ -162,6 +167,8 @@ export default function ProjectInstanceViewPage() {
           setEditableData({ mainPresentationTitle: instanceData.name || "New Video Lesson", slides: [], detectedLanguage: lang });
         } else if (instanceData.component_name === COMPONENT_NAME_QUIZ) {
           setEditableData({ quizTitle: instanceData.name || "New Quiz", questions: [], detectedLanguage: lang });
+        } else if (instanceData.component_name === COMPONENT_NAME_TEXT_PRESENTATION) {
+          setEditableData({ textTitle: instanceData.name || "New Text Presentation", contentBlocks: [], detectedLanguage: lang });
         } else {
           setEditableData(null);
         }
@@ -246,7 +253,8 @@ export default function ProjectInstanceViewPage() {
       COMPONENT_NAME_PDF_LESSON,
       COMPONENT_NAME_TRAINING_PLAN,
       COMPONENT_NAME_VIDEO_LESSON,
-      COMPONENT_NAME_QUIZ
+      COMPONENT_NAME_QUIZ,
+      COMPONENT_NAME_TEXT_PRESENTATION,
     ];
     if (!editableComponentTypes.includes(projectInstanceData.component_name)) {
       setSaveError("Content editing is not supported for this component type on this page.");
@@ -292,7 +300,8 @@ export default function ProjectInstanceViewPage() {
       COMPONENT_NAME_PDF_LESSON,
       COMPONENT_NAME_TRAINING_PLAN,
       COMPONENT_NAME_VIDEO_LESSON,
-      COMPONENT_NAME_QUIZ
+      COMPONENT_NAME_QUIZ,
+      COMPONENT_NAME_TEXT_PRESENTATION,
     ];
     if (!editableComponentTypes.includes(projectInstanceData.component_name)) {
       alert(`Content editing is currently supported for ${editableComponentTypes.join(', ')} types on this page.`);
@@ -314,6 +323,8 @@ export default function ProjectInstanceViewPage() {
           setEditableData({ mainPresentationTitle: projectInstanceData.name || "New Video Lesson", slides: [], detectedLanguage: lang });
         } else if (projectInstanceData.component_name === COMPONENT_NAME_QUIZ) {
           setEditableData({ quizTitle: projectInstanceData.name || "New Quiz", questions: [], detectedLanguage: lang });
+        } else if (projectInstanceData.component_name === COMPONENT_NAME_TEXT_PRESENTATION) {
+          setEditableData({ textTitle: projectInstanceData.name || "New Text Presentation", contentBlocks: [], detectedLanguage: lang });
         } else {
           setEditableData(null);
         }
@@ -362,60 +373,28 @@ export default function ProjectInstanceViewPage() {
   }
 
   const displayContent = () => {
-    if (!projectInstanceData || pageState !== 'success') {
-      return null; 
+    if (!projectInstanceData || editableData === undefined) {
+      return <div className="text-center p-4">{locale.rendering || 'Rendering content...'}</div>;
     }
 
-    const parentProjectName = searchParams.get('parentProjectName') || undefined;
-    const lessonNumberStr = searchParams.get('lessonNumber');
-    const lessonNumber = lessonNumberStr ? parseInt(lessonNumberStr, 10) : undefined;
-
-    switch (projectInstanceData.component_name) {
+    const componentName = projectInstanceData.component_name;
+    const commonProps = {
+      isEditing: isEditing,
+      onTextChange: handleTextChange,
+      parentProjectName: parentProjectNameForCurrentView,
+    };
+    
+    switch (componentName) {
       case COMPONENT_NAME_TRAINING_PLAN:
-        const trainingPlanData = editableData as TrainingPlanData | null;
-        return (
-          <TrainingPlanTableComponent
-            dataToDisplay={trainingPlanData}
-            isEditing={isEditing}
-            onTextChange={handleTextChange}
-            sourceChatSessionId={projectInstanceData.sourceChatSessionId}
-            allUserMicroproducts={allUserMicroproducts}
-            parentProjectName={parentProjectNameForCurrentView}
-          />
-        );
+        return <TrainingPlanTableComponent dataToDisplay={editableData as TrainingPlanData | null} {...commonProps} />;
       case COMPONENT_NAME_PDF_LESSON:
-        const pdfLessonData = editableData as PdfLessonData | null;
-        return (
-          <PdfLessonDisplayComponent 
-            dataToDisplay={pdfLessonData} 
-            isEditing={isEditing} 
-            onTextChange={handleTextChange}
-            parentProjectName={parentProjectName}
-            lessonNumber={lessonNumber}
-          />
-        );
+        return <PdfLessonDisplayComponent dataToDisplay={editableData as PdfLessonData | null} {...commonProps} />;
       case COMPONENT_NAME_VIDEO_LESSON:
-        const videoData = editableData as VideoLessonData | null;
-        return (
-          <VideoLessonDisplay
-            dataToDisplay={videoData}
-            isEditing={isEditing}
-            onTextChange={handleTextChange}
-            parentProjectName={parentProjectName}
-            lessonNumber={lessonNumber}
-          />
-        );
+        return <VideoLessonDisplay dataToDisplay={editableData as VideoLessonData | null} {...commonProps} />;
       case COMPONENT_NAME_QUIZ:
-        const quizData = editableData as QuizData | null;
-        return (
-          <QuizDisplay 
-            dataToDisplay={quizData} 
-            isEditing={isEditing} 
-            onTextChange={handleTextChange} 
-            parentProjectName={parentProjectName}
-            lessonNumber={lessonNumber}
-          />
-        );
+        return <QuizDisplay dataToDisplay={editableData as QuizData | null} {...commonProps} />;
+      case COMPONENT_NAME_TEXT_PRESENTATION:
+        return <TextPresentationDisplay dataToDisplay={editableData as TextPresentationData | null} {...commonProps} />;
       default:
         return <DefaultDisplayComponent instanceData={projectInstanceData} />;
     }
@@ -423,7 +402,7 @@ export default function ProjectInstanceViewPage() {
 
   const displayName = projectInstanceData?.name || `Project ${projectId}`;
   const canEditContent = projectInstanceData &&
-                          [COMPONENT_NAME_TRAINING_PLAN, COMPONENT_NAME_PDF_LESSON, COMPONENT_NAME_VIDEO_LESSON, COMPONENT_NAME_QUIZ].includes(projectInstanceData.component_name);
+                          [COMPONENT_NAME_TRAINING_PLAN, COMPONENT_NAME_PDF_LESSON, COMPONENT_NAME_VIDEO_LESSON, COMPONENT_NAME_QUIZ, COMPONENT_NAME_TEXT_PRESENTATION].includes(projectInstanceData.component_name);
 
   return (
     <main className="p-4 md:p-8 bg-gray-100 min-h-screen font-['Inter',_sans-serif]">

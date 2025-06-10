@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="{{ text_data.detectedLanguage if text_data and text_data.detectedLanguage else 'ru' }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{% set segments = (text_data.textTitle if text_data and text_data.textTitle else 'Text Presentation').split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        html {
+          box-sizing: border-box;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        *, *:before, *:after {
+          box-sizing: inherit;
+        }
+
+        :root {
+            --font-primary: 'Inter', Arial, sans-serif;
+            --color-primary-accent: #FF1414;
+            --color-primary-accent-dark: #CC1010;
+            --color-primary-accent-light-bg: #fafafa;
+            --color-text-black: #000000;
+            --color-text-darkest: #18181B;
+            --color-text-default: #4B4B4B; 
+            --color-text-muted: #4B4B4B;  
+            --color-border-extralight: #F3F4F6;
+            --color-border-light: #E5E7EB; 
+            --color-background-page: #FFFFFF;
+
+            --font-weight-normal: 400;
+            --font-weight-medium: 500;
+            --font-weight-semibold: 600;
+            --font-weight-bold: 700;
+
+            --font-size-paragraph-small: 8pt;
+            --font-size-list-item: 7pt; 
+            --font-size-base: 10pt;
+            --line-height-base: 1.5; 
+
+            --font-size-main-title: 19pt; 
+            --font-size-h1-content: 13pt;  
+            --font-size-other-section-header: 14pt; 
+
+            --font-size-h3-box: 11pt;
+            --font-size-h4-box: 10pt;
+            --font-size-p-box: 8.5pt;
+
+            --font-size-mini-title: 8pt;
+            --font-size-mini-title-text: 7pt;
+            
+            --list-number-circle-size: 24px;
+            --list-number-font-size: 11pt;
+
+            --space-xxs: 2px; --space-xs: 4px; --space-sm: 8px; --space-md: 12px;
+            --space-lg: 18px; --space-xl: 24px; --space-2xl: 32px; --space-3xl: 48px;
+            --content-max-width-constrained: 75%;
+            
+            --color-alert-text: #4B4B4B;
+            --letter-spacing-increased: 0.02em; 
+        }
+
+        @page { margin-top: 10mm; margin-bottom: 12mm; margin-left: 10mm; margin-right: 10mm; size: A4; }
+        body {
+            font-family: var(--font-primary); margin: 0; padding: 0;
+            background-color: var(--color-background-page); color: var(--color-text-default);
+            font-size: var(--font-size-base); font-weight: var(--font-weight-normal);
+            line-height: var(--line-height-base); widows: 3; orphans: 3;
+            letter-spacing: var(--letter-spacing-increased);
+        }
+        .pdf-container { width: 100%; padding: 0; }
+        .main-title-section { margin-bottom: 8px; }
+        .main-title-text {
+            font-size: var(--font-size-main-title); font-weight: var(--font-weight-medium);
+            color: var(--color-text-darkest); margin: 0 0 var(--space-sm) 0; 
+            line-height: 1.5; letter-spacing: var(--letter-spacing-increased); text-transform: uppercase;
+        }
+        .icon-svg { display: inline-block; vertical-align: middle; width: 1em; height: 1em; flex-shrink: 0; }
+        .icon-svg.icon-new-bullet { fill: currentColor; stroke: none; }
+
+        .content-block-wrapper { margin-bottom: var(--space-sm); } 
+        .content-block-wrapper:last-child { margin-bottom: 0; }
+
+        .headline-block { display: flex; align-items: center; line-height: 1.5; max-width: 100%; text-transform: uppercase; letter-spacing: var(--letter-spacing-increased); }
+        .headline-block .icon-svg { 
+            margin-right: var(--space-sm); width: 0.8em; height: 0.8em; 
+            flex-shrink: 0; color: var(--color-primary-accent);
+             position: relative;
+             top: 0.1em;
+         }
+
+        .headline-block span { flex-grow: 1; }
+        .headline-block.h1 { font-size: var(--font-size-h1-content); font-weight: var(--font-weight-medium); color: var(--color-text-darkest); margin-top: var(--space-2xl); margin-bottom: 8px; }
+        .headline-block.h2 { font-family: var(--font-primary); font-size: var(--font-size-other-section-header); font-weight: var(--font-weight-medium); color: var(--color-text-darkest); line-height: 1.5; letter-spacing: var(--letter-spacing-increased); margin-top: 16px; margin-bottom: 12px; }
+        .headline-block.h3 { font-size: var(--font-size-h3-box); font-weight: var(--font-weight-medium); color: var(--color-text-black); margin-top: 10px; margin-bottom: 6px; }
+        .headline-block.h4 { font-size: var(--font-size-h4-box); font-weight: var(--font-weight-medium); color: var(--color-text-black); margin-top: 8px; margin-bottom: 4px; }
+        
+        .paragraph-block { font-size: var(--font-size-paragraph-small); line-height: 1.5; letter-spacing: var(--letter-spacing-increased); font-weight: var(--font-weight-normal); margin-bottom: var(--space-sm); color: var(--color-text-default); }
+
+        .list-block-wrapper ul, .list-block-wrapper ol { padding-left: 0; list-style-type: none; margin-top: var(--space-xs); margin-bottom: var(--space-md); max-width: 100%; }
+        .list-block-wrapper li { 
+            margin-bottom: var(--space-xs); 
+            font-size: var(--font-size-list-item); 
+            font-weight: var(--font-weight-normal); 
+            line-height: 1.5; 
+            color: var(--color-text-default); 
+            display: flex; 
+            align-items: flex-start;
+            letter-spacing: var(--letter-spacing-increased);
+        }
+        
+        .content-wrapper > .content-block-wrapper.type-bullet_list ul > li > .list-marker {
+            margin-right: var(--space-xs); 
+            flex-shrink: 0;
+            padding-top: 0.2em;
+        }
+        
+        .content-wrapper > .content-block-wrapper.type-bullet_list ul > li > .list-marker .icon-svg {
+            width: 0.7em;  
+            height: 0.7em; 
+            color: var(--color-primary-accent); 
+            fill: currentColor; 
+            stroke: none; 
+            display: block; 
+        }
+        .list-item-content-wrapper ul > li > .list-marker .icon-svg { 
+            width: 0.6em; 
+            height: 0.6em;
+            color: var(--color-text-muted); 
+        }
+        .list-item-text-or-block { flex-grow: 1; }
+
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol { list-style: none; padding-left: 0; margin-top: var(--space-lg); counter-reset: numbered-box-li; }
+        
+        .content-wrapper > .content-block-wrapper.type-numbered_list > .list-block-wrapper > ol > li {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-md);
+            border: 1px solid var(--color-primary-accent);
+            background-color: var(--color-primary-accent-light-bg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+            border-radius: 5px;
+            line-height: 1.5;
+            letter-spacing: var(--letter-spacing-increased);
+        }
+
+        .list-number-circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: var(--list-number-circle-size);
+            height: var(--list-number-circle-size);
+            border-radius: 50%;
+            background-color: var(--color-primary-accent);
+            color: white;
+            font-weight: var(--font-weight-semibold);
+            font-size: var(--list-number-font-size);
+            line-height: var(--list-number-circle-size);
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .list-number-circle::before { counter-increment: numbered-box-li; content: counter(numbered-box-li); }
+        .list-content-column { width: 100%; }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li::before { display: none; content: ""; }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li > .list-marker { display: none; }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-item-text-or-block > .content-block-wrapper.type-bullet_list { margin-bottom: 0; }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list > ul { margin: 0; padding: 0; list-style: none; }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list > ul > li { padding: 0; margin: 0 0 var(--space-xs) 0; display: flex; align-items: flex-start; } 
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list > ul > li:last-child { margin-bottom: 0; }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list > ul > li > .list-marker { display: flex; }
+
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column > .content-block-wrapper:first-child > .headline-block {
+            margin-top: 0;
+        }
+        
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list .headline-block { margin-top: -3px !important; margin-bottom: var(--space-xs) !important; font-size: var(--font-size-mini-title); font-weight: var(--font-weight-medium); color: var(--color-text-black); line-height: 1.5; text-transform: uppercase; letter-spacing: var(--letter-spacing-increased); }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list .headline-block .icon-svg { display: none; }
+        .content-wrapper > .content-block-wrapper.type-numbered_list ol > li .list-content-column .list-block-wrapper.type-bullet_list .paragraph-block { font-size: var(--font-size-mini-title-text); font-weight: var(--font-weight-normal); color: var(--color-text-muted); max-width: 100%; line-height: 1.5; letter-spacing: var(--letter-spacing-increased); }
+
+        .alert-block { display: flex; padding: var(--space-md); border-left-width: 4px; border-radius: 3px; margin-bottom: var(--space-md); font-size: var(--font-size-paragraph-small); page-break-inside: avoid; color: var(--color-alert-text) !important; line-height: 1.5; letter-spacing: var(--letter-spacing-increased); }
+        .alert-block .icon-container { margin-right: var(--space-sm); flex-shrink: 0; padding-top: 0.1em; }
+        .alert-block .icon-container .icon-svg { width: 1.2em; height: 1.2em; }
+        .alert-block .text-container { flex-grow: 1; }
+        .alert-block .alert-title { font-weight: var(--font-weight-semibold); margin-bottom: var(--space-xxs); } 
+        .alert-block .alert-text { }
+        .alert-block.alert-info { background-color: #E0F2FE; border-color: #3B82F6; }
+        .alert-block.alert-info .icon-container { color: #3B82F6; }
+        .alert-block.alert-success { background-color: #D1FAE5; border-color: #10B981; }
+        .alert-block.alert-success .icon-container { color: #10B981; }
+        .alert-block.alert-warning { background-color: #FEF3C7; border-color: #F59E0B; }
+        .alert-block.alert-warning .icon-container { color: #F59E0B; }
+        .alert-block.alert-danger { background-color: #FEE2E2; border-color: #EF4444; }
+        .alert-block.alert-danger .icon-container { color: #EF4444; }
+
+        .paragraph-block.recommendation { font-size: 8pt; color: var(--color-text-muted); margin-top: var(--space-sm); margin-bottom:0; font-weight: var(--font-weight-medium); padding-left: 13px; position: relative; line-height: 1.5; letter-spacing: var(--letter-spacing-increased); }
+        .paragraph-block.recommendation::before { content: ""; position: absolute; left: 0; top: 0.1em; height: calc(100% - 0.2em); width: 3px; background-color: var(--color-primary-accent); }
+
+        .mini-section-box-wrapper { margin-top: var(--space-xl); margin-bottom: var(--space-xl); page-break-inside: avoid; }
+        .mini-section-box { background-color: var(--color-primary-accent-light-bg); border: 1px solid var(--color-primary-accent); border-radius: 5px; padding: var(--space-md) var(--space-xl); }
+        .mini-section-box > .content-block-wrapper:first-child { margin-top: 0 !important; }
+        .mini-section-box > .content-block-wrapper:first-child > .headline-block { margin-top: 0 !important; }
+        .mini-section-box .content-block-wrapper, .mini-section-box .paragraph-block { max-width: 100%; }
+        .mini-section-box .list-block-wrapper { max-width: 100%; }
+        .mini-section-box .list-block-wrapper li { font-size: var(--font-size-list-item); }
+
+        .section-break-block.solid, .section-break-block.dashed { border: none; border-top: 0.5pt solid var(--color-border-light); margin: var(--space-xl) 0; } 
+        .section-break-block.none { height: var(--space-lg); border:none; }
+        .content-section-divider { border: none; border-top: 0.5pt solid var(--color-border-light); margin: var(--space-md) 0 var(--space-xs) 0; max-width: 100%; }
+
+        .content-wrapper > .content-block-wrapper.type-paragraph { max-width: var(--content-max-width-constrained); }
+        .content-wrapper > .content-block-wrapper.type-alert { max-width: var(--content-max-width-constrained); }
+        .list-block-wrapper .content-block-wrapper.type-paragraph { max-width: 100%; }
+
+        .headline-block, .alert-block, li, .paragraph-block { page-break-inside: avoid; }
+        .headline-block.h2 { page-break-before: auto; page-break-after: avoid; }
+        hr.content-section-divider { page-break-before: auto; page-break-after: avoid;}
+    </style>
+</head>
+<body>
+    <svg width="0" height="0" style="position:absolute;display:none;" aria-hidden="true">
+        <defs>
+            <symbol id="icon-new-bullet" viewBox="0 0 3 4">
+                <path d="M3 2L8.69979e-08 3.73205L2.38419e-07 0.267944L3 2Z" fill="currentColor"/>
+            </symbol>
+            <symbol id="icon-info" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></symbol>
+            <symbol id="icon-check" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"> <path stroke="none" d="M0 0h24v24H0z" fill="none"/> <path d="M5 12l5 5l10 -10" /> </symbol>
+            <symbol id="icon-alertTriangle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></symbol>
+            <symbol id="icon-xCircle" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M10 10l4 4m0 -4l-4 4" /></symbol>
+        </defs>
+    </svg>
+
+    <div class="pdf-container">
+        {% set text_data = details.details %}
+        {% set locale = details.locale %}
+        
+        {% if text_data is mapping and text_data.textTitle is defined %}
+            <div class="main-title-section">
+                <h1 class="main-title-text">
+                    {% set text_content = text_data.textTitle %}
+                    {% set segments = text_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}
+                </h1>
+            </div>
+        {% endif %}
+
+        {% macro render_icon_svg_macro(icon_name_str, default_icon_for_type=None, css_class="", depth=0) %}
+            {% set final_icon_name = icon_name_str %}
+
+            {% if default_icon_for_type == 'ul' or default_icon_for_type == 'ul-nested' %}
+                {% if icon_name_str == 'none' %}{% set final_icon_name = 'none' %}
+                {% else %}{% set final_icon_name = 'new-bullet' %}{% endif %}
+            {% elif not icon_name_str %}
+                {% if default_icon_for_type == 'alert-info' %}{% set final_icon_name = 'info' %} 
+                {% elif default_icon_for_type == 'alert-success' %}{% set final_icon_name = 'check' %} 
+                {% elif default_icon_for_type == 'alert-warning' %}{% set final_icon_name = 'alertTriangle' %} 
+                {% elif default_icon_for_type == 'alert-danger' %}{% set final_icon_name = 'xCircle' %} 
+                {% endif %}
+            {% elif icon_name_str %}
+                 {% set final_icon_name = icon_name_str %}
+            {% endif %}
+
+            {% if final_icon_name and final_icon_name != 'none' %}
+                <svg class="icon-svg {{ css_class }} icon-{{final_icon_name}}"><use xlink:href="#icon-{{ final_icon_name }}" /></svg>
+            {% endif %}
+        {% endmacro %}
+
+        {% macro render_list_items_recursive_macro(items_list, list_type_str, list_icon_name_str, depth) %}
+            {% if items_list is iterable and items_list is not string and items_list|length > 0 %}
+                {% for item_content in items_list %}
+                    <li>
+                        {% if list_type_str == 'numbered_list' %}
+                            <span class="list-number-circle"></span>
+                            <div class="list-content-column">
+                                {% if item_content is mapping %}
+                                    {{ render_single_block_recursive_macro(item_content, depth + 1) }}
+                                {% elif item_content is string %}
+                                    <span>{% set segments = item_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
+                                {% else %}
+                                    <span class="error-message">Numbered list item content is not string or dict.</span>
+                                {% endif %}
+                            </div>
+                        {% else %} {# bullet_list logic #}
+                            <div class="list-marker">
+                                {{ render_icon_svg_macro(list_icon_name_str, 'ul' if depth == 0 else 'ul-nested', 'bullet-icon', depth) }}
+                            </div>
+                            <div class="list-item-text-or-block">
+                            {% if item_content is string %}
+                                <span>{% set segments = item_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
+                            {% elif item_content is mapping %}
+                                {{ render_single_block_recursive_macro(item_content, depth + 1) }}
+                            {% else %}
+                                <span class="error-message">Item is not string or dict: {{ item_content }}</span>
+                            {% endif %}
+                            </div>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            {% elif items_list is none or (items_list is iterable and items_list|length == 0) %}
+            {% else %}
+                <li class="error-message">Items list for "{{list_type_str}}" is not iterable. Type: {{ items_list|type }}</li>
+            {% endif %}
+        {% endmacro %}
+
+        {% macro render_single_block_recursive_macro(block_data, depth=0) %}
+            {% if block_data is mapping %}
+                {% set block_type = block_data.get('type') %}
+                {% set level = block_data.level | default(3) %}
+                {% set text_content = block_data.text | default('') %}
+                {% set alert_title_content = block_data.title | default('') %}
+
+                <div class="content-block-wrapper type-{{block_type}}">
+                    {% if block_type == 'headline' %}
+                        <div class="headline-block h{{ level }}"
+                             style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% endif %}">
+                            {{ render_icon_svg_macro(block_data.iconName) }}
+                            <span>{% set segments = text_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
+                        </div>
+                    {% elif block_type == 'paragraph' %}
+                        <p class="paragraph-block {{ 'recommendation' if block_data.isRecommendation else '' }}">{% set segments = text_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</p>
+                    {% elif block_type == 'bullet_list' or block_type == 'numbered_list' %}
+                        <div class="list-block-wrapper {{block_type}} depth-{{depth}}">
+                            {% if block_type == 'bullet_list' %}
+                                <ul>{{ render_list_items_recursive_macro(block_data.get('items'), block_type, block_data.iconName, depth) }}</ul>
+                            {% else %} {# numbered_list #}
+                                <ol>{{ render_list_items_recursive_macro(block_data.get('items'), block_type, None, depth) }}</ol>
+                            {% endif %}
+                        </div>
+                    {% elif block_type == 'alert' %}
+                       <div class="alert-block alert-{{ block_data.alertType | default('info') }}"
+                             style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %}{% if block_data.borderColor %}border-color: {{ block_data.borderColor }};{% endif %}{% if block_data.textColor %}color: {{ block_data.textColor }};{% endif %}">
+                            <div class="icon-container" style="{% if block_data.iconColor %}color: {{ block_data.iconColor }}; fill: {{ block_data.iconColor }};{% endif %}">
+                                {{ render_icon_svg_macro(block_data.iconName, 'alert-' + (block_data.alertType|default('info')) ) }}
+                            </div>
+                            <div class="text-container">
+                                {% if block_data.title %}<div class="alert-title">{% set segments = alert_title_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</div>{% endif %}
+                                <div class="alert-text">{% set segments = text_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</div>
+                            </div>
+                        </div>
+                    {% elif block_type == 'section_break' %}
+                        {% if block_data.style == 'solid' or block_data.style == 'dashed' %}
+                            <hr class="section-break-block {{ block_data.style }}">
+                        {% elif block_data.style == 'none' %}
+                             <div class="section-break-block none"></div>
+                        {% endif %}
+                    {% else %}
+                        <p class="error-message">Unsupported block type: {{ block_type }}</p>
+                    {% endif %}
+                </div>
+            {% else %}
+                <p class="error-message">Block data is not a dictionary/mapping: {{ block_data }}</p>
+            {% endif %}
+        {% endmacro %}
+
+        <div class="content-wrapper">
+        {% if text_data is mapping and text_data.contentBlocks is iterable and text_data.contentBlocks is not string %}
+            {% set next_block_in_box_content = [false] %}
+            {% for loop_index in range(text_data.contentBlocks | length) %}
+                {% set current_block_item = text_data.contentBlocks[loop_index] %}
+                {% set next_block_item = text_data.contentBlocks[loop_index+1] if (loop_index+1) < (text_data.contentBlocks | length) else none %}
+                {% set is_last_block_overall = loop_index == (text_data.contentBlocks | length) - 1 %}
+                
+                {% if next_block_in_box_content[0] %}
+                    {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(false) %}
+                {% else %}
+                    {% set is_important_headline_check = current_block_item is mapping and current_block_item.get('type') == 'headline' and current_block_item.get('isImportant') %}
+                    {% set is_relevant_content_following_for_box_check = next_block_item is mapping and next_block_item.get('type') in ['bullet_list', 'numbered_list', 'paragraph', 'alert'] %}
+                    
+                    {% if is_important_headline_check %} 
+                        <div class="mini-section-box-wrapper"> <div class="mini-section-box">
+                            {{ render_single_block_recursive_macro(current_block_item, 0) }}
+                            {% if is_relevant_content_following_for_box_check %}
+                                {{ render_single_block_recursive_macro(next_block_item, 0) }}
+                                {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(true) %}
+                            {% endif %}
+                        </div> </div>
+                    {% else %} 
+                        {{ render_single_block_recursive_macro(current_block_item, 0) }}
+                    {% endif %}
+                {% endif %}
+
+            {% endfor %}
+        {% elif text_data and text_data.contentBlocks is not none %}
+             <p class="error-message">contentBlocks is not iterable. Type: {{ text_data.contentBlocks|type }}</p>
+        {% else %}
+             <p class="warning-message">No content blocks found.</p>
+        {% endif %}
+        </div>
+    </div>
+</body>
+</html> 
