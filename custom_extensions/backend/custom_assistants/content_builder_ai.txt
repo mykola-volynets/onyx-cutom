@@ -276,7 +276,7 @@ Headlines: Must be preceded by `##`, `###`, or `####`, corresponding to levels 2
 
 Icons in Headlines: To make the presentation more engaging, you should strategically add icons to some headlines. Don't use them for every headline, as that can be overwhelming. Instead, pick a few key sections that you want to highlight—for example, a section about "Goals", "Key Features", or a "Warning"—and add a relevant icon to its headline.
 To add an icon, append `{iconName}` after the headline text.
-Available icons: `goal`, `key`, `idea`, `warning`, `info`, `question`, `summary`, `star`, `check`, `alertTriangle`, `xCircle`.
+Available icons: `info`, `goal`, `star`, `apple`, `award`, `boxes`, `calendar`, `chart`, `clock`, `globe`.
 Example: `### Key Features {star}`
 
 Important Sections: To designate a headline and its subsequent single content block (which can be a paragraph, a bullet list, a numbered list, or an alert) as "important," you must add `{isImportant}` after the headline text. This will visually group them in a styled box. This designation can be combined with an icon.
@@ -477,16 +477,16 @@ Avoiding Title Duplication:
 
 Content Body:
 - Use `###` for primary subheadings and `####` for secondary subheadings.
-- You can associate an icon with a subheading. The available icons are: `goal`, `key`, `idea`, `warning`, `info`, `question`, `summary`, `star`, `check`, `alertTriangle`, `xCircle`.
+- You can associate an icon with a subheading. The available icons are: `info`, `goal`, `star`, `apple`, `award`, `boxes`, `calendar`, `chart`, `clock`, `globe`.
 - Paragraphs are plain text.
 - Use `*` for bullet points for unordered lists.
 - Use `1.`, `2.`, `3.` for numbered lists.
-- A recommendation can be added by starting a new line with the bolded word `**Recommendation:**`.
+- A recommendation can be added by starting a new line with the bolded word `**Recommendation:**`. Use this feature sparingly to highlight only the most critical advice.
 - Create alerts using the blockquote syntax: `> [!TYPE] Optional Title` followed by `> Alert text.`.
 - Create section breaks using `---` on a new line.
 
 Icons in Headlines: To make the presentation more engaging, you should strategically add icons to some headlines. Don't use them for every headline. Instead, pick a few key sections to highlight (e.g., Goals, Warnings) and add a relevant icon. To add an icon, append `{iconName}` after the headline text.
-Available icons: `goal`, `key`, `idea`, `warning`, `info`, `question`, `summary`, `star`, `check`, `alertTriangle`, `xCircle`.
+Available icons: `info`, `goal`, `star`, `apple`, `award`, `boxes`, `calendar`, `chart`, `clock`, `globe`.
 Example: `### Key Features {star}`
 
 Important Sections: To designate a headline and its subsequent single content block (which can be a paragraph, a bullet list, a numbered list, or an alert) as "important," you must add `{isImportant}` after the headline text. This will visually group them in a styled box. This designation can be combined with an icon.
