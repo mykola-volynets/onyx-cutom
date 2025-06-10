@@ -265,8 +265,8 @@ Determine Content Origin & Style (Based on gathered info and identified topic).
 Adhere to Specific Requirements (Defaults, user can modify with follow-up instructions).
 
 Text Presentation & Readability:
-
-This is a comprehensive and self-contained block for creating a structured Text Presentation. It includes a main title, sections, and various content blocks within those sections. You must follow the formatting rules below precisely.
+- This is a comprehensive and self-contained block for creating a structured Text Presentation. It includes a main title, sections, and various content blocks within those sections. You must follow the formatting rules below precisely.
+- To create a rich and effective document, you should use a variety of elements, including headlines, paragraphs, bulleted and numbered lists, alerts, and section breaks. Do not limit the presentation to just lists.
 
 Formatting Rules:
 
@@ -274,7 +274,7 @@ Main Title (Optional): The entire document can have a main title. If the user pr
 
 Headlines: Must be preceded by `##`, `###`, or `####`, corresponding to levels 2, 3, and 4. Level 2 is for major sections, while Levels 3 and 4 are for sub-sections or specific points within a list.
 
-Icons in Headlines: You are encouraged to use icons to make headlines more visually engaging. To add an icon, append `{iconName}` after the headline text.
+Icons in Headlines: To make the presentation more engaging, you should strategically add icons to some headlines. Don't use them for every headline. Instead, pick a few key sections to highlight (e.g., Goals, Warnings) and add a relevant icon. To add an icon, append `{iconName}` after the headline text.
 Available icons: `info`, `check`, `alertTriangle`, `xCircle`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `target`, `trendingUp`, `flag`, `shield`, `activity`, `anchor`, `aperture`, `archive`, `atSign`.
 Example: `### Key Features {award}`
 
@@ -285,6 +285,15 @@ You MUST NOT mark two consecutive headlines as important. An important section c
 Paragraphs: Are standard text. No special formatting is needed.
 
 Bold Text: Use `**word**` to make text bold.
+
+Alerts: To create an alert box for important notes, warnings, etc., use the blockquote syntax with a special tag.
+The available alert types are `[!INFO]`, `[!SUCCESS]`, `[!WARNING]`, and `[!DANGER]`.
+The title is optional.
+Example:
+> [!WARNING] This is a Warning
+> This is the main text of the alert.
+
+Section Breaks: To add a visual separator between sections, use `---` on a new line.
 
 Important Headlines and Mini-Sections:
 
@@ -472,8 +481,10 @@ Content Body:
 - Use `*` for bullet points for unordered lists.
 - Use `1.`, `2.`, `3.` for numbered lists.
 - A recommendation can be added by starting a new line with the bolded word `**Recommendation:**`.
+- Create alerts using the blockquote syntax: `> [!TYPE] Optional Title` followed by `> Alert text.`.
+- Create section breaks using `---` on a new line.
 
-Icons in Headlines: You are encouraged to use icons to make headlines more visually engaging. To add an icon, append `{iconName}` after the headline text.
+Icons in Headlines: To make the presentation more engaging, you should strategically add icons to some headlines. Don't use them for every headline. Instead, pick a few key sections to highlight (e.g., Goals, Warnings) and add a relevant icon. To add an icon, append `{iconName}` after the headline text.
 Available icons: `info`, `check`, `alertTriangle`, `xCircle`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `star`, `zap`, `trendingDown`, `target`, `trendingUp`, `flag`, `shield`, `activity`, `anchor`, `aperture`, `archive`, `atSign`.
 Example: `### Key Features {award}`
 

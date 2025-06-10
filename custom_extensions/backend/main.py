@@ -1296,6 +1296,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
                 *   `alertType` (string): One of `info`, `success`, `warning`, `danger`.
                 *   `title` (string, optional): The title of the alert.
                 *   `text` (string): The body text of the alert.
+                *   **Parsing Rule:** An alert is identified in the raw text by a blockquote. The first line of the blockquote MUST be `> [!TYPE] Optional Title`. The `TYPE` is extracted for `alertType`. The text after the tag is the `title`. All subsequent lines within the blockquote form the `text`.
 
             6.  **`type: "section_break"`**
                 * `style` (string, optional): e.g., "solid", "dashed", "none". Parse from `---` in the raw text.
