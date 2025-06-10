@@ -67,7 +67,6 @@ const DefaultDisplayComponent = ({ instanceData }: { instanceData: ProjectInstan
   </div>
 );
 
-
 function ProjectInstanceViewPageContent() {
   const params = useParams<ProjectViewParams>();
   const router = useRouter();
@@ -301,30 +300,32 @@ function ProjectInstanceViewPageContent() {
   };
 
   const handlePdfDownload = () => {
-    if (!projectInstanceData) {
-        alert("Project data not loaded yet.");
+    if (!projectInstanceData || typeof projectInstanceData.project_id !== 'number') {
+        alert("Project data or ID is not available for download.");
         return;
     }
-    const slug = slugify(projectInstanceData.name);
-    let downloadUrl = `${CUSTOM_BACKEND_URL}/pdf/${projectInstanceData.project_id}/${slug}`;
+    const nameForSlug = projectInstanceData.name || 'document';
+    const docNameSlug = slugify(nameForSlug);
+    const pdfProjectId = projectInstanceData.project_id;
+
+    const parentProjectName = searchParams.get('parentProjectName');
+    const lessonNumber = searchParams.get('lessonNumber');
+
+    let pdfUrl = `${CUSTOM_BACKEND_URL}/pdf/${pdfProjectId}/${docNameSlug}`;
     
     const queryParams = new URLSearchParams();
-    if (parentProjectNameForCurrentView) {
-      queryParams.append('parentProjectName', parentProjectNameForCurrentView);
+    if (parentProjectName) {
+        queryParams.append('parentProjectName', parentProjectName);
     }
-    if (projectInstanceData.details && 'lessonNumber' in projectInstanceData.details && projectInstanceData.details.lessonNumber) {
-       queryParams.append('lessonNumber', projectInstanceData.details.lessonNumber.toString());
+    if (lessonNumber) {
+        queryParams.append('lessonNumber', lessonNumber);
     }
+
     if (queryParams.toString()) {
-      downloadUrl += `?${queryParams.toString()}`;
+        pdfUrl += `?${queryParams.toString()}`;
     }
 
-    const devUserId = typeof window !== "undefined" ? sessionStorage.getItem("dev_user_id") : null;
-    if (devUserId && process.env.NODE_ENV === 'development') {
-      // Cookies should handle auth for browser-based requests like this.
-    }
-
-    window.open(downloadUrl, '_blank');
+    window.open(pdfUrl, '_blank');
   };
 
   const displayContent = () => {
