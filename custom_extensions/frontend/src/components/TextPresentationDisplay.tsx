@@ -197,7 +197,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
           className={finalClassName}
           style={{ backgroundColor: backgroundColor || 'transparent', color: headlineTextColor || undefined , padding: backgroundColor ? '0.4rem 0.6rem' : undefined, borderRadius: backgroundColor ? '0.25rem' : undefined }}
         >
-          {IconComponent && <IconComponent className="mr-1.5 shrink-0" />}
+          {IconComponent && <IconComponent className={`mr-1.5 shrink-0 ${THEME_COLORS.accentRed}`} />}
           {isEditing && onTextChange ? (
             <input 
               type="text" 

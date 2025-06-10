@@ -1287,10 +1287,10 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
                 * `isRecommendation` (boolean, optional): Set to `true` if this paragraph should be styled as a recommendation (e.g., with a side border).
 
             3.  **`type: "bullet_list"`**
-                * `items` (array of `ListItem`): Can be simple strings. Nested lists are not supported in the raw format, so parse them as flat lists.
+                * `items` (array of `ListItem`): Can be simple strings. Nested lists are supported; you can place a `bullet_list` or `numbered_list` inside another list's `items` array.
 
             4.  **`type: "numbered_list"`**
-                * `items` (array of `ListItem`): Can be simple strings.
+                * `items` (array of `ListItem`): Can be simple strings or other blocks, including a `bullet_list` for nested content.
 
             5.  **`type: "alert"`**
                 *   `alertType` (string): One of `info`, `success`, `warning`, `danger`.
