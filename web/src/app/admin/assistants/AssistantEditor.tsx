@@ -25,7 +25,7 @@ import { getDisplayNameForModel, useLabels } from "@/lib/hooks";
 import { DocumentSetSelectable } from "@/components/documentSet/DocumentSetSelectable";
 import { addAssistantToList } from "@/lib/assistants/updateAssistantPreferences";
 import {
-  destructureValue,
+  parseLlmDescriptor,
   modelSupportsImageInput,
   structureValue,
 } from "@/lib/llm/utils";
@@ -532,7 +532,7 @@ export function AssistantEditor({
 
           // if disable_retrieval is set, set num_chunks to 0
           // to tell the backend to not fetch any documents
-          const numChunks = searchToolEnabled ? values.num_chunks || 10 : 0;
+          const numChunks = searchToolEnabled ? values.num_chunks || 25 : 0;
           const starterMessages = values.starter_messages
             .filter(
               (message: { message: string }) => message.message.trim() !== ""
@@ -548,6 +548,7 @@ export function AssistantEditor({
 
           const submissionData: PersonaUpsertParameters = {
             ...values,
+            icon_color: values.icon_color ?? null,
             existing_prompt_id: existingPrompt?.id ?? null,
             starter_messages: starterMessages,
             groups: groups,
@@ -1163,7 +1164,7 @@ export function AssistantEditor({
                         setFieldValue("llm_model_provider_override", null);
                       } else {
                         const { modelName, provider, name } =
-                          destructureValue(selected);
+                          parseLlmDescriptor(selected);
                         if (modelName && name) {
                           setFieldValue(
                             "llm_model_version_override",

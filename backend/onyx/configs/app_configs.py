@@ -120,8 +120,10 @@ SMTP_SERVER = os.environ.get("SMTP_SERVER") or "smtp.gmail.com"
 SMTP_PORT = int(os.environ.get("SMTP_PORT") or "587")
 SMTP_USER = os.environ.get("SMTP_USER", "your-email@gmail.com")
 SMTP_PASS = os.environ.get("SMTP_PASS", "your-gmail-password")
-EMAIL_CONFIGURED = all([SMTP_SERVER, SMTP_USER, SMTP_PASS])
 EMAIL_FROM = os.environ.get("EMAIL_FROM") or SMTP_USER
+
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY") or ""
+EMAIL_CONFIGURED = all([SMTP_SERVER, SMTP_USER, SMTP_PASS]) or SENDGRID_API_KEY
 
 # If set, Onyx will listen to the `expires_at` returned by the identity
 # provider (e.g. Okta, Google, etc.) and force the user to re-authenticate
@@ -180,6 +182,13 @@ POSTGRES_API_SERVER_POOL_SIZE = int(
 )
 POSTGRES_API_SERVER_POOL_OVERFLOW = int(
     os.environ.get("POSTGRES_API_SERVER_POOL_OVERFLOW") or 10
+)
+
+POSTGRES_API_SERVER_READ_ONLY_POOL_SIZE = int(
+    os.environ.get("POSTGRES_API_SERVER_READ_ONLY_POOL_SIZE") or 10
+)
+POSTGRES_API_SERVER_READ_ONLY_POOL_OVERFLOW = int(
+    os.environ.get("POSTGRES_API_SERVER_READ_ONLY_POOL_OVERFLOW") or 5
 )
 
 # defaults to False
@@ -306,6 +315,11 @@ try:
     CELERY_WORKER_INDEXING_CONCURRENCY = int(env_value)
 except ValueError:
     CELERY_WORKER_INDEXING_CONCURRENCY = CELERY_WORKER_INDEXING_CONCURRENCY_DEFAULT
+
+
+CELERY_WORKER_KG_PROCESSING_CONCURRENCY = int(
+    os.environ.get("CELERY_WORKER_KG_PROCESSING_CONCURRENCY") or 4
+)
 
 # The maximum number of tasks that can be queued up to sync to Vespa in a single pass
 VESPA_SYNC_MAX_TASKS = 1024
@@ -545,7 +559,7 @@ INDEXING_TRACER_INTERVAL = int(os.environ.get("INDEXING_TRACER_INTERVAL") or 0)
 # Enable multi-threaded embedding model calls for parallel processing
 # Note: only applies for API-based embedding models
 INDEXING_EMBEDDING_MODEL_NUM_THREADS = int(
-    os.environ.get("INDEXING_EMBEDDING_MODEL_NUM_THREADS") or 1
+    os.environ.get("INDEXING_EMBEDDING_MODEL_NUM_THREADS") or 8
 )
 
 # During an indexing attempt, specifies the number of batches which are allowed to
@@ -672,6 +686,21 @@ CONTROL_PLANE_API_BASE_URL = os.environ.get(
     "CONTROL_PLANE_API_BASE_URL", "http://localhost:8082"
 )
 
+OAUTH_SLACK_CLIENT_ID = os.environ.get("OAUTH_SLACK_CLIENT_ID", "")
+OAUTH_SLACK_CLIENT_SECRET = os.environ.get("OAUTH_SLACK_CLIENT_SECRET", "")
+OAUTH_CONFLUENCE_CLOUD_CLIENT_ID = os.environ.get(
+    "OAUTH_CONFLUENCE_CLOUD_CLIENT_ID", ""
+)
+OAUTH_CONFLUENCE_CLOUD_CLIENT_SECRET = os.environ.get(
+    "OAUTH_CONFLUENCE_CLOUD_CLIENT_SECRET", ""
+)
+OAUTH_JIRA_CLOUD_CLIENT_ID = os.environ.get("OAUTH_JIRA_CLOUD_CLIENT_ID", "")
+OAUTH_JIRA_CLOUD_CLIENT_SECRET = os.environ.get("OAUTH_JIRA_CLOUD_CLIENT_SECRET", "")
+OAUTH_GOOGLE_DRIVE_CLIENT_ID = os.environ.get("OAUTH_GOOGLE_DRIVE_CLIENT_ID", "")
+OAUTH_GOOGLE_DRIVE_CLIENT_SECRET = os.environ.get(
+    "OAUTH_GOOGLE_DRIVE_CLIENT_SECRET", ""
+)
+
 # JWT configuration
 JWT_ALGORITHM = "HS256"
 
@@ -728,4 +757,10 @@ IMAGE_ANALYSIS_SYSTEM_PROMPT = os.environ.get(
 
 DISABLE_AUTO_AUTH_REFRESH = (
     os.environ.get("DISABLE_AUTO_AUTH_REFRESH", "").lower() == "true"
+)
+
+# Knowledge Graph Read Only User Configuration
+DB_READONLY_USER: str = os.environ.get("DB_READONLY_USER", "db_readonly_user")
+DB_READONLY_PASSWORD: str = urllib.parse.quote_plus(
+    os.environ.get("DB_READONLY_PASSWORD") or "password"
 )
