@@ -1305,6 +1305,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             *   Parse `{iconName}` on headlines to the `iconName` string field.
             *   Use `isRecommendation` on paragraphs that should be highlighted as a recommendation.
             *   Do NOT remove the `**` from the text; treat it as part of the text.
+            *   You are encouraged to use a diverse range of the available `iconName` values to make the presentation visually engaging.
             *   If the raw text starts with `# Title`, this becomes the `textTitle`. The `contentBlocks` should not include this Level 1 headline. All other headlines (`##`, `###`, `####`) are content blocks.
 
             Return ONLY the JSON object.
