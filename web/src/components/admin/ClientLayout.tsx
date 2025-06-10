@@ -34,12 +34,12 @@ import { MdOutlineCreditCard } from "react-icons/md";
 import { UserSettingsModal } from "@/app/chat/modal/UserSettingsModal";
 import { usePopup } from "./connectors/Popup";
 import { useChatContext } from "../context/ChatContext";
-import {
-  ApplicationStatus,
-  CombinedSettings,
-} from "@/app/admin/settings/interfaces";
+import { ApplicationStatus } from "@/app/admin/settings/interfaces";
 import Link from "next/link";
 import { Button } from "../ui/button";
+
+// TODO: Import your AssistantsModal component
+// import { AssistantsModal } from "@/app/chat/modal/AssistantsModal"; // Example path
 
 export function ClientLayout({
   user,
@@ -555,23 +555,6 @@ export function ClientLayout({
             {children}
           </div>
         </div>
-      )}
-
-      <div className="default-scrollbar flex-none text-text-settings-sidebar bg-background-sidebar dark:bg-[#000] w-[250px] overflow-x-hidden z-20 pt-2 pb-8 h-full border-r border-border dark:border-none miniscroll overflow-auto">
-        <AdminSidebar
-          collections={collections(
-            isCurator,
-            enableCloud,
-            enableEnterprise,
-            settings
-          )}
-        />
-      </div>
-      <div className="overflow-y-scroll w-full">
-        <div className="fixed left-0 gap-x-4 px-4 top-4 h-8 mb-auto w-full items-start flex justify-end">
-          <UserDropdown toggleUserSettings={toggleUserSettings} />
-        </div>
-        <div className="flex pt-10 pb-4 px-4 md:px-12">{children}</div>
       </div>
     </div>
   );
