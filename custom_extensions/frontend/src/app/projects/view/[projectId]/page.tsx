@@ -300,32 +300,31 @@ function ProjectInstanceViewPageContent() {
   };
 
   const handlePdfDownload = () => {
-    if (!projectInstanceData || typeof projectInstanceData.project_id !== 'number') {
-        alert("Project data or ID is not available for download.");
+    if (!projectInstanceData) {
+        alert("Project data not loaded yet.");
         return;
     }
-    const nameForSlug = projectInstanceData.name || 'document';
-    const docNameSlug = slugify(nameForSlug);
-    const pdfProjectId = projectInstanceData.project_id;
-
-    const parentProjectName = searchParams.get('parentProjectName');
-    const lessonNumber = searchParams.get('lessonNumber');
-
-    let pdfUrl = `${CUSTOM_BACKEND_URL}/pdf/${pdfProjectId}/${docNameSlug}`;
+    const slug = slugify(projectInstanceData.name);
+    let downloadUrl = `${CUSTOM_BACKEND_URL}/pdf/${projectInstanceData.project_id}/${slug}`;
     
     const queryParams = new URLSearchParams();
-    if (parentProjectName) {
-        queryParams.append('parentProjectName', parentProjectName);
+    if (parentProjectNameForCurrentView) {
+      queryParams.append('parentProjectName', parentProjectNameForCurrentView);
     }
-    if (lessonNumber) {
-        queryParams.append('lessonNumber', lessonNumber);
+    const details = projectInstanceData.details;
+    if (details && 'lessonNumber' in details && typeof details.lessonNumber === 'number') {
+       queryParams.append('lessonNumber', details.lessonNumber.toString());
     }
-
     if (queryParams.toString()) {
-        pdfUrl += `?${queryParams.toString()}`;
+      downloadUrl += `?${queryParams.toString()}`;
     }
 
-    window.open(pdfUrl, '_blank');
+    const devUserId = typeof window !== "undefined" ? sessionStorage.getItem("dev_user_id") : null;
+    if (devUserId && process.env.NODE_ENV === 'development') {
+      queryParams.append('X-Dev-Onyx-User-ID', devUserId);
+    }
+
+    window.open(downloadUrl, '_blank');
   };
 
   const displayContent = () => {
@@ -335,7 +334,11 @@ function ProjectInstanceViewPageContent() {
 
     const componentName = projectInstanceData.component_name;
     const dataToRender = isEditing ? editableData : projectInstanceData.details;
-    const lessonNumber = (projectInstanceData.details && 'lessonNumber' in projectInstanceData.details) ? projectInstanceData.details.lessonNumber : undefined;
+    
+    let lessonNumber: number | undefined = undefined;
+    if (projectInstanceData.details && 'lessonNumber' in projectInstanceData.details && typeof projectInstanceData.details.lessonNumber === 'number') {
+      lessonNumber = projectInstanceData.details.lessonNumber;
+    }
 
     switch (componentName) {
       case COMPONENT_NAME_TRAINING_PLAN:
