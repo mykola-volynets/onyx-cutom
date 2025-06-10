@@ -110,7 +110,6 @@
         .content-wrapper > .content-block-wrapper.type-bullet_list ul > li > .list-marker {
             margin-right: var(--space-xs); 
             flex-shrink: 0;
-            padding-top: 0.2em;
         }
         
         .content-wrapper > .content-block-wrapper.type-bullet_list ul > li > .list-marker .icon-svg {
@@ -264,9 +263,12 @@
                                 {% endif %}
                             </div>
                         {% else %} {# bullet_list logic #}
-                            <div class="list-marker">
-                                {{ render_icon_svg_macro(list_icon_name_str, 'ul' if depth == 0 else 'ul-nested', 'bullet-icon', depth) }}
-                            </div>
+                            {% set is_recommendation_paragraph = item_content is mapping and item_content.get('type') == 'paragraph' and item_content.get('isRecommendation') %}
+                            {% if not is_recommendation_paragraph %}
+                                <div class="list-marker">
+                                    {{ render_icon_svg_macro(list_icon_name_str, 'ul' if depth == 0 else 'ul-nested', 'bullet-icon', depth) }}
+                                </div>
+                            {% endif %}
                             <div class="list-item-text-or-block">
                             {% if item_content is string %}
                                 <span>{% set segments = item_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
@@ -296,7 +298,7 @@
                     {% if block_type == 'headline' %}
                         <div class="headline-block h{{ level }}"
                              style="{% if block_data.backgroundColor %}background-color: {{ block_data.backgroundColor }};{% endif %} {% if block_data.textColor %}color: {{ block_data.textColor }}; fill: {{block_data.textColor}};{% elif is_in_mini_section %}color: var(--color-primary-accent); fill: var(--color-primary-accent);{% endif %}">
-                            {% if is_in_mini_section %}{{ render_icon_svg_macro('info') }}{% endif %}
+                            {% if is_in_mini_section and not block_data.iconName %}{{ render_icon_svg_macro('info') }}{% endif %}
                             {{ render_icon_svg_macro(block_data.iconName) }}
                             <span>{% set segments = text_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
                         </div>
