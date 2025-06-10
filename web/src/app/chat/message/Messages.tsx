@@ -377,7 +377,7 @@ export const AIMessage = ({
       }, content);
 
       const lastMatch = matches[matches.length - 1];
-      if (!lastMatch.endsWith("```")) {
+      if (lastMatch && !lastMatch.endsWith("```")) {
         return preprocessLaTeX(content);
       }
     }
@@ -527,6 +527,11 @@ export const AIMessage = ({
     onMessageSelection &&
     otherMessagesCanSwitchTo &&
     otherMessagesCanSwitchTo.length > 1;
+
+  let otherMessage: number | undefined = undefined;
+  if (currentMessageInd && otherMessagesCanSwitchTo) {
+    otherMessage = otherMessagesCanSwitchTo[currentMessageInd - 1];
+  }
 
   return (
     <>
@@ -757,63 +762,56 @@ export const AIMessage = ({
                       )}
                     </div>
 
-                    {!removePadding &&
-                      handleFeedback &&
-                      (isActive ? (
-                        <div
-                          className={`
-                            flex md:flex-row gap-x-0.5 mt-1
-                            transition-transform duration-300 ease-in-out
-                            transform opacity-100 "
-                          `}
-                        >
-                          <TooltipGroup>
-                            <div className="flex justify-start w-full gap-x-0.5">
-                              {includeMessageSwitcher && (
+                  {!removePadding &&
+                    handleFeedback &&
+                    (isActive ? (
+                      <div
+                        className={`
+                        flex md:flex-row gap-x-0.5 mt-1
+                        transition-transform duration-300 ease-in-out
+                        transform opacity-100 "
+                  `}
+                      >
+                        <TooltipGroup>
+                          <div className="flex justify-start w-full gap-x-0.5">
+                            {includeMessageSwitcher &&
+                              otherMessage !== undefined && (
                                 <div className="-mx-1 mr-auto">
                                   <MessageSwitcher
-                                    currentPage={currentMessageInd! + 1}
-                                    totalPages={otherMessagesCanSwitchTo!.length}
+                                    currentPage={currentMessageInd + 1}
+                                    totalPages={otherMessagesCanSwitchTo.length}
                                     handlePrevious={() => {
-                                      onMessageSelection!(
-                                        otherMessagesCanSwitchTo![
-                                          currentMessageInd! - 1
-                                        ]
-                                      );
+                                      onMessageSelection(otherMessage!);
                                     }}
                                     handleNext={() => {
-                                      onMessageSelection!(
-                                        otherMessagesCanSwitchTo![
-                                          currentMessageInd! + 1
-                                        ]
-                                      );
+                                      onMessageSelection(otherMessage!);
                                     }}
                                   />
                                 </div>
                               )}
-                            </div>
-                            <CustomTooltip showTick line content="Copy">
-                              <CopyButton
-                                copyAllFn={() =>
-                                  copyAll(
-                                    finalContentProcessed as string,
-                                    markdownRef
-                                  )
-                                }
-                              />
-                            </CustomTooltip>
-                            <CustomTooltip showTick line content="Good response">
-                              <HoverableIcon
-                                icon={<LikeFeedback />}
-                                onClick={() => handleFeedback("like")}
-                              />
-                            </CustomTooltip>
-                            <CustomTooltip showTick line content="Bad response">
-                              <HoverableIcon
-                                icon={<DislikeFeedback size={16} />}
-                                onClick={() => handleFeedback("dislike")}
-                              />
-                            </CustomTooltip>
+                          </div>
+                          <CustomTooltip showTick line content="Copy">
+                            <CopyButton
+                              copyAllFn={() =>
+                                copyAll(
+                                  finalContentProcessed as string,
+                                  markdownRef
+                                )
+                              }
+                            />
+                          </CustomTooltip>
+                          <CustomTooltip showTick line content="Good response">
+                            <HoverableIcon
+                              icon={<LikeFeedback />}
+                              onClick={() => handleFeedback("like")}
+                            />
+                          </CustomTooltip>
+                          <CustomTooltip showTick line content="Bad response">
+                            <HoverableIcon
+                              icon={<DislikeFeedback size={16} />}
+                              onClick={() => handleFeedback("dislike")}
+                            />
+                          </CustomTooltip>
 
                             {regenerate && (
                               <CustomTooltip
@@ -1156,6 +1154,11 @@ export const HumanMessage = ({
     ? otherMessagesCanSwitchTo?.indexOf(messageId)
     : undefined;
 
+  let otherMessage: number | undefined = undefined;
+  if (currentMessageInd && otherMessagesCanSwitchTo) {
+    otherMessage = otherMessagesCanSwitchTo[currentMessageInd - 1];
+  }
+
   return (
     <div
       id="onyx-human-message"
@@ -1349,31 +1352,29 @@ export const HumanMessage = ({
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-x-0.5 mt-1">
-          {currentMessageInd !== undefined &&
-            onMessageSelection &&
-            otherMessagesCanSwitchTo &&
-            otherMessagesCanSwitchTo.length > 1 && (
-              <div className="ml-auto mr-3">
-                <MessageSwitcher
-                  disableForStreaming={disableSwitchingForStreaming}
-                  currentPage={currentMessageInd + 1}
-                  totalPages={otherMessagesCanSwitchTo.length}
-                  handlePrevious={() => {
-                    stopGenerating();
-                    onMessageSelection(
-                      otherMessagesCanSwitchTo[currentMessageInd - 1]
-                    );
-                  }}
-                  handleNext={() => {
-                    stopGenerating();
-                    onMessageSelection(
-                      otherMessagesCanSwitchTo[currentMessageInd + 1]
-                    );
-                  }}
-                />
-              </div>
-            )}
+          <div className="flex flex-col md:flex-row gap-x-0.5 mt-1">
+            {currentMessageInd !== undefined &&
+              otherMessage !== undefined &&
+              onMessageSelection &&
+              otherMessagesCanSwitchTo &&
+              otherMessagesCanSwitchTo.length > 1 && (
+                <div className="ml-auto mr-3">
+                  <MessageSwitcher
+                    disableForStreaming={disableSwitchingForStreaming}
+                    currentPage={currentMessageInd + 1}
+                    totalPages={otherMessagesCanSwitchTo.length}
+                    handlePrevious={() => {
+                      stopGenerating();
+                      onMessageSelection(otherMessage!);
+                    }}
+                    handleNext={() => {
+                      stopGenerating();
+                      onMessageSelection(otherMessage!);
+                    }}
+                  />
+                </div>
+              )}
+          </div>
         </div>
       </div>
     </div>
