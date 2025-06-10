@@ -39,10 +39,12 @@ export interface SectionBreakBlock {
 export type AnyContentBlock =
   | HeadlineBlock
   | ParagraphBlock
-  | BulletListBlock // Defined below
-  | NumberedListBlock // Defined below
   | AlertBlock
-  | SectionBreakBlock;
+  | SectionBreakBlock
+  | BulletListBlock
+  | NumberedListBlock
+  | MiniSection
+  | StandaloneBlock;
 
 export type ListItem = string | AnyContentBlock;
 
@@ -57,6 +59,18 @@ export interface NumberedListBlock {
   items: ListItem[];
   // NumberedListBlock does not have its own iconName in the Pydantic model.
 }
+
+// --- Composite Types for Rendering ---
+export interface MiniSection {
+  type: "mini_section";
+  headline: HeadlineBlock;
+  list: BulletListBlock | NumberedListBlock | ParagraphBlock | AlertBlock;
+};
+
+export interface StandaloneBlock { 
+  type: "standalone_block"; 
+  content: AnyContentBlock; 
+};
 
 // --- Main Data Structure ---
 export interface TextPresentationData {
