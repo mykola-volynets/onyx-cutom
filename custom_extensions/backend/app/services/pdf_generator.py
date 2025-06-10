@@ -6,6 +6,7 @@ from fastapi import HTTPException
 import logging
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape # Import Jinja2
+import random
 
 # Attempt to import settings (as before)
 try:
@@ -40,6 +41,16 @@ jinja_env = Environment(
     loader=FileSystemLoader(TEMPLATE_DIR),
     autoescape=select_autoescape(['html', 'xml'])
 )
+
+def shuffle_filter(seq):
+    try:
+        result = list(seq)
+        random.shuffle(result)
+        return result
+    except:
+        return seq
+
+jinja_env.filters['shuffle'] = shuffle_filter
 # --- End Jinja2 Setup ---
 
 async def generate_pdf_from_html_template(
