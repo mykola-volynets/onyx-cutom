@@ -7,7 +7,7 @@ import {
   BulletListBlock, NumberedListBlock, AlertBlock, SectionBreakBlock,
 } from '@/types/textPresentation';
 import {
-  CheckCircle, Info, XCircle, Minus, AlertTriangle,
+  CheckCircle, Info as InfoIconLucide, XCircle, AlertTriangle,
 } from 'lucide-react';
 import { locales } from '@/locales';
 
@@ -44,29 +44,30 @@ const NewBulletIcon = () => (
 );
 
 // --- New Icon Set ---
+const InfoIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v-6h-2v6zm0-8h2V7h-2v2z"/></svg>;
 const GoalIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg width="1em" height="1em" viewBox="0 0 16 16" className={className} xmlns="http://www.w3.org/2000/svg">
+    <svg width="1em" height="1em" viewBox="0 0 16 16" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="16" height="16" rx="8" fill="#FF1414"/>
         <path fillRule="evenodd" clipRule="evenodd" d="M7.66681 3.66672C5.08942 3.66672 3 5.75606 3 8.33336C3 10.9107 5.08942 13 7.66681 13C10.2442 13 12.3336 10.9107 12.3336 8.33336C12.3336 7.70679 12.2098 7.10913 11.9858 6.56324L11.9441 6.6049C11.8353 6.71373 11.6922 6.78166 11.5391 6.79694L11.0311 6.84761C11.232 7.30193 11.3438 7.80451 11.3438 8.33325C11.3438 10.364 9.69753 12.0101 7.66681 12.0101C5.63599 12.0101 3.9898 10.3639 3.9898 8.33325C3.9898 6.30261 5.6361 4.65637 7.66681 4.65637C8.19535 4.65637 8.69784 4.76817 9.15206 4.96889L9.20263 4.46137C9.21791 4.30813 9.28617 4.1649 9.39489 4.05607L9.43656 4.01441C8.89076 3.79049 8.2933 3.66672 7.66681 3.66672ZM9.36818 6.16003L9.53428 4.49445C9.5422 4.41772 9.5765 4.34627 9.63058 4.29175L10.8249 3.09753C10.9172 3.00574 11.0538 2.97551 11.1757 3.02069C11.2977 3.06576 11.3832 3.17766 11.393 3.30715L11.4873 4.51237L12.6933 4.60713C12.822 4.61735 12.9342 4.70188 12.9793 4.82401C13.0245 4.94602 12.9941 5.08321 12.9027 5.175L11.7085 6.36922C11.6544 6.42385 11.5827 6.4576 11.506 6.4653L9.84 6.63139L7.90272 8.56893C7.83786 8.63389 7.75234 8.66665 7.66681 8.66665C7.58129 8.66665 7.49576 8.63389 7.4309 8.56893C7.30119 8.43878 7.30119 8.22772 7.4309 8.09746L9.36818 6.16003ZM7.66681 6.99997C7.78609 6.99997 7.90173 7.01569 8.01177 7.04515L7.19522 7.86178C6.93524 8.12175 6.93534 8.54398 7.19489 8.80428C7.3201 8.92981 7.48961 8.99994 7.66681 8.99994C7.84391 8.99994 8.0132 8.92981 8.13841 8.80461L8.95485 7.98798C8.98431 8.09812 9.00014 8.21387 9.00014 8.33336C9.00014 9.06975 8.40323 9.66664 7.66681 9.66664C6.9304 9.66664 6.33348 9.06975 6.33348 8.33336C6.33348 7.59697 6.9304 6.99997 7.66681 6.99997ZM7.66681 5.32296C8.1782 5.32296 8.6598 5.45069 9.08149 5.6756L9.04829 6.00845L8.52865 6.52806C8.26768 6.40319 7.97538 6.33328 7.6667 6.33328C6.56214 6.33328 5.66666 7.22872 5.66666 8.33325C5.66666 9.43777 6.56214 10.3332 7.6667 10.3332C8.77127 10.3332 9.66675 9.43777 9.66675 8.33325C9.66675 8.02447 9.59672 7.73207 9.47174 7.47089L9.99148 6.95105L10.3241 6.91786C10.5494 7.33975 10.6771 7.82144 10.6771 8.33303C10.6771 9.99553 9.32927 11.3433 7.6667 11.3433C6.00414 11.3433 4.6563 9.99553 4.6563 8.33303C4.6563 6.67053 6.00425 5.32296 7.66681 5.32296Z" fill="white"/>
     </svg>
 );
 const StarIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg width="1em" height="1em" viewBox="0 0 16 16" className={className} xmlns="http://www.w3.org/2000/svg">
-        <rect width="16" height="16" rx="8" fill="#FFC700"/>
-        <path d="M8.00004 11.5L4.22653 13.56L5.22807 9.31999L1.99998 6.44L6.34538 6.13333L8.00004 2L9.6547 6.13333L14 6.44L10.7719 9.32L11.7735 13.56L8.00004 11.5Z" fill="white"/>
+    <svg width="1em" height="1em" viewBox="0 0 16 16" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="16" height="16" rx="8" fill="#FF1414"/>
+        <path d="M7.68389 3.24065C7.78339 2.91978 8.21661 2.91978 8.31611 3.24065L9.26859 6.31234C9.31309 6.45584 9.4407 6.553 9.5847 6.553H12.667C12.989 6.553 13.1228 6.98473 12.8624 7.18304L10.3687 9.08144C10.2522 9.17013 10.2035 9.32733 10.248 9.47083L11.2005 12.5425C11.3 12.8634 10.9495 13.1302 10.689 12.9319L8.19536 11.0335C8.07887 10.9448 7.92113 10.9448 7.80464 11.0335L5.31101 12.9319C5.05052 13.1302 4.70004 12.8634 4.79954 12.5425L5.75202 9.47083C5.79651 9.32733 5.74777 9.17013 5.63127 9.08144L3.13765 7.18304C2.87716 6.98473 3.01103 6.553 3.33301 6.553H6.41531C6.5593 6.553 6.68692 6.45584 6.73141 6.31234L7.68389 3.24065Z" fill="white"/>
     </svg>
 );
-const AppleIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M17.75 16.02c.62-.93.99-2.03.99-3.19 0-2.81-1.89-5.18-4.63-5.82.7-1.55.43-3.41-1.12-4.11-1.32-.59-2.92.09-3.51 1.41-.33.74-.42 1.59-.22 2.38-2.18.11-4.02 1.54-4.7 3.44-1.27 3.53.28 7.15 3.32 8.44.82.35 1.7.53 2.58.53.85 0 1.66-.17 2.43-.49.9-.38 1.69-.98 2.34-1.74a.5.5 0 0 0-.64-.78c-.5.48-1.13.9-1.83 1.18-.73.28-1.5.42-2.28.42-.76 0-1.5-.16-2.19-.46-2.58-1.1-3.8-4.06-2.79-6.64.71-1.99 2.5-3.32 4.66-3.43.14-.01.28-.02.43-.02.19 0 .37.01.55.03.11 1.05.58 2.01 1.34 2.76.22-1.28 1.25-2.28 2.53-2.56 1.08-.23 2.21.29 2.71 1.25.36.68.39 1.5.08 2.23-.97.24-1.86.83-2.48 1.66-.23.31-.22.73.04.99.27.27.7.29.98.02z"/></svg>;
-const AwardIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2zm0 2.24L9.7 8.65l-4.72.69 3.42 3.33-1.01 5.86L12 15.68l4.01 2.85-1.01-5.86 3.42-3.33-4.72-.69L12 4.24z"/><circle cx="12" cy="12" r="3"/></svg>;
-const BoxesIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M20 7l-8-5-8 5 8 5 8-5zM4 9l8 5 8-5-8-5-8 5zM20 17l-8 5-8-5v-6l8 5 8-5v6z"/></svg>;
-const CalendarIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7v-5z"/></svg>;
-const ChartIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M4 18.99h4v-7H4v7zM10 18.99h4v-13h-4v13zM16 18.99h4v-4h-4v4z"/></svg>;
-const ClockIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>;
-const GlobeIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM3.68 13h2.1c.32-1.93.98-3.72 1.89-5.26-1.39.84-2.58 2.03-3.56 3.47-.14.24-.26.49-.38.74a.49.49 0 0 0-.05.05zm5.53 5.95c-.44-.65-.82-1.36-1.13-2.1H12v2.1c-1.3 0-2.5-.4-3.52-1.05zM12 18.9V16.8h4.23c-.44.65-.82 1.36-1.13 2.1-1.02.65-2.22 1.05-3.52 1.05zM12.33 14H7.4c-.11-.64-.17-1.3-.17-1.99 0-.7.06-1.35.17-2.01h4.93c.06.66.1 1.32.1 2s-.04 1.34-.1 2zm.84-4h4.94c.11.66.17 1.31.17 2.01s-.06 1.35-.17 2.01h-4.94c-.06-.66-.1-1.32-.1-2s.04-1.34.1-2zm1.62-5.95c.44.65.82 1.36 1.13 2.1H12V4.05c1.3 0 2.5.4 3.52 1.05zm-4.52 2.1h-4c.31-.87.7-1.68 1.17-2.4.9.56 1.71 1.28 2.39 2.11v.29zm.83 2.1h-4.9c-.06-.66-.1-1.32-.1-2s.04-1.34.1-2h4.9c-.06.66-.1 1.32-.1-2s.04 1.34.1 2zM12 4.05V6.15h-4.23c.44-.65.82-1.36 1.13-2.1C9.92 4.45 11.12 4.05 12 4.05zm-4.28 9.96h-2.1c.14-.85.45-1.66.89-2.39.99 1.45 2.18 2.64 3.56 3.47-.91-1.54-1.57-3.33-1.89-5.26a.5.5 0 0 0-.46.18zM15.79 16.4c-.47.72-.85 1.53-1.17 2.4.9-.56 1.71-1.28 2.39-2.11v-.29zM18.32 13h-2.1c-.32-1.93-.98-3.72-1.89-5.26 1.39.84 2.58 2.03 3.56 3.47.14.24.26.49.38.74a.49.49 0 0 0 .05-.05z"/></svg>;
+const AppleIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"/><path d="M10 2c1 .5 2 2 2 5"/></svg>;
+const AwardIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/></svg>;
+const BoxesIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"/><path d="m7 16.5-4.74-2.85"/><path d="m7 16.5 5-3"/><path d="m7 16.5v5.17"/><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"/><path d="m17 16.5-5-3"/><path d="m17 16.5 4.74-2.85"/><path d="M17 16.5v5.17"/><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"/><path d="M12 8 7.26 5.15"/><path d="m12 8 4.74-2.85"/><path d="M12 13.5V8"/></svg>;
+const CalendarIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M11 14h1v4"/><path d="M16 2v4"/><path d="M3 10h18"/><path d="M8 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>;
+const ChartIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 11.207a.5.5 0 0 1 .146-.353l2-2a.5.5 0 0 1 .708 0l3.292 3.292a.5.5 0 0 0 .708 0l4.292-4.292a.5.5 0 0 1 .854.353V16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/></svg>;
+const ClockIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+const GlobeIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>;
 
 
 const iconMap: { [key: string]: React.ElementType } = {
-  info: Info,
+  info: InfoIcon,
   goal: GoalIcon,
   star: StarIcon,
   apple: AppleIcon,
@@ -76,7 +77,6 @@ const iconMap: { [key: string]: React.ElementType } = {
   chart: ChartIcon,
   clock: ClockIcon,
   globe: GlobeIcon,
-  default: Minus,
 };
 
 const THEME_COLORS = {
@@ -109,11 +109,11 @@ const editingTextareaClass = `${editingInputClass} min-h-[50px] resize-y`;
 
 const getAlertColors = (alertType: AlertBlock['alertType']) => {
     switch (alertType) {
-        case 'info': return { bgColor: THEME_COLORS.alertInfoBg, borderColor: THEME_COLORS.alertInfoBorder, textColor: THEME_COLORS.alertInfoText, iconColorClass: THEME_COLORS.alertInfoIcon, Icon: Info };
+        case 'info': return { bgColor: THEME_COLORS.alertInfoBg, borderColor: THEME_COLORS.alertInfoBorder, textColor: THEME_COLORS.alertInfoText, iconColorClass: THEME_COLORS.alertInfoIcon, Icon: InfoIconLucide };
         case 'success': return { bgColor: THEME_COLORS.alertSuccessBg, borderColor: THEME_COLORS.alertSuccessBorder, textColor: THEME_COLORS.alertSuccessText, iconColorClass: THEME_COLORS.alertSuccessIcon, Icon: CheckCircle };
         case 'warning': return { bgColor: THEME_COLORS.alertWarningBg, borderColor: THEME_COLORS.alertWarningBorder, textColor: THEME_COLORS.alertWarningText, iconColorClass: THEME_COLORS.alertWarningIcon, Icon: AlertTriangle };
         case 'danger': return { bgColor: THEME_COLORS.alertDangerBg, borderColor: THEME_COLORS.alertDangerBorder, textColor: THEME_COLORS.alertDangerText, iconColorClass: THEME_COLORS.alertDangerIcon, Icon: XCircle };
-        default: return { bgColor: THEME_COLORS.alertInfoBg, borderColor: THEME_COLORS.alertInfoBorder, textColor: THEME_COLORS.alertInfoText, iconColorClass: THEME_COLORS.alertInfoIcon, Icon: Info };
+        default: return { bgColor: THEME_COLORS.alertInfoBg, borderColor: THEME_COLORS.alertInfoBorder, textColor: THEME_COLORS.alertInfoText, iconColorClass: THEME_COLORS.alertInfoIcon, Icon: InfoIconLucide };
       }
 };
 
