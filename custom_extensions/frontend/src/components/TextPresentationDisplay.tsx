@@ -107,7 +107,6 @@ interface RenderBlockProps {
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newText: string) => void;
   basePath?: (string | number)[];
-  isMiniSectionList?: boolean; 
 }
 
 const RenderBlock: React.FC<RenderBlockProps> = (props) => {
@@ -115,7 +114,6 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
     block, depth = 0, isFirstInBox, isLastInBox, 
     isMiniSectionHeadline, isListItemContent,
     isEditing, onTextChange, basePath = [],
-    isMiniSectionList
   } = props;
 
   const fieldPath = (fieldKey: string) => [...basePath, fieldKey];
@@ -142,7 +140,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
       let textStyleClass = 'uppercase '; 
       if (level === 1) { textStyleClass += `text-lg lg:text-xl font-semibold ${THEME_COLORS.headingText}`; } 
       else if (level === 2) { textStyleClass += `text-base lg:text-lg font-semibold ${THEME_COLORS.headingText}`; }  
-      else if (level === 3) { textStyleClass += `text-base lg:text-lg font-semibold ${THEME_COLORS.accentRed}`; } 
+      else if (level === 3) { textStyleClass += `text-base lg:text-lg font-semibold ${THEME_COLORS.headingText}`; } 
       else if (level === 4) { textStyleClass += `text-sm lg:text-base font-medium ${THEME_COLORS.subHeadingText}`; }
       else { textStyleClass += `text-base font-medium ${THEME_COLORS.subHeadingText}`; }
 
@@ -238,16 +236,13 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
 
       const ListTag = isNumbered ? 'ol' : 'ul';
       const listStyle = isNumbered 
-        ? 'list-decimal list-outside ' 
-        : (BulletIconToRender === NewBulletIcon || BulletIconToRender === null) ? 'list-none ' : 'list-none ';
+        ? 'list-none' 
+        : 'list-none';
       
-      const textIndentClass = isNumbered ? 'pl-4' : (BulletIconToRender === NewBulletIcon) ? 'pl-0' : 'pl-1';
+      const textIndentClass = isNumbered ? 'pl-0' : 'pl-1';
       const finalMb = isLastInBox ? 'mb-0' : 'mb-2';
 
       let containerClasses = `flex flex-col ${finalMb} `;
-      if (isMiniSectionList) {
-        containerClasses += `${THEME_COLORS.veryLightAccentBg} border-l-[3px] ${THEME_COLORS.underlineAccent} py-2 pl-3.5 pr-2`;
-      }
 
       return (
         <div className={containerClasses.trim()}>
@@ -258,6 +253,43 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
               
               const styledItemText = itemIsString ? parseAndStyleText(item) : null;
 
+              if (isNumbered) {
+                if (isEditing && onTextChange && itemIsString) {
+                   return (
+                    <li key={index} className="flex items-start gap-3 p-4 border border-gray-200 bg-gray-50 rounded-lg">
+                      <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center font-semibold text-xs">{index + 1}</div>
+                      <div className="flex-grow">
+                        <input
+                          type="text"
+                          value={item}
+                          onChange={(e) => handleInputChangeEvent(listItemPath(index), e)}
+                          className={`${editingInputClass} w-full`}
+                        />
+                      </div>
+                    </li>
+                   )
+                }
+                return (
+                  <li key={index} className="flex items-start gap-3 p-4 border border-gray-200 bg-gray-50 rounded-lg">
+                    <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center font-semibold text-xs">{index + 1}</div>
+                    <div className="flex-grow">
+                      {itemIsString
+                        ? <span className="text-gray-700 text-xs leading-snug">{styledItemText}</span>
+                        : <RenderBlock 
+                            block={item as AnyContentBlock}
+                            depth={(depth || 0) + 1}
+                            isListItemContent={true}
+                            isLastInBox={isLastItem}
+                            isEditing={isEditing}
+                            onTextChange={onTextChange}
+                            basePath={listItemPath(index)}
+                          />
+                      }
+                    </div>
+                  </li>
+                );
+              }
+              
               if (isEditing && onTextChange && itemIsString) {
                 return (
                   <li key={index} className="flex items-start">
@@ -450,7 +482,6 @@ const TextPresentationDisplay = ({ dataToDisplay, isEditing, onTextChange, paren
                           />
                           <RenderBlock
                             block={subItem.list}
-                            isMiniSectionList={true}
                             isLastInBox={isLastSubItem}
                             basePath={['contentBlocks', originalMiniListIndex]}
                             isEditing={isEditing}
@@ -490,7 +521,6 @@ const TextPresentationDisplay = ({ dataToDisplay, isEditing, onTextChange, paren
                 />
                 <RenderBlock
                   block={item.list}
-                  isMiniSectionList={true}
                   isLastInBox={isLastItem}
                   basePath={['contentBlocks', originalListIndex]}
                   isEditing={isEditing}
