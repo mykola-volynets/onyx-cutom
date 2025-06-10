@@ -1209,6 +1209,7 @@ export function ChatPage({
       console.error("AI_MESSAGE_DEBUG: Invalid AI message content. Message:", fullAIMessage);
       setIsCreatingProduct(false);
       setProductCreationResult({ success: false, message: "Invalid AI message content for product creation." });
+      return;
     }
 
     const lines = fullAIMessage.split('\n');
@@ -1221,7 +1222,7 @@ export function ChatPage({
     
     // UPDATED: Regex is now less strict and allows for leading/trailing whitespace.
     const headerRegex = /^\s*\*\*(.*?)\*\* *: *\*\*(.*?)\*\* *: *\*\*(.*?)\*\*\s*$/;
-    const match = headerLine.match(headerRegex);
+    const match = headerLine ? headerLine.match(headerRegex) : null;
 
     // ADDED: Log the result of the regex match
     console.log("AI_MESSAGE_DEBUG: Regex match result:", match);
