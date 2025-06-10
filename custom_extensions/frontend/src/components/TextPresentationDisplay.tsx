@@ -269,6 +269,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
             {items.map((item, index) => {
               const isLastItem = index === items.length - 1;
               const itemIsString = typeof item === 'string';
+              const isRecommendationPara = !itemIsString && (item as AnyContentBlock).type === 'paragraph' && (item as ParagraphBlock).isRecommendation;
               
               const styledItemText = itemIsString ? parseAndStyleText(item) : null;
 
@@ -312,7 +313,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
               if (isEditing && onTextChange && itemIsString) {
                 return (
                   <li key={index} className="flex items-start">
-                    {BulletIconToRender && !isNumbered && <BulletIconToRender />}
+                    {BulletIconToRender && !isNumbered && !isRecommendationPara && <BulletIconToRender />}
                     <input
                       type="text"
                       value={item}
@@ -328,7 +329,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
                   key={index}
                   className={`flex items-start ${THEME_COLORS.mutedText} text-xs leading-tight`}
                 >
-                  {!isNumbered && BulletIconToRender && <BulletIconToRender />}
+                  {!isNumbered && BulletIconToRender && !isRecommendationPara && <BulletIconToRender />}
                   <div className="flex-grow">
                     {itemIsString
                       ? <span className={isNumbered ? 'ml-1' : ''}>{styledItemText}</span>

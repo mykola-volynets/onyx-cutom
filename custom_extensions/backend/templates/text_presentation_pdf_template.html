@@ -103,7 +103,7 @@
             line-height: 1.5; 
             color: var(--color-text-default); 
             display: flex; 
-            align-items: flex-start;
+            align-items: baseline;
             letter-spacing: var(--letter-spacing-increased);
         }
         
@@ -167,6 +167,10 @@
 
         .paragraph-block.recommendation { font-size: 8pt; color: var(--color-text-muted); margin-top: var(--space-sm); margin-bottom:0; font-weight: var(--font-weight-medium); padding-left: 13px; position: relative; line-height: 1.5; letter-spacing: var(--letter-spacing-increased); }
         .paragraph-block.recommendation::before { content: ""; position: absolute; left: 0; top: 0.1em; height: calc(100% - 0.2em); width: 3px; background-color: var(--color-primary-accent); }
+        
+        li .paragraph-block.recommendation {
+            margin-top: 0;
+        }
 
         .mini-section-box-wrapper { margin-top: var(--space-xl); margin-bottom: var(--space-xl); page-break-inside: avoid; }
         .mini-section-box { background-color: #FEF2F2; border-left: 4px solid #F87171; padding: var(--space-md) var(--space-xl); border-radius: 8px; }
