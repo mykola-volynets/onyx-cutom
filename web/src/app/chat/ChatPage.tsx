@@ -1242,9 +1242,9 @@ export function ChatPage({
       return;
     }
 
-    const parsedProjectName = match[1].trim();
-    const parsedProductName = match[2].trim();
-    let parsedInstanceName = match[3].trim();
+    const parsedProjectName = (match[1] || "").trim();
+    const parsedProductName = (match[2] || "").trim();
+    let parsedInstanceName = (match[3] || "").trim();
 
     // ADDED: Log parsed values
     console.log("AI_MESSAGE_DEBUG: Parsed Project Name:", parsedProjectName);
