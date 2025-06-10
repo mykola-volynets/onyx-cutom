@@ -255,7 +255,7 @@
                 {% if question.question_type == 'sorting' %}
                     <p><strong>{{ locale.quiz.itemsToSort }}:</strong></p>
                     <ul class="sorting-list">
-                        {% for item in question.items_to_sort %}
+                        {% for item in question.items_to_sort | shuffle %}
                             <li>{{ item.text }}</li>
                         {% endfor %}
                     </ul>
