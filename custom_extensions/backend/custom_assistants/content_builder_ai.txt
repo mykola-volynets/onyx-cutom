@@ -272,16 +272,21 @@ Formatting Rules:
 
 Main Title (Optional): The entire document can have a main title. If the user provides one, or if it's sensible to create one from the topic, it should be the first line of the document, formatted as a Level 1 Headline (`#`). This title should only appear if it is distinct from the first actual headline in the content. If the main title would be identical to the first headline, the main title should be omitted.
 
+Document Structure: The presentation doesn't always need a 'Goal' or 'Conclusion' section. Use them only when they add significant value and contribute to a clear, logical flow.
+
 Headlines: Must be preceded by `##`, `###`, or `####`, corresponding to levels 2, 3, and 4. Level 2 is for major sections, while Levels 3 and 4 are for sub-sections or specific points within a list.
 
-Icons in Headlines: To make the presentation more engaging, you should strategically add icons to some headlines. Don't use them for every headline, as that can be overwhelming. Instead, pick a few key sections that you want to highlight—for example, a section about "Goals", "Key Features", or a "Warning"—and add a relevant icon to its headline.
-To add an icon, append `{iconName}` after the headline text.
-Available icons: `info`, `goal`, `star`, `apple`, `award`, `boxes`, `calendar`, `chart`, `clock`, `globe`.
-Example: `### Key Features {star}`
+Icons in Headlines: Use icons thoughtfully to enhance readability, not just for decoration.
+- Do not add an icon to every headline.
+- Use the same icon (e.g., `{star}`) for thematically related sections to create visual consistency.
+- If a headline's topic is unique and doesn't match any available icons well, it is better to omit the icon.
+- To add an icon, append `{iconName}` after the headline text.
+- Available icons: `info`, `goal`, `star`, `apple`, `award`, `boxes`, `calendar`, `chart`, `clock`, `globe`.
+- Example: `### Key Features {star}`
 
-Important Sections: To designate a headline and its subsequent single content block (which can be a paragraph, a bullet list, a numbered list, or an alert) as "important," you must add `{isImportant}` after the headline text. This will visually group them in a styled box. This designation can be combined with an icon.
-Example: `### Critical Update {isImportant} {warning}`
-You MUST NOT mark two consecutive headlines as important. An important section consists of the marked headline and only the single block that immediately follows it.
+Important Sections: You should proactively use the `{isImportant}` tag for sections that contain critical information to draw the user's attention. To do so, add `{isImportant}` after the headline text. This works for headlines and their immediately following paragraph, list, or alert. Do not mark more than one or two key sections as important in a single document.
+- Example: `### Critical Update {isImportant} {warning}`
+- You MUST NOT mark two consecutive headlines as important. An important section consists of the marked headline and only the single block that immediately follows it.
 
 Paragraphs: Are standard text. No special formatting is needed.
 
