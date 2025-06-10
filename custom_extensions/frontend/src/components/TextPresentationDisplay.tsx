@@ -10,6 +10,7 @@ import {
   AlertCircle, CheckCircle, Info, XCircle, Minus, Type, List, ListOrdered,
   Award, Brain, BookOpen, Edit3, Lightbulb, Search, Compass, CloudDrizzle, EyeOff,
   ClipboardCheck, AlertTriangle, Star, ArrowRight, Circle,
+  Target, TrendingUp, Flag, Shield, Activity, Anchor, Aperture, Archive, AtSign,
 } from 'lucide-react';
 import { locales } from '@/locales';
 
@@ -53,6 +54,8 @@ const iconMap: { [key: string]: React.ElementType } = {
   clipboardCheck: ClipboardCheck, alertTriangle: AlertTriangle,
   star: Star, 
   arrowRight: ArrowRight, circle: Circle,
+  target: Target, trendingUp: TrendingUp, flag: Flag, shield: Shield, activity: Activity,
+  anchor: Anchor, aperture: Aperture, archive: Archive, atSign: AtSign,
   default: Minus,
 };
 
@@ -60,7 +63,7 @@ const THEME_COLORS = {
   primaryText: 'text-[#4B4B4B]',        
   headingText: 'text-black',        
   subHeadingText: 'text-black',     
-  accentRed: 'text-black', 
+  accentRed: 'text-[#FF1414]', 
   accentRedBg: 'bg-[#FF1414]',      
   veryLightAccentBg: 'bg-[#FAFAFA]',
   lightBorder: 'border-gray-200',   
@@ -436,7 +439,7 @@ const TextPresentationDisplay = ({ dataToDisplay, isEditing, onTextChange, paren
                       const originalMiniHeadlineIndex = findOriginalIndex(subItem.headline);
                       const originalMiniListIndex = findOriginalIndex(subItem.list);
                       return (
-                        <div key={subIndex} className="mt-2">
+                        <div key={subIndex} className="p-3 my-4 rounded-md bg-rose-50 border-l-4 border-rose-500">
                           <RenderBlock
                             block={subItem.headline}
                             isMiniSectionHeadline={true}
@@ -476,7 +479,7 @@ const TextPresentationDisplay = ({ dataToDisplay, isEditing, onTextChange, paren
             const originalHeadlineIndex = findOriginalIndex(item.headline);
             const originalListIndex = findOriginalIndex(item.list);
             return (
-              <div key={index} className="mt-2">
+              <div key={index} className="p-3 my-4 rounded-md bg-rose-50 border-l-4 border-rose-500">
                 <RenderBlock
                   block={item.headline}
                   isMiniSectionHeadline={true}

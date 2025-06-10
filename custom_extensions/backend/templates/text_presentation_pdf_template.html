@@ -235,7 +235,7 @@
         {% set text_data = details.details %}
         {% set locale = details.locale %}
         
-        {% if text_data is mapping and text_data.textTitle is defined %}
+        {% if text_data is mapping and text_data.textTitle %}
             <div class="main-title-section">
                 <h1 class="main-title-text">
                     {% set text_content = text_data.textTitle %}
@@ -354,11 +354,16 @@
 
         <div class="content-wrapper">
         {% if text_data is mapping and text_data.contentBlocks is iterable and text_data.contentBlocks is not string %}
+            {% set blocks_to_render = text_data.contentBlocks %}
+            {% if text_data.textTitle and blocks_to_render and blocks_to_render[0].type == 'headline' and blocks_to_render[0].level in [1, 2] and blocks_to_render[0].text | trim | lower == text_data.textTitle | trim | lower %}
+                {% set blocks_to_render = blocks_to_render[1:] %}
+            {% endif %}
+
             {% set next_block_in_box_content = [false] %}
-            {% for loop_index in range(text_data.contentBlocks | length) %}
-                {% set current_block_item = text_data.contentBlocks[loop_index] %}
-                {% set next_block_item = text_data.contentBlocks[loop_index+1] if (loop_index+1) < (text_data.contentBlocks | length) else none %}
-                {% set is_last_block_overall = loop_index == (text_data.contentBlocks | length) - 1 %}
+            {% for loop_index in range(blocks_to_render | length) %}
+                {% set current_block_item = blocks_to_render[loop_index] %}
+                {% set next_block_item = blocks_to_render[loop_index+1] if (loop_index+1) < (blocks_to_render | length) else none %}
+                {% set is_last_block_overall = loop_index == (blocks_to_render | length) - 1 %}
                 
                 {% if next_block_in_box_content[0] %}
                     {% set _ = next_block_in_box_content.pop() %}{% set _ = next_block_in_box_content.append(false) %}

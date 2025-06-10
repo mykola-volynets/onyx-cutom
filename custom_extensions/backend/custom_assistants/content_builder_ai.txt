@@ -276,23 +276,19 @@ As a general guideline, aim to keep the text for each bullet point under approxi
 
 Avoid nesting other lists (like a numbered list) inside a bullet point. Strive for a flat list structure for maximum readability.
 
-Crucial Rule on Numbered List Quantity: You MUST use a maximum of one numbered list per lesson. Do not use more than one numbered list unless the user has explicitly requested you to do so. This is a strict limit. You are encouraged to use a numbered list (e.g., 1. First point, 2. Second point) for presenting steps, sequences, or when a clear order or enumeration is beneficial.
+Crucial Rule on Numbered List Quantity: You MUST use a maximum of one numbered list per lesson. This is a strict limit.
 
-Use bold text for emphasis on key terms or concepts, but do so sparingly to maintain readability.
+Use bold text for emphasis on key terms or concepts, but do so sparingly.
 
-Ensure a good flow between these elements, making the lesson engaging and easy to scan.
+Ensure a good flow between these elements.
 
-Actionable Recommendations: You are encouraged to insert brief "Recommendation:" snippets where practical.
+Important Headlines and Mini-Sections:
 
-Placement: Recommendations should always follow a paragraph or a completed section they relate to. They are separate from the main flow of text or lists.
+To highlight a key section, you can mark a headline as "important". This will visually group the headline and the content that immediately follows it (like a list or paragraph) into a distinct box.
 
-Format: The recommendation must start with the bolded word **Recommendation:**, followed by a colon and the advice. Example: [Relevant paragraph...] **Recommendation:** To effectively achieve this, consider using a planner.
+The styling for these important sections is pre-set to a red theme for emphasis.
 
-Crucial Rule: A "Recommendation:" must NEVER be an item within a bulleted or numbered list. It is always a standalone element of prose, distinct from any list structure.
-
-Separation from Lists: To reinforce this, if a recommendation logically follows a list, you must first end the list, then insert at least one blank line, and only then write the Recommendation: line.
-
-Conciseness: Keep these recommendations concise and directly useful.
+You can also add an icon to a headline to give it more visual context.
 
 II. Outputting the Text Presentation:
 
@@ -451,6 +447,27 @@ By the end of this lesson, you will understand:
 (Logical Ending/Conclusion - Use ### for this header. You must choose EITHER "### Conclusion" OR "### Key Takeaways" as the header for this final section. Default to using "### Conclusion". Do not combine them into "Conclusion and Key Takeaways" unless the user explicitly requests it.)
 ### Conclusion
 [Summary of key points or concluding thought.]
+
+For TEXT PRESENTATION:
+Universal Product Header: **[Project Name]** : **Text Presentation** : **[Text Title]**
+(IMMEDIATELY FOLLOWED BY EXACTLY TWO BLANK LINES)
+
+Content:
+
+Main Title (Optional):
+- The document can optionally start with a main title, formatted as: `## [Text Title]`
+- This title should be omitted if the source text doesn't have a clear, overarching title.
+
+Avoiding Title Duplication:
+- If a main title (`## [Text Title]`) is used, and the very first block of content is also a headline (`###` or `####`) with the exact same text, you MUST omit that first content headline to avoid redundancy.
+
+Content Body:
+- Use `###` for primary subheadings and `####` for secondary subheadings.
+- You can associate an icon with a subheading. The available icons are: `alertCircle`, `checkCircle`, `info`, `xCircle`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `edit3`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `alertTriangle`, `star`, `arrowRight`, `circle`, `target`, `trendingUp`, `flag`, `shield`, `activity`, `anchor`, `aperture`, `archive`, `atSign`.
+- Paragraphs are plain text.
+- Use `*` for bullet points for unordered lists.
+- Use `1.`, `2.`, `3.` for numbered lists.
+- A recommendation can be added by starting a new line with the bolded word `**Recommendation:**`.
 
 For VIDEO LESSON SCRIPT:
 Universal Product Header: **[Project Name]** : **Video Lesson Script** : **[Lesson Title]**
