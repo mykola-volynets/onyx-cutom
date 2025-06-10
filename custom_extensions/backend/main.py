@@ -1265,27 +1265,47 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             component_specific_instructions = """
             You are an expert text-to-JSON parsing assistant for 'Text Presentation' content.
             This product is for general text like introductions, goal descriptions, etc.
-            The JSON structure is similar to a PDF Lesson.
+            Your output MUST be a single, valid JSON object. Strictly follow the JSON structure provided in the example.
 
-            **Overall Goal:** Convert the *entirety* of the "Raw text to parse" into structured JSON. Maintain original language.
+            **Overall Goal:** Convert the *entirety* of the "Raw text to parse" into a structured JSON. Capture all information and hierarchical relationships. Maintain original language.
 
             **Global Fields:**
-            1.  `textTitle` (string): Main title for the document.
-            2.  `contentBlocks` (array): Ordered array of content block objects.
+            1.  `textTitle` (string, optional): Main title for the document. This should be derived from a Level 1 headline (`#`).
+            2.  `contentBlocks` (array): Ordered array of content block objects that form the body of the lesson.
             3.  `detectedLanguage` (string): e.g., "en", "ru".
 
-            **Content Block Instructions:**
-            - **`headline`**: Contains `level`, `text`, and optional `iconName`, `backgroundColor`, `textColor`.
-            - **`isImportant`** (boolean, optional on headline): Set to `true` to highlight a section. If `true`, this headline AND its *immediately following single block* (like a paragraph or list) will be grouped into a visually distinct box. This can be used multiple times for any important sections.
-            - **`paragraph`**: Contains `text`.
-            - **`isRecommendation`** (boolean, optional on paragraph): Set to `true` if this paragraph is a "recommendation" to be styled distinctly (e.g., with a side border).
-            - The `contentBlocks` array can also contain `bullet_list`, `numbered_list`, and `alert` blocks.
+            **Content Block Instructions (`contentBlocks` array items):**
+
+            1.  **`type: "headline"`**
+                * `level` (integer): `2`, `3`, or `4`.
+                * `text` (string): Headline text.
+                * `iconName` (string, optional): If the raw text includes an icon name like `{iconName}`, extract it. Permissible Icon Names: `info`, `check`, `alertTriangle`, `xCircle`, `type`, `list`, `listOrdered`, `award`, `brain`, `bookOpen`, `lightbulb`, `search`, `compass`, `cloudDrizzle`, `eyeOff`, `clipboardCheck`, `star`, `zap`, `trendingDown`, `target`, `trendingUp`, `flag`, `shield`, `activity`, `anchor`, `aperture`, `archive`, `atSign`.
+                * `isImportant` (boolean, optional): If the raw text includes `{isImportant}`, set this to `true`. If `true`, this headline AND its *immediately following single block* will be grouped into a visually distinct highlighted box.
+
+            2.  **`type: "paragraph"`**
+                * `text` (string): Full paragraph text.
+                * `isRecommendation` (boolean, optional): Set to `true` if this paragraph should be styled as a recommendation (e.g., with a side border).
+
+            3.  **`type: "bullet_list"`**
+                * `items` (array of `ListItem`): Can be simple strings. Nested lists are not supported in the raw format, so parse them as flat lists.
+
+            4.  **`type: "numbered_list"`**
+                * `items` (array of `ListItem`): Can be simple strings.
+
+            5.  **`type: "alert"`**
+                *   `alertType` (string): One of `info`, `success`, `warning`, `danger`.
+                *   `title` (string, optional): The title of the alert.
+                *   `text` (string): The body text of the alert.
+
+            6.  **`type: "section_break"`**
+                * `style` (string, optional): e.g., "solid", "dashed", "none". Parse from `---` in the raw text.
 
             **Key Parsing Rules:**
-            *   Use `isImportant` on headlines to create visually distinct, boxed-off sections.
+            *   Parse `{isImportant}` on headlines to the `isImportant` boolean field.
+            *   Parse `{iconName}` on headlines to the `iconName` string field.
             *   Use `isRecommendation` on paragraphs that should be highlighted as a recommendation.
-            *   Focus on capturing the text and its basic structure (headings, lists, paragraphs).
-            *   Do NOT remove the '**' from the text, treat it as an equal part of the text. Moreover, ADD '**' around short parts of the text if you are sure that they should be bold.
+            *   Do NOT remove the `**` from the text; treat it as part of the text.
+            *   If the raw text starts with `# Title`, this becomes the `textTitle`. The `contentBlocks` should not include this Level 1 headline. All other headlines (`##`, `###`, `####`) are content blocks.
 
             Return ONLY the JSON object.
             """

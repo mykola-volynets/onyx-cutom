@@ -11,6 +11,7 @@ import {
   Award, Brain, BookOpen, Edit3, Lightbulb, Search, Compass, CloudDrizzle, EyeOff,
   ClipboardCheck, AlertTriangle, Star, ArrowRight, Circle,
   Target, TrendingUp, Flag, Shield, Activity, Anchor, Aperture, Archive, AtSign,
+  Zap, TrendingDown,
 } from 'lucide-react';
 import { locales } from '@/locales';
 
@@ -56,6 +57,7 @@ const iconMap: { [key: string]: React.ElementType } = {
   arrowRight: ArrowRight, circle: Circle,
   target: Target, trendingUp: TrendingUp, flag: Flag, shield: Shield, activity: Activity,
   anchor: Anchor, aperture: Aperture, archive: Archive, atSign: AtSign,
+  zap: Zap, trendingDown: TrendingDown,
   default: Minus,
 };
 
