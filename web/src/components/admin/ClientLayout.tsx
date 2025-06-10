@@ -41,13 +41,6 @@ import {
 import Link from "next/link";
 import { Button } from "../ui/button";
 
-const collections = (
-  isCurator: boolean,
-  enableCloud: boolean,
-  enableEnterprise: boolean,
-  settings: CombinedSettings | null
-) => [
-
 export function ClientLayout({
   user,
   children,
