@@ -127,53 +127,52 @@ export default function GenerateProductPicker() {
           className="w-full border border-gray-300 rounded-md p-3 h-14 resize-none bg-white/90 placeholder-gray-500"
         />
 
-        {/* When no prompt, show examples + shuffle */}
-        {prompt.trim().length === 0 ? (
-          <>
-            <div className="flex items-center gap-4 text-gray-600 font-medium text-lg -mt-4">
-              <hr className="flex-grow border-gray-300" />
-              <span>Example prompts</span>
-              <hr className="flex-grow border-gray-300" />
-            </div>
+        {/* Example prompts block */}
+        <div
+          className={`transition-all duration-300 ${prompt.trim().length === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+        >
+          <div className="flex items-center gap-4 text-gray-600 font-medium text-lg -mt-4">
+            <hr className="flex-grow border-gray-300" />
+            <span>Example prompts</span>
+            <hr className="flex-grow border-gray-300" />
+          </div>
 
-            <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 transition-all duration-300 ${prompt.trim().length===0? 'opacity-100 translate-y-0':'opacity-0 -translate-y-2'}`}>
-              {examples.map((ex) => (
-                <button
-                  key={ex}
-                  type="button"
-                  onClick={() => setPrompt(ex)}
-                  className="text-left border border-gray-200 rounded-md bg-[#D9ECFF] px-4 py-3 text-sm hover:bg-white"
-                >
-                  {ex}
-                </button>
-              ))}
-            </div>
-
-            <div
-              className={`flex justify-center mt-3 transition-opacity duration-300 ${prompt.trim().length===0 ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-            >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
+            {examples.map((ex) => (
               <button
+                key={ex}
                 type="button"
-                className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary/10 border border-gray-300 text-sm"
-                onClick={shuffleExamples}
+                onClick={() => setPrompt(ex)}
+                className="text-left border border-gray-200 rounded-md bg-[#D9ECFF] px-4 py-3 text-sm hover:bg-white w-full"
               >
-                <Shuffle size={16} /> Shuffle
+                {ex}
               </button>
-            </div>
-          </>
-        ) : (
-          <div
-            className={`flex justify-center mt-4 transition-all duration-300 ${prompt.trim().length>0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}
-          >
+            ))}
+          </div>
+
+          <div className="flex justify-center mt-3">
             <button
               type="button"
-              onClick={handleCourseOutlineStart}
-              className="flex items-center gap-2 px-8 py-3 rounded-full bg-brand-primary text-white hover:bg-brand-primary-hover active:scale-95 transition-all duration-200 text-lg font-semibold shadow-lg"
+              className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary/10 border border-gray-300 text-sm"
+              onClick={shuffleExamples}
             >
-              <Sparkles size={18} /> Generate outline
+              <Shuffle size={16} /> Shuffle
             </button>
           </div>
-        )}
+        </div>
+
+        {/* Generate button block */}
+        <div
+          className={`flex justify-center mt-4 transition-all duration-300 ${prompt.trim().length > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}
+        >
+          <button
+            type="button"
+            onClick={handleCourseOutlineStart}
+            className="flex items-center gap-2 px-8 py-3 rounded-full bg-brand-primary text-white hover:bg-brand-primary-hover active:scale-95 transition-all duration-200 text-lg font-semibold shadow-lg"
+          >
+            <Sparkles size={18} /> Generate outline
+          </button>
+        </div>
       </div>
     </main>
   );
