@@ -286,8 +286,12 @@
                                     {{ render_single_block_recursive_macro(item_content, depth + 1, is_in_mini_section) }}
                                 {% elif item_content is string %}
                                     <span>{% set segments = item_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
+                                {% elif item_content is iterable %}
+                                    {% for block in item_content %}
+                                        {{ render_single_block_recursive_macro(block, depth + 1, is_in_mini_section) }}
+                                    {% endfor %}
                                 {% else %}
-                                    <span class="error-message">Numbered list item content is not string or dict.</span>
+                                    <span class="error-message">Numbered list item content is not string, dict, or list.</span>
                                 {% endif %}
                             </div>
                         {% else %} {# bullet_list logic #}
@@ -299,8 +303,12 @@
                                 <span>{% set segments = item_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
                             {% elif item_content is mapping %}
                                 {{ render_single_block_recursive_macro(item_content, depth + 1, is_in_mini_section) }}
+                            {% elif item_content is iterable %}
+                                {% for block in item_content %}
+                                    {{ render_single_block_recursive_macro(block, depth + 1, is_in_mini_section) }}
+                                {% endfor %}
                             {% else %}
-                                <span class="error-message">Item is not string or dict: {{ item_content }}</span>
+                                <span class="error-message">Item is not string, dict, or list: {{ item_content }}</span>
                             {% endif %}
                             </div>
                         {% endif %}

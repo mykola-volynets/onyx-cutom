@@ -312,7 +312,8 @@ class TrainingPlanDetails(BaseModel):
     detectedLanguage: Optional[str] = None
     model_config = {"from_attributes": True}
 
-ListItem = Union[str, 'HeadlineBlock', 'ParagraphBlock', 'BulletListBlock', 'NumberedListBlock', 'AlertBlock', 'SectionBreakBlock']
+AnyContentBlock = Union["HeadlineBlock", "ParagraphBlock", "BulletListBlock", "NumberedListBlock", "AlertBlock", "SectionBreakBlock"]
+ListItem = Union[str, AnyContentBlock, List[AnyContentBlock]]
 
 class BaseContentBlock(BaseModel):
     type: str
@@ -333,13 +334,13 @@ class ParagraphBlock(BaseContentBlock):
     isRecommendation: Optional[bool] = Field(default=False, description="Set to true if this paragraph is a 'recommendation' within a numbered list item, to be styled distinctly.")
 
 class BulletListBlock(BaseContentBlock):
-    type: str = "bullet_list"
-    items: List[ListItem] = Field(default_factory=list)
+    type: Literal['bullet_list'] = 'bullet_list'
+    items: List[ListItem] = []
     iconName: Optional[str] = None
 
 class NumberedListBlock(BaseContentBlock):
-    type: str = "numbered_list"
-    items: List[ListItem] = Field(default_factory=list)
+    type: Literal['numbered_list'] = 'numbered_list'
+    items: List[ListItem] = []
 
 class AlertBlock(BaseContentBlock):
     type: str = "alert"

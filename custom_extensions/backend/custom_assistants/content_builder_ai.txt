@@ -295,6 +295,9 @@ Paragraphs and Styling:
 - Use bulleted lists (`*`) for non-sequential items.
 - Use numbered lists (`1.`) for sequential steps or ordered items.
 - Support for nested lists: A bullet list (`bullet_list`) can be nested within a numbered list (`numbered_list`) item, and vice versa.
+- Complex Numbered List Items: A single item in a numbered list can now contain a sequence of blocks, such as a headline followed by a bulleted list.
+  - Example: An item could be `[{"type": "headline", "level": 4, "text": "Sub-topic"}, {"type": "bullet_list", "items": ["Point 1", "Point 2"]}]`.
+  - This allows for more structured and detailed enumeration within a single numbered point.
 - Recommendations: Use `**Recommendation:**` for actionable advice. This should not be part of a list.
 
 Alerts: Use the specified alert format for drawing attention to specific types of information (info, success, warning, danger).

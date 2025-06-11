@@ -285,12 +285,36 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
                     <li key={index} className="flex items-start gap-3">
                       <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center font-semibold text-xs">{index + 1}</div>
                       <div className="flex-grow">
-                        <input
-                          type="text"
-                          value={item}
-                          onChange={(e) => handleInputChangeEvent(listItemPath(index), e)}
-                          className={`${editingInputClass} w-full`}
-                        />
+                        {itemIsString ? (
+                            <span className="text-gray-700 text-xs leading-snug">{styledItemText}</span>
+                        ) : Array.isArray(item) ? (
+                            <div className="flex flex-col">
+                                {(item as AnyContentBlock[]).map((block, blockIndex) => (
+                                    <RenderBlock
+                                        key={blockIndex}
+                                        block={block}
+                                        depth={(depth || 0) + 1}
+                                        isListItemContent={true}
+                                        isLastInBox={blockIndex === (item as AnyContentBlock[]).length - 1}
+                                        isEditing={isEditing}
+                                        onTextChange={onTextChange}
+                                        basePath={listItemPath(index, String(blockIndex))}
+                                        suppressRecommendationStripe={hasRecommendation}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <RenderBlock 
+                                block={item as AnyContentBlock}
+                                depth={(depth || 0) + 1}
+                                isListItemContent={true}
+                                isLastInBox={isLastItem}
+                                isEditing={isEditing}
+                                onTextChange={onTextChange}
+                                basePath={listItemPath(index)}
+                                suppressRecommendationStripe={hasRecommendation}
+                            />
+                        )}
                       </div>
                     </li>
                    )
@@ -299,19 +323,36 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
                   <li key={index} className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center font-semibold text-xs">{index + 1}</div>
                     <div className="flex-grow">
-                      {itemIsString
-                        ? <span className="text-gray-700 text-xs leading-snug">{styledItemText}</span>
-                        : <RenderBlock 
-                            block={item as AnyContentBlock}
-                            depth={(depth || 0) + 1}
-                            isListItemContent={true}
-                            isLastInBox={isLastItem}
-                            isEditing={isEditing}
-                            onTextChange={onTextChange}
-                            basePath={listItemPath(index)}
-                            suppressRecommendationStripe={hasRecommendation}
+                      {itemIsString ? (
+                          <span className="text-gray-700 text-xs leading-snug">{styledItemText}</span>
+                      ) : Array.isArray(item) ? (
+                          <div className="flex flex-col">
+                              {(item as AnyContentBlock[]).map((block, blockIndex) => (
+                                  <RenderBlock
+                                      key={blockIndex}
+                                      block={block}
+                                      depth={(depth || 0) + 1}
+                                      isListItemContent={true}
+                                      isLastInBox={blockIndex === (item as AnyContentBlock[]).length - 1}
+                                      isEditing={isEditing}
+                                      onTextChange={onTextChange}
+                                      basePath={listItemPath(index, String(blockIndex))}
+                                      suppressRecommendationStripe={hasRecommendation}
+                                  />
+                              ))}
+                          </div>
+                      ) : (
+                          <RenderBlock 
+                              block={item as AnyContentBlock}
+                              depth={(depth || 0) + 1}
+                              isListItemContent={true}
+                              isLastInBox={isLastItem}
+                              isEditing={isEditing}
+                              onTextChange={onTextChange}
+                              basePath={listItemPath(index)}
+                              suppressRecommendationStripe={hasRecommendation}
                           />
-                      }
+                      )}
                     </div>
                   </li>
                 );
@@ -338,19 +379,36 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
                 >
                   {!isNumbered && BulletIconToRender && <BulletIconToRender />}
                   <div className="flex-grow">
-                    {itemIsString
-                      ? <span className={isNumbered ? 'ml-1' : ''}>{styledItemText}</span>
-                      : <RenderBlock 
-                          block={item as AnyContentBlock}
-                          depth={(depth || 0) + 1}
-                          isListItemContent={true}
-                          isLastInBox={isLastItem}
-                          isEditing={isEditing}
-                          onTextChange={onTextChange}
-                          basePath={listItemPath(index)}
-                          suppressRecommendationStripe={hasRecommendation}
+                    {itemIsString ? (
+                        <span className={isNumbered ? 'ml-1' : ''}>{styledItemText}</span>
+                    ) : Array.isArray(item) ? (
+                        <div className="flex flex-col">
+                            {(item as AnyContentBlock[]).map((block, blockIndex) => (
+                                <RenderBlock
+                                    key={blockIndex}
+                                    block={block}
+                                    depth={(depth || 0) + 1}
+                                    isListItemContent={true}
+                                    isLastInBox={blockIndex === (item as AnyContentBlock[]).length - 1}
+                                    isEditing={isEditing}
+                                    onTextChange={onTextChange}
+                                    basePath={listItemPath(index, String(blockIndex))}
+                                    suppressRecommendationStripe={hasRecommendation}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <RenderBlock 
+                            block={item as AnyContentBlock}
+                            depth={(depth || 0) + 1}
+                            isListItemContent={true}
+                            isLastInBox={isLastItem}
+                            isEditing={isEditing}
+                            onTextChange={onTextChange}
+                            basePath={listItemPath(index)}
+                            suppressRecommendationStripe={hasRecommendation}
                         />
-                    }
+                    )}
                   </div>
                 </li>
               );
