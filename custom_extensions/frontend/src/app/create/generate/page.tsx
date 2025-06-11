@@ -14,7 +14,7 @@ const TabButton: React.FC<{
   <button
     type="button"
     onClick={onClick}
-    className={`flex flex-col items-center gap-2 border rounded-md px-6 py-4 transition-colors min-w-[130px] ${
+    className={`flex flex-col items-center gap-2 border rounded-md px-5 py-3 transition-colors min-w-[120px] ${
       active ? "bg-white shadow text-brand-primary border-brand-primary" : "bg-white/70 text-gray-600 hover:bg-white"
     }`}
   >
@@ -76,8 +76,8 @@ export default function GenerateProductPicker() {
           <ArrowLeft size={14} /> Back
         </Link>
 
-        <h1 className="text-5xl font-semibold text-center tracking-wide text-gray-900 mt-10">Generate</h1>
-        <p className="text-center text-gray-600 text-xl -mt-2">What would you like to create today?</p>
+        <h1 className="text-5xl font-semibold text-center tracking-wide text-gray-700 mt-8">Generate</h1>
+        <p className="text-center text-gray-600 text-xl mt-1">What would you like to create today?</p>
 
         {/* Tab selector */}
         <div className="flex justify-center gap-4">
@@ -151,7 +151,7 @@ export default function GenerateProductPicker() {
         <div className="flex flex-col items-center gap-4 mt-4">
           <button
             type="button"
-            className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary hover:text-white border border-gray-300 text-sm"
+            className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary/10 border border-gray-300 text-sm"
             onClick={shuffleExamples}
           >
             <Shuffle size={16} /> Shuffle
