@@ -57,8 +57,8 @@ export default function GenerateProductPicker() {
           <ArrowLeft size={14} /> Back
         </Link>
 
-        <h1 className="text-5xl font-semibold text-center">Generate</h1>
-        <p className="text-center text-gray-700 text-xl -mt-3">What would you like to create today?</p>
+        <h1 className="text-5xl font-semibold text-center tracking-wide text-gray-800">Generate</h1>
+        <p className="text-center text-gray-600 text-xl -mt-3">What would you like to create today?</p>
 
         {/* Tab selector */}
         <div className="flex justify-center gap-4">
@@ -109,38 +109,23 @@ export default function GenerateProductPicker() {
         />
 
         {/* Example prompts */}
-        <div className="flex flex-col gap-4">
-          <h3 className="text-center text-gray-700 font-medium relative">
-            <span className="before:absolute before:left-0 before:right-0 before:top-1/2 before:h-px before:bg-gray-300"> </span>
-            <span className="px-3 relative z-10 bg-transparent">Example prompts</span>
-          </h3>
+        <div className="flex items-center gap-4 text-gray-600 font-medium text-lg">
+          <hr className="flex-grow border-gray-300" />
+          <span>Example prompts</span>
+          <hr className="flex-grow border-gray-300" />
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              "Code Optimization Course",
-              "Junior AI/ML Engineer Training",
-              "New Employee Onboarding",
-            ].map((ex) => (
-              <button
-                key={ex}
-                type="button"
-                onClick={() => setPrompt(ex)}
-                className="text-left border border-gray-200 rounded-md bg-[#D9ECFF] px-4 py-3 text-sm hover:bg-white"
-              >
-                {ex}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex justify-center mt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {["Code Optimization Course", "Junior AI/ML Engineer Training", "New Employee Onboarding"].map((ex) => (
             <button
+              key={ex}
               type="button"
-              className="flex items-center gap-1 px-5 py-2 rounded-full border border-gray-300 bg-white/80 hover:bg-white text-gray-800 text-sm"
-              onClick={() => {}}
+              onClick={() => setPrompt(ex)}
+              className="text-left border border-gray-200 rounded-md bg-[#D9ECFF] px-4 py-3 text-sm hover:bg-white"
             >
-              <Shuffle size={16} /> Shuffle
+              {ex}
             </button>
-          </div>
+          ))}
         </div>
 
         {/* Continue button */}
