@@ -59,7 +59,7 @@ const StarIcon: React.FC<{className?: string}> = ({ className }) => (
 );
 const AppleIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} fill="currentColor"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"/><path d="M10 2c1 .5 2 2 2 5"/></svg>;
 const AwardIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/></svg>;
-const BoxesIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"/><path d="m7 16.5-4.74-2.85"/><path d="m7 16.5 5-3"/><path d="m7 16.5v5.17"/><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"/><path d="m17 16.5-5-3"/><path d="m17 16.5 4.74-2.85"/><path d="M17 16.5v5.17"/><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"/><path d="M12 8 7.26 5.15"/><path d="m12 8 4.74-2.85"/><path d="M12 13.5V8"/></svg>;
+const BoxesIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"/><path d="m7 16.5-4.74-2.85"/><path d="m7 16.5 5-3"/><path d="m7 16.5v5.17"/><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5-3-5 3Z"/><path d="m17 16.5-5-3"/><path d="m17 16.5 4.74-2.85"/><path d="M17 16.5v5.17"/><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"/><path d="M12 8 7.26 5.15"/><path d="m12 8 4.74-2.85"/><path d="M12 13.5V8"/></svg>;
 const CalendarIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M11 14h1v4"/><path d="M16 2v4"/><path d="M3 10h18"/><path d="M8 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>;
 const ChartIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 11.207a.5.5 0 0 1 .146-.353l2-2a.5.5 0 0 1 .708 0l3.292 3.292a.5.5 0 0 0 .708 0l4.292-4.292a.5.5 0 0 1 .854.353V16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/></svg>;
 const ClockIcon: React.FC<{className?: string}> = ({ className }) => <svg viewBox="0 0 24 24" width="1em" height="1em" className={className} strokeWidth="2" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
@@ -127,6 +127,7 @@ interface RenderBlockProps {
   isEditing?: boolean;
   onTextChange?: (path: (string | number)[], newText: string) => void;
   basePath?: (string | number)[];
+  suppressRecommendationStripe?: boolean;
 }
 
 const RenderBlock: React.FC<RenderBlockProps> = (props) => {
@@ -134,6 +135,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
     block, depth = 0, isFirstInBox, isLastInBox, 
     isMiniSectionHeadline, isListItemContent,
     isEditing, onTextChange, basePath = [],
+    suppressRecommendationStripe
   } = props;
 
   const fieldPath = (fieldKey: string) => [...basePath, fieldKey];
@@ -219,8 +221,8 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
       const finalMb = isLastInBox ? 'mb-0' : defaultMb;
       
       let recommendationClasses = "";
-      if (isRecommendation) {
-        recommendationClasses = `pl-2.5 border-l-[3px] border-[#FF1414] py-1`;
+      if (isRecommendation && !suppressRecommendationStripe) {
+        recommendationClasses = `pl-2.5 border-l-[3px] border-[#FF1414] py-1 rounded-md`;
       }
       const styledText = parseAndStyleText(text);
 
@@ -243,6 +245,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
       const currentBlockIconName = block.type === 'bullet_list' ? (block as BulletListBlock).iconName : undefined;
       const { items } = block; 
       const isNumbered = block.type === 'numbered_list';
+      const hasRecommendation = !isNumbered && items.some(item => typeof item === 'object' && item !== null && (item as AnyContentBlock).type === 'paragraph' && (item as ParagraphBlock).isRecommendation);
       
       let BulletIconToRender: React.ElementType | null = NewBulletIcon; 
       if (block.type === 'bullet_list') {
@@ -262,6 +265,9 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
       const finalMb = isLastInBox ? 'mb-0' : 'mb-2';
 
       let containerClasses = `flex flex-col ${finalMb} `;
+      if (hasRecommendation) {
+        containerClasses += `pl-2.5 border-l-[3px] border-[#FF1414] py-1 rounded-md`;
+      }
 
       return (
         <div className={containerClasses.trim()}>
@@ -303,6 +309,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
                             isEditing={isEditing}
                             onTextChange={onTextChange}
                             basePath={listItemPath(index)}
+                            suppressRecommendationStripe={hasRecommendation}
                           />
                       }
                     </div>
@@ -341,6 +348,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
                           isEditing={isEditing}
                           onTextChange={onTextChange}
                           basePath={listItemPath(index)}
+                          suppressRecommendationStripe={hasRecommendation}
                         />
                     }
                   </div>
