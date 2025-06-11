@@ -77,7 +77,7 @@ export default function GenerateProductPicker() {
         </Link>
 
         <h1 className="text-5xl font-semibold text-center tracking-wide text-gray-700 mt-8">Generate</h1>
-        <p className="text-center text-gray-600 text-xl mt-1">What would you like to create today?</p>
+        <p className="text-center text-gray-600 text-xl mt-0.5">What would you like to create today?</p>
 
         {/* Tab selector */}
         <div className="flex justify-center gap-4">
@@ -127,46 +127,49 @@ export default function GenerateProductPicker() {
           className="w-full border border-gray-300 rounded-md p-3 h-14 resize-none bg-white/90 placeholder-gray-500"
         />
 
-        {/* Example prompts */}
-        <div className="flex items-center gap-4 text-gray-600 font-medium text-lg">
-          <hr className="flex-grow border-gray-300" />
-          <span>Example prompts</span>
-          <hr className="flex-grow border-gray-300" />
-        </div>
+        {/* When no prompt, show examples + shuffle */}
+        {prompt.trim().length === 0 ? (
+          <>
+            <div className="flex items-center gap-4 text-gray-600 font-medium text-lg mt-6">
+              <hr className="flex-grow border-gray-300" />
+              <span>Example prompts</span>
+              <hr className="flex-grow border-gray-300" />
+            </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {examples.map((ex) => (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {examples.map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  onClick={() => setPrompt(ex)}
+                  className="text-left border border-gray-200 rounded-md bg-[#D9ECFF] px-4 py-3 text-sm hover:bg-white"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex justify-center mt-4">
+              <button
+                type="button"
+                className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary/10 border border-gray-300 text-sm"
+                onClick={shuffleExamples}
+              >
+                <Shuffle size={16} /> Shuffle
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-center mt-6">
             <button
-              key={ex}
               type="button"
-              onClick={() => setPrompt(ex)}
-              className="text-left border border-gray-200 rounded-md bg-[#D9ECFF] px-4 py-3 text-sm hover:bg-white"
+              onClick={handleCourseOutlineStart}
+              className="px-8 py-4 rounded-full bg-brand-primary text-white hover:bg-brand-primary-hover text-lg font-medium"
             >
-              {ex}
+              Generate
             </button>
-          ))}
-        </div>
-
-        {/* Shuffle + Continue buttons */}
-        <div className="flex flex-col items-center gap-4 mt-4">
-          <button
-            type="button"
-            className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary/10 border border-gray-300 text-sm"
-            onClick={shuffleExamples}
-          >
-            <Shuffle size={16} /> Shuffle
-          </button>
-
-          {/* Continue button */}
-          <button
-            type="button"
-            onClick={handleCourseOutlineStart}
-            disabled={!prompt.trim()}
-            className="px-6 py-3 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover disabled:opacity-50"
-          >
-            Continue
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </main>
   );
