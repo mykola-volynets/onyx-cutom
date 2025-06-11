@@ -1863,6 +1863,55 @@ async def get_project_instance_detail(project_id: int, onyx_user_id: str = Depen
             else:
                 details_data = TrainingPlanDetails(mainTitle=f"No/Invalid content for {project_instance_name}", sections=[], detectedLanguage=lang_fallback)
 
+        # === ENSURE lessonNumber IS PRESENT FOR LESSON-LEVEL COMPONENTS ===
+        if component_name in (COMPONENT_NAME_PDF_LESSON, COMPONENT_NAME_VIDEO_LESSON, COMPONENT_NAME_QUIZ):
+            try:
+                needs_number = False
+                if isinstance(details_data, BaseModel):
+                    needs_number = getattr(details_data, 'lessonNumber', None) is None
+                elif isinstance(details_data, dict):
+                    needs_number = 'lessonNumber' not in details_data or details_data.get('lessonNumber') is None
+
+                if needs_number:
+                    async with pool.acquire() as conn:
+                        tp_row = await conn.fetchrow(
+                            """
+                            SELECT p.microproduct_content
+                            FROM projects p
+                            JOIN design_templates dt ON p.design_template_id = dt.id
+                            WHERE p.onyx_user_id = $1
+                              AND p.project_name   = $2
+                              AND dt.component_name = $3
+                            LIMIT 1;
+                            """,
+                            onyx_user_id,
+                            row_dict.get('project_name'),
+                            COMPONENT_NAME_TRAINING_PLAN
+                        )
+                    if tp_row and isinstance(tp_row['microproduct_content'], dict):
+                        try:
+                            tp_parsed = TrainingPlanDetails(**tp_row['microproduct_content'])
+                            counter_tmp = 0
+                            title_to_match = (row_dict.get('microproduct_name') or '').strip()
+                            found_num = None
+                            for sec in tp_parsed.sections:
+                                for les in sec.lessons:
+                                    counter_tmp += 1
+                                    if les.title.strip() == title_to_match:
+                                        found_num = counter_tmp
+                                        break
+                                if found_num is not None:
+                                    break
+                            if found_num is not None:
+                                if isinstance(details_data, BaseModel):
+                                    details_data = details_data.model_copy(update={'lessonNumber': found_num})
+                                elif isinstance(details_data, dict):
+                                    details_data['lessonNumber'] = found_num
+                        except Exception as e_detect:
+                            logger.warning(f"Lesson number detection failed for proj {project_id}: {e_detect}", exc_info=not IS_PRODUCTION)
+            except Exception as e_outer:
+                logger.warning(f"Outer lesson number detection error for proj {project_id}: {e_outer}", exc_info=not IS_PRODUCTION)
+
         web_link_path = f"/projects/view/{project_id}"
         pdf_doc_identifier_slug = create_slug(f"{row_dict.get('project_name')}_{project_instance_name}")
         pdf_link_path = f"pdf/{project_id}/{pdf_doc_identifier_slug}"
@@ -2113,3 +2162,40 @@ ProjectDB.model_rebuild()
 MicroProductApiResponse.model_rebuild()
 ProjectDetailForEditResponse.model_rebuild()
 ProjectUpdateRequest.model_rebuild()
+
+# === ENSURE lessonNumber PRESENT IN PDF DETAILS (when opened outside Training Plan) ===
+if component_name in (COMPONENT_NAME_PDF_LESSON, COMPONENT_NAME_VIDEO_LESSON, COMPONENT_NAME_QUIZ):
+    try:
+        if isinstance(data_for_template_render, dict) and not data_for_template_render.get('lessonNumber'):
+            async with pool.acquire() as conn:
+                tp_row = await conn.fetchrow(
+                    """
+                    SELECT p.microproduct_content
+                    FROM projects p
+                    JOIN design_templates dt ON p.design_template_id = dt.id
+                    WHERE p.onyx_user_id = $1
+                      AND p.project_name   = $2
+                      AND dt.component_name = $3
+                    LIMIT 1;
+                    """,
+                    onyx_user_id,
+                    target_row_dict.get('project_name'),
+                    COMPONENT_NAME_TRAINING_PLAN
+                )
+            if tp_row and isinstance(tp_row['microproduct_content'], dict):
+                tp_model = TrainingPlanDetails(**tp_row['microproduct_content'])
+                cnt = 0
+                title_to_find = (target_row_dict.get('microproduct_name') or '').strip()
+                found_num = None
+                for sec in tp_model.sections:
+                    for les in sec.lessons:
+                        cnt += 1
+                        if les.title.strip() == title_to_find:
+                            found_num = cnt
+                            break
+                    if found_num is not None:
+                        break
+                if found_num is not None:
+                    data_for_template_render['lessonNumber'] = found_num
+    except Exception as e_auto_num_pdf:
+        logger.warning(f"Auto lessonNumber PDF failed for proj {project_id}: {e_auto_num_pdf}")
