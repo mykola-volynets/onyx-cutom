@@ -30,6 +30,25 @@ export default function GenerateProductPicker() {
   const [lessonsPerModule, setLessonsPerModule] = useState("3-4");
   const [language, setLanguage] = useState("en");
 
+  const allExamples = [
+    "Code Optimization Course",
+    "Junior AI/ML Engineer Training",
+    "New Employee Onboarding",
+    "Negotiating and closing deals to meet or exceed sales targets",
+    "Choosing the right pricing strategy",
+    "Workshop on effective communication skills for managers",
+    "Half-day workshop for business innovation models",
+    "Customer journey mapping",
+    "A guide to investing in real estate",
+  ];
+  const getRandomExamples = () => {
+    const shuffled = [...allExamples].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 6);
+  };
+  const [examples, setExamples] = useState<string[]>(getRandomExamples());
+
+  const shuffleExamples = () => setExamples(getRandomExamples());
+
   const handleCourseOutlineStart = () => {
     if (!prompt.trim()) return;
     const params = new URLSearchParams({
@@ -52,13 +71,13 @@ export default function GenerateProductPicker() {
         {/* back button absolute top-left */}
         <Link
           href="/create"
-          className="absolute top-6 left-6 flex items-center gap-1 text-sm text-brand-primary hover:text-brand-primary-hover rounded-full px-3 py-1 border border-brand-primary bg-white"
+          className="absolute top-6 left-6 flex items-center gap-1 text-sm text-brand-primary hover:text-brand-primary-hover rounded-full px-3 py-1 border border-gray-300 bg-white"
         >
           <ArrowLeft size={14} /> Back
         </Link>
 
-        <h1 className="text-5xl font-semibold text-center tracking-wide text-gray-800">Generate</h1>
-        <p className="text-center text-gray-600 text-xl -mt-3">What would you like to create today?</p>
+        <h1 className="text-5xl font-semibold text-center tracking-wide text-gray-900 mt-10">Generate</h1>
+        <p className="text-center text-gray-600 text-xl -mt-2">What would you like to create today?</p>
 
         {/* Tab selector */}
         <div className="flex justify-center gap-4">
@@ -116,7 +135,7 @@ export default function GenerateProductPicker() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {["Code Optimization Course", "Junior AI/ML Engineer Training", "New Employee Onboarding"].map((ex) => (
+          {examples.map((ex) => (
             <button
               key={ex}
               type="button"
@@ -128,15 +147,26 @@ export default function GenerateProductPicker() {
           ))}
         </div>
 
-        {/* Continue button */}
-        <button
-          type="button"
-          onClick={handleCourseOutlineStart}
-          disabled={!prompt.trim()}
-          className="self-center mt-6 px-6 py-3 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover disabled:opacity-50"
-        >
-          Continue
-        </button>
+        {/* Shuffle + Continue buttons */}
+        <div className="flex flex-col items-center gap-4 mt-4">
+          <button
+            type="button"
+            className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary hover:text-white border border-gray-300 text-sm"
+            onClick={shuffleExamples}
+          >
+            <Shuffle size={16} /> Shuffle
+          </button>
+
+          {/* Continue button */}
+          <button
+            type="button"
+            onClick={handleCourseOutlineStart}
+            disabled={!prompt.trim()}
+            className="px-6 py-3 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover disabled:opacity-50"
+          >
+            Continue
+          </button>
+        </div>
       </div>
     </main>
   );
