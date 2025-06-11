@@ -56,8 +56,8 @@ export default function GenerateProductPicker() {
         background: "linear-gradient(180deg, #FFF9F5 0%, #ECECFF 30%, #BFD7FF 65%, #CCE8FF 100%)",
       }}
     >
-      <div className="w-full max-w-4xl flex flex-col gap-10">
-        <h1 className="text-3xl font-bold text-center">Select a product type</h1>
+      <div className="w-full max-w-4xl flex flex-col gap-10 text-gray-900">
+        <h1 className="text-3xl font-semibold text-center">Select a product type</h1>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
           <ProductCard
             title="Course Outline"
@@ -72,21 +72,21 @@ export default function GenerateProductPicker() {
 
         {/* Course Outline prompt section */}
         <section className="mt-8 flex flex-col gap-6">
-          <label className="font-semibold text-lg">Describe what you'd like to make</label>
+          <label className="font-medium text-lg text-gray-800">Describe what you'd like to make</label>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="e.g. Code Optimization Course"
-            className="w-full border rounded-md p-3 h-28 resize-none"
+            className="w-full border border-gray-300 rounded-md p-3 h-28 resize-none placeholder-gray-500 bg-white/80"
           />
 
           {/* Example prompts */}
-          <div className="flex gap-2 flex-wrap text-sm">
+          <div className="flex gap-2 flex-wrap text-sm text-gray-700">
             {["Code Optimization Course", "Junior AI/ML Engineer Training", "New Employee Onboarding"].map((ex) => (
               <button
                 key={ex}
                 type="button"
-                className="px-3 py-1 border rounded-full hover:bg-gray-100"
+                className="px-3 py-1 border border-gray-300 rounded-full hover:bg-gray-100 bg-white/70"
                 onClick={() => setPrompt(ex)}
               >
                 {ex}
@@ -97,24 +97,24 @@ export default function GenerateProductPicker() {
           {/* Dropdowns */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Modules</label>
-              <select value={modulesCount} onChange={(e) => setModulesCount(Number(e.target.value))} className="border rounded-md p-2">
+              <label className="text-sm font-medium text-gray-700">Modules</label>
+              <select value={modulesCount} onChange={(e) => setModulesCount(Number(e.target.value))} className="border border-gray-300 rounded-md p-2 bg-white/80 text-gray-900">
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
                   <option key={num} value={num}>{num}</option>
                 ))}
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Lessons per module</label>
-              <select value={lessonsPerModule} onChange={(e) => setLessonsPerModule(e.target.value)} className="border rounded-md p-2">
+              <label className="text-sm font-medium text-gray-700">Lessons per module</label>
+              <select value={lessonsPerModule} onChange={(e) => setLessonsPerModule(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white/80 text-gray-900">
                 {["1-2", "3-4", "5-7", "8-10"].map((rng) => (
                   <option key={rng} value={rng}>{rng}</option>
                 ))}
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Language</label>
-              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="border rounded-md p-2">
+              <label className="text-sm font-medium text-gray-700">Language</label>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="border border-gray-300 rounded-md p-2 bg-white/80 text-gray-900">
                 <option value="en">English</option>
                 <option value="uk">Ukrainian</option>
                 <option value="es">Spanish</option>
