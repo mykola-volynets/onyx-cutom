@@ -3,15 +3,18 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Shuffle, Sparkles, Plus } from "lucide-react";
+import Image from "next/image";
 
 // Simple tab button
-const TabButton: React.FC<{
+interface TabButtonProps {
   label: string;
   Icon?: React.ElementType;
   imgSrc?: string;
   active?: boolean;
   onClick?: () => void;
-}> = ({ label, Icon, imgSrc, active, onClick }) => (
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ label, Icon, imgSrc, active, onClick }) => (
   <button
     type="button"
     onClick={onClick}
@@ -22,7 +25,7 @@ const TabButton: React.FC<{
     }`}
   >
     {imgSrc ? (
-      <img src={imgSrc} alt={label} className="w-6 h-6" />
+      <Image src={imgSrc} alt={label} width={24} height={24} />
     ) : (
       Icon && <Icon size={20} />
     )}
