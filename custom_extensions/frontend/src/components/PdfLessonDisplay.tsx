@@ -41,7 +41,7 @@ const parseAndStyleText = (text: string | undefined | null): React.ReactNode[] =
 };
 
 const LessonGoalIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-1.5 shrink-0">
+  <svg width="16" height="16" viewBox="-1 -1 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-1.5 shrink-0" style={{overflow:'visible'}}>
     <rect width="16" height="16" rx="8" fill="#FF1414"/>
     <path fillRule="evenodd" clipRule="evenodd" d="M7.66681 3.66672C5.08942 3.66672 3 5.75606 3 8.33336C3 10.9107 5.08942 13 7.66681 13C10.2442 13 12.3336 10.9107 12.3336 8.33336C12.3336 7.70679 12.2098 7.10913 11.9858 6.56324L11.9441 6.6049C11.8353 6.71373 11.6922 6.78166 11.5391 6.79694L11.0311 6.84761C11.232 7.30193 11.3438 7.80451 11.3438 8.33325C11.3438 10.364 9.69753 12.0101 7.66681 12.0101C5.63599 12.0101 3.9898 10.3639 3.9898 8.33325C3.9898 6.30261 5.6361 4.65637 7.66681 4.65637C8.19535 4.65637 8.69784 4.76817 9.15206 4.96889L9.20263 4.46137C9.21791 4.30813 9.28617 4.1649 9.39489 4.05607L9.43656 4.01441C8.89076 3.79049 8.2933 3.66672 7.66681 3.66672ZM9.36818 6.16003L9.53428 4.49445C9.5422 4.41772 9.5765 4.34627 9.63058 4.29175L10.8249 3.09753C10.9172 3.00574 11.0538 2.97551 11.1757 3.02069C11.2977 3.06576 11.3832 3.17766 11.393 3.30715L11.4873 4.51237L12.6933 4.60713C12.822 4.61735 12.9342 4.70188 12.9793 4.82401C13.0245 4.94602 12.9941 5.08321 12.9027 5.175L11.7085 6.36922C11.6544 6.42385 11.5827 6.4576 11.506 6.4653L9.84 6.63139L7.90272 8.56893C7.83786 8.63389 7.75234 8.66665 7.66681 8.66665C7.58129 8.66665 7.49576 8.63389 7.4309 8.56893C7.30119 8.43878 7.30119 8.22772 7.4309 8.09746L9.36818 6.16003ZM7.66681 6.99997C7.78609 6.99997 7.90173 7.01569 8.01177 7.04515L7.19522 7.86178C6.93524 8.12175 6.93534 8.54398 7.19489 8.80428C7.3201 8.92981 7.48961 8.99994 7.66681 8.99994C7.84391 8.99994 8.0132 8.92981 8.13841 8.80461L8.95485 7.98798C8.98431 8.09812 9.00014 8.21387 9.00014 8.33336C9.00014 9.06975 8.40323 9.66664 7.66681 9.66664C6.9304 9.66664 6.33348 9.06975 6.33348 8.33336C6.33348 7.59697 6.9304 6.99997 7.66681 6.99997ZM7.66681 5.32296C8.1782 5.32296 8.6598 5.45069 9.08149 5.6756L9.04829 6.00845L8.52865 6.52806C8.26768 6.40319 7.97538 6.33328 7.6667 6.33328C6.56214 6.33328 5.66666 7.22872 5.66666 8.33325C5.66666 9.43777 6.56214 10.3332 7.6667 10.3332C8.77127 10.3332 9.66675 9.43777 9.66675 8.33325C9.66675 8.02447 9.59672 7.73207 9.47174 7.47089L9.99148 6.95105L10.3241 6.91786C10.5494 7.33975 10.6771 7.82144 10.6771 8.33303C10.6771 9.99553 9.32927 11.3433 7.6667 11.3433C6.00414 11.3433 4.6563 9.99553 4.6563 8.33303C4.6563 6.67053 6.00425 5.32296 7.66681 5.32296Z" fill="white"/>
   </svg>
@@ -54,7 +54,7 @@ const NewBulletIcon = () => (
 );
 
 const LastSectionStarIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-1.5 shrink-0">
+  <svg width="16" height="16" viewBox="-1 -1 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-1.5 shrink-0" style={{overflow:'visible'}}>
     <rect width="16" height="16" rx="8" fill="#FF1414"/>
     <path d="M7.68389 3.24065C7.78339 2.91978 8.21661 2.91978 8.31611 3.24065L9.26859 6.31234C9.31309 6.45584 9.4407 6.553 9.5847 6.553H12.667C12.989 6.553 13.1228 6.98473 12.8624 7.18304L10.3687 9.08144C10.2522 9.17013 10.2035 9.32733 10.248 9.47083L11.2005 12.5425C11.3 12.8634 10.9495 13.1302 10.689 12.9319L8.19536 11.0335C8.07887 10.9448 7.92113 10.9448 7.80464 11.0335L5.31101 12.9319C5.05052 13.1302 4.70004 12.8634 4.79954 12.5425L5.75202 9.47083C5.79651 9.32733 5.74777 9.17013 5.63127 9.08144L3.13765 7.18304C2.87716 6.98473 3.01103 6.553 3.33301 6.553H6.41531C6.5593 6.553 6.68692 6.45584 6.73141 6.31234L7.68389 3.24065Z" fill="white"/>
   </svg>
@@ -260,7 +260,9 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
           {items.map((item, index) => {
             const itemNumber = isNumbered ? `${depth > 0 ? String.fromCharCode(97 + depth -1) : ''}${index + 1}` : '';
             const currentItemPathForData = listItemPath(index); 
-            const styledItemText = typeof item === 'string' ? parseAndStyleText(item) : null;
+            const isPlainStringNoBold = (typeof item === 'string') && !item.includes('**');
+            const textSource = (typeof item === 'string') ? ((isNumbered && isPlainStringNoBold) ? `**${item}**` : item) : "";
+            const styledItemText = (typeof item === 'string') ? parseAndStyleText(textSource) : null;
 
             if (isNumbered) {
               const liBoxClass = `${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-md p-2.5`;
@@ -510,7 +512,7 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange, parentProjec
                       if (typeof subItem === 'object' && 'type' in subItem && subItem.type === "mini_section") {
                         const miniSec = subItem as MiniSection;
                         return (
-                          <div key={`major-${index}-mini-${subIndex}`} className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
+                          <div key={`major-${index}-mini-${subIndex}`} className="bg-rose-50 border-l-4 border-rose-500 rounded-md p-3 my-2">
                             <RenderBlock 
                                 block={miniSec.headline} 
                                 isFirstInBox={true} isLastInBox={false} isMiniSectionHeadline={true} 
@@ -529,7 +531,7 @@ const PdfLessonDisplay = ({ dataToDisplay, isEditing, onTextChange, parentProjec
               {item.type === "mini_section" && (
                  (() => {
                     return (
-                        <div className={`${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-lg p-3 my-2`}>
+                        <div className="bg-rose-50 border-l-4 border-rose-500 rounded-md p-3 my-2">
                         <RenderBlock 
                             block={item.headline} 
                             isFirstInBox={true} isLastInBox={false} isMiniSectionHeadline={true} 
