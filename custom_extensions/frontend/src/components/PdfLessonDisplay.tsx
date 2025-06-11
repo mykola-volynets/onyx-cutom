@@ -268,7 +268,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
               const liBoxClass = `${THEME_COLORS.veryLightAccentBg} border border-[#FF1414] rounded-md p-2.5`;
               return (
                 <li key={index} className={`${liBoxClass} ${listItemBaseTextStyle}`}>
-                  <div className={`flex items-start`}>
+                  <div className={`flex items-center`}>
                     <span 
                       className={`mr-2.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${THEME_COLORS.accentRedBg} text-white text-[10px] font-medium`}
                     > {itemNumber} </span>
@@ -296,7 +296,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
               );
             } else { // Bullet List
               return (
-                <li key={index} className={`py-0.5 ${listItemBaseTextStyle} flex items-start`}>
+                <li key={index} className={`py-0.5 ${listItemBaseTextStyle} flex items-center`}>
                   {BulletIconToRender && <div className="pt-[0.1em] mr-1.5 shrink-0"><BulletIconToRender /></div>}
                   <div className="flex-grow">
                     {typeof item === 'string' ? (

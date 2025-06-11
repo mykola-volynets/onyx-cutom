@@ -290,8 +290,8 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
 
               if (isNumbered) {
                 return (
-                  <li key={index} className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center font-semibold text-xs">{index + 1}</div>
+                  <li key={index} className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center font-semibold text-xs">{index + 1}</div>
                     <div className="flex-grow">
                       {itemIsString ? (
                         isEditing && onTextChange ? (
