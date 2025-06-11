@@ -141,4 +141,6 @@ export default function CourseOutlinePreview() {
       </div>
     </main>
   );
-} 
+}
+
+export const dynamic = 'force-dynamic'; 

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { BookOpenCheck, FilePresentation, Film, HelpCircle } from "lucide-react";
+import { BookOpenCheck, Presentation, Film, HelpCircle } from "lucide-react";
 
 interface ProductCardProps {
   title: string;
@@ -58,7 +58,7 @@ export default function GenerateProductPicker() {
             Icon={BookOpenCheck}
             // We'll show form below instead of href
           />
-          <ProductCard title="Lesson Presentation" description="Coming soon" Icon={FilePresentation} disabled />
+          <ProductCard title="Lesson Presentation" description="Coming soon" Icon={Presentation} disabled />
           <ProductCard title="Video Lesson Script" description="Coming soon" Icon={Film} disabled />
           <ProductCard title="Quiz" description="Coming soon" Icon={HelpCircle} disabled />
         </div>
