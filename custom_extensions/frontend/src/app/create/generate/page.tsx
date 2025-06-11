@@ -14,8 +14,10 @@ const TabButton: React.FC<{
   <button
     type="button"
     onClick={onClick}
-    className={`flex flex-col items-center gap-2 border rounded-md px-5 py-3 transition-colors min-w-[120px] ${
-      active ? "bg-white shadow text-brand-primary border-brand-primary" : "bg-white/70 text-gray-600 hover:bg-white"
+    className={`flex flex-col items-center gap-2 rounded-md px-5 py-3 transition-colors min-w-[120px] ${
+      active
+        ? "bg-white shadow text-brand-primary border border-brand-primary"
+        : "bg-white/70 text-gray-700 hover:bg-white"
     }`}
   >
     <Icon size={20} />
@@ -67,7 +69,7 @@ export default function GenerateProductPicker() {
         background: "linear-gradient(180deg, #FFF9F5 0%, #B4DCFF 35%, #A3C2FF 60%, #E1E8FF 85%)",
       }}
     >
-      <div className="w-full max-w-3xl flex flex-col gap-8 text-gray-900">
+      <div className="w-full max-w-3xl flex flex-col gap-4 text-gray-900">
         {/* back button absolute top-left */}
         <Link
           href="/create"
@@ -77,7 +79,7 @@ export default function GenerateProductPicker() {
         </Link>
 
         <h1 className="text-5xl font-semibold text-center tracking-wide text-gray-700 mt-8">Generate</h1>
-        <p className="text-center text-gray-600 text-xl -mt-1">What would you like to create today?</p>
+        <p className="text-center text-gray-600 text-lg -mt-1">What would you like to create today?</p>
 
         {/* Tab selector */}
         <div className="flex justify-center gap-4">
@@ -88,11 +90,11 @@ export default function GenerateProductPicker() {
         </div>
 
         {/* Dropdown chips */}
-        <div className="flex flex-wrap justify-center gap-3">
+        <div className="flex flex-wrap justify-center gap-2">
           <select
             value={modulesCount}
             onChange={(e) => setModulesCount(Number(e.target.value))}
-            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-gray-800"
+            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-black"
           >
             {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>{n} Modules</option>
@@ -101,7 +103,7 @@ export default function GenerateProductPicker() {
           <select
             value={lessonsPerModule}
             onChange={(e) => setLessonsPerModule(e.target.value)}
-            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-gray-800"
+            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-black"
           >
             {["1-2", "3-4", "5-7", "8-10"].map((rng) => (
               <option key={rng} value={rng}>{rng} Lessons</option>
@@ -110,7 +112,7 @@ export default function GenerateProductPicker() {
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-gray-800"
+            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-black"
           >
             <option value="en">English</option>
             <option value="uk">Ukrainian</option>
@@ -131,7 +133,7 @@ export default function GenerateProductPicker() {
         <div
           className={`transition-all duration-300 ${prompt.trim().length === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
         >
-          <div className="flex items-center gap-4 text-gray-600 font-medium text-lg -mt-4">
+          <div className="flex items-center gap-4 text-gray-600 font-medium text-base -mt-4">
             <hr className="flex-grow border-gray-300" />
             <span>Example prompts</span>
             <hr className="flex-grow border-gray-300" />
@@ -163,7 +165,7 @@ export default function GenerateProductPicker() {
 
         {/* Generate button block */}
         <div
-          className={`flex justify-center mt-4 transition-all duration-300 ${prompt.trim().length > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}
+          className={`flex justify-center mt-4 transition-all duration-300 ${prompt.trim().length > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'} z-10`}
         >
           <button
             type="button"
