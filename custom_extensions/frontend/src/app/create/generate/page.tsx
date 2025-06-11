@@ -26,16 +26,16 @@ const TabButton: React.FC<{
 export default function GenerateProductPicker() {
   // For prompt input and filters we keep in state and navigate later
   const [prompt, setPrompt] = useState("");
-  const [cards, setCards] = useState("8 cards");
-  const [design, setDesign] = useState("Default");
+  const [modulesCount, setModulesCount] = useState(4);
+  const [lessonsPerModule, setLessonsPerModule] = useState("3-4");
   const [language, setLanguage] = useState("en");
 
   const handleCourseOutlineStart = () => {
     if (!prompt.trim()) return;
     const params = new URLSearchParams({
       prompt,
-      cards,
-      design,
+      modules: String(modulesCount),
+      lessons: lessonsPerModule,
       lang: language,
     });
     window.location.href = `/create/course-outline?${params.toString()}`;
@@ -73,27 +73,27 @@ export default function GenerateProductPicker() {
         {/* Dropdown chips */}
         <div className="flex flex-wrap justify-center gap-3">
           <select
-            value={cards}
-            onChange={(e) => setCards(e.target.value)}
-            className="px-4 py-2 rounded-full border border-gray-300 bg-white/80 text-sm"
+            value={modulesCount}
+            onChange={(e) => setModulesCount(Number(e.target.value))}
+            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-gray-800"
           >
-            {["8 cards", "16 cards", "24 cards"].map((opt) => (
-              <option key={opt}>{opt}</option>
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>{n} Modules</option>
             ))}
           </select>
           <select
-            value={design}
-            onChange={(e) => setDesign(e.target.value)}
-            className="px-4 py-2 rounded-full border border-gray-300 bg-white/80 text-sm"
+            value={lessonsPerModule}
+            onChange={(e) => setLessonsPerModule(e.target.value)}
+            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-gray-800"
           >
-            {["Default"].map((opt) => (
-              <option key={opt}>{opt}</option>
+            {["1-2", "3-4", "5-7", "8-10"].map((rng) => (
+              <option key={rng} value={rng}>{rng} Lessons</option>
             ))}
           </select>
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="px-4 py-2 rounded-full border border-gray-300 bg-white/80 text-sm"
+            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-gray-800"
           >
             <option value="en">English</option>
             <option value="uk">Ukrainian</option>
@@ -119,18 +119,15 @@ export default function GenerateProductPicker() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              "How the best creators build successful online courses",
-              "How to learn web development",
-              "Living your best life: how to maintain work-life balance for creatives",
-              "The ABCs of personal branding",
-              "Sales proposal for a b2b software company",
-              "Quantum computing lesson plan",
+              "Code Optimization Course",
+              "Junior AI/ML Engineer Training",
+              "New Employee Onboarding",
             ].map((ex) => (
               <button
                 key={ex}
                 type="button"
                 onClick={() => setPrompt(ex)}
-                className="text-left border border-gray-200 rounded-md bg-white/60 px-4 py-3 text-sm hover:bg-white"
+                className="text-left border border-gray-200 rounded-md bg-[#E8F3FF] px-4 py-3 text-sm hover:bg-white"
               >
                 {ex}
               </button>
