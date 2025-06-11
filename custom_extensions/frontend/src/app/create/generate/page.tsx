@@ -14,7 +14,7 @@ const TabButton: React.FC<{
   <button
     type="button"
     onClick={onClick}
-    className={`flex flex-col items-center gap-2 rounded-md px-5 py-3 transition-colors min-w-[120px] ${
+    className={`flex flex-col items-center gap-2 rounded-md px-5 py-3 transition-colors min-w-[120px] cursor-pointer ${
       active
         ? "bg-white shadow text-brand-primary border border-brand-primary"
         : "bg-white/70 text-gray-700 hover:bg-white"
@@ -145,10 +145,10 @@ export default function GenerateProductPicker() {
                 key={ex}
                 type="button"
                 onClick={() => setPrompt(ex)}
-                className="relative text-left border border-gray-200 rounded-md bg-[#D9ECFF] px-4 py-3 text-sm hover:bg-white w-full"
+                className="relative text-left border border-gray-200 rounded-md bg-[#D9ECFF] px-4 py-3 text-sm hover:bg-white w-full cursor-pointer"
               >
                 {ex}
-                <Plus size={14} className="absolute right-2 top-2 text-gray-600" />
+                <Plus size={14} className="absolute right-2 top-2 text-gray-600 opacity-60" />
               </button>
             ))}
           </div>
@@ -156,7 +156,7 @@ export default function GenerateProductPicker() {
           <div className="flex justify-center mt-3">
             <button
               type="button"
-              className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary/10 border border-gray-300 text-sm"
+              className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary/10 border border-gray-300 text-sm cursor-pointer"
               onClick={shuffleExamples}
             >
               <Shuffle size={16} /> Shuffle
@@ -171,7 +171,7 @@ export default function GenerateProductPicker() {
           <button
             type="button"
             onClick={handleCourseOutlineStart}
-            className="flex items-center gap-2 px-8 py-3 rounded-full text-white hover:bg-brand-primary-hover active:scale-95 transition-all duration-200 text-lg font-semibold shadow-lg"
+            className="flex items-center gap-2 px-8 py-3 rounded-full text-white hover:bg-brand-primary-hover active:scale-95 transition-all duration-200 text-lg font-semibold shadow-lg cursor-pointer"
             style={{ backgroundColor: '#0076FF' }}
           >
             <Sparkles size={18} /> Generate outline
