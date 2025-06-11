@@ -78,7 +78,12 @@ export default function CourseOutlineClient() {
   };
 
   return (
-    <main className="min-h-screen p-6 flex flex-col items-center bg-app-gradient">
+    <main
+      className="min-h-screen p-6 flex flex-col items-center"
+      style={{
+        background: "linear-gradient(180deg, #FFF9F5 0%, #ECECFF 30%, #BFD7FF 65%, #CCE8FF 100%)",
+      }}
+    >
       <div className="w-full max-w-5xl flex flex-col gap-8">
         <h1 className="text-3xl font-bold text-center">Course Outline Preview</h1>
 

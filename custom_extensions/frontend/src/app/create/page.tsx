@@ -16,8 +16,8 @@ const OptionCard: React.FC<{
     <div
       className={`flex flex-col items-center justify-center gap-3 border rounded-lg p-6  transition-colors w-full h-full text-center shadow-sm ${
         disabled
-          ? "bg-white/50 text-gray-400 cursor-not-allowed backdrop-blur-sm"
-          : "bg-white/70 hover:bg-white/90 text-gray-800 cursor-pointer backdrop-blur-md"
+          ? "bg-white/60 text-gray-400 cursor-not-allowed border-gray-300 shadow-none"
+          : "bg-white/80 hover:bg-white text-gray-900 cursor-pointer shadow border-gray-200"
       }`}
     >
       <Icon size={32} className="mb-1" />
@@ -32,7 +32,12 @@ const OptionCard: React.FC<{
 
 export default function DataSourceLanding() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-app-gradient">
+    <main
+      className="min-h-screen flex flex-col items-center justify-center p-6"
+      style={{
+        background: "linear-gradient(180deg, #FFF9F5 0%, #ECECFF 30%, #BFD7FF 65%, #CCE8FF 100%)",
+      }}
+    >
       <div className="w-full max-w-3xl flex flex-col gap-10">
         <h1 className="text-3xl font-bold text-center">Choose a data source</h1>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

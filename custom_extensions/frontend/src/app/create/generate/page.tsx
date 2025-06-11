@@ -16,7 +16,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ title, description, Icon, hre
   const inner = (
     <div
       className={`flex flex-col items-start gap-2 border rounded-lg p-6 shadow-sm transition-colors h-full w-full ${
-        disabled ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white hover:bg-gray-50 cursor-pointer"
+        disabled
+          ? "bg-white/60 text-gray-400 cursor-not-allowed border-gray-300 shadow-none"
+          : "bg-white/80 hover:bg-white text-gray-900 cursor-pointer shadow border-gray-200"
       }`}
     >
       <Icon size={28} />
@@ -48,7 +50,12 @@ export default function GenerateProductPicker() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-6 bg-app-gradient">
+    <main
+      className="min-h-screen flex flex-col items-center p-6"
+      style={{
+        background: "linear-gradient(180deg, #FFF9F5 0%, #ECECFF 30%, #BFD7FF 65%, #CCE8FF 100%)",
+      }}
+    >
       <div className="w-full max-w-4xl flex flex-col gap-10">
         <h1 className="text-3xl font-bold text-center">Select a product type</h1>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
