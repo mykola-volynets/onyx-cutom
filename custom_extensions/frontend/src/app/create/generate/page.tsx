@@ -45,20 +45,20 @@ export default function GenerateProductPicker() {
     <main
       className="min-h-screen flex flex-col items-center p-6"
       style={{
-        background: "linear-gradient(180deg, #FFF9F5 0%, #E1E8FF 25%, #A3C2FF 65%, #B4DCFF 100%)",
+        background: "linear-gradient(180deg, #FFF9F5 0%, #B4DCFF 35%, #A3C2FF 60%, #E1E8FF 85%)",
       }}
     >
       <div className="w-full max-w-3xl flex flex-col gap-8 text-gray-900">
-        {/* back button absolute top-right */}
+        {/* back button absolute top-left */}
         <Link
           href="/create"
-          className="absolute top-6 right-6 flex items-center gap-1 text-sm text-brand-primary hover:text-brand-primary-hover rounded-full px-3 py-1 border border-brand-primary bg-white"
+          className="absolute top-6 left-6 flex items-center gap-1 text-sm text-brand-primary hover:text-brand-primary-hover rounded-full px-3 py-1 border border-brand-primary bg-white"
         >
           <ArrowLeft size={14} /> Back
         </Link>
 
-        <h1 className="text-4xl font-semibold text-center">Generate</h1>
-        <p className="text-center text-gray-700 text-lg -mt-4">What would you like to create today?</p>
+        <h1 className="text-5xl font-semibold text-center">Generate</h1>
+        <p className="text-center text-gray-700 text-xl -mt-3">What would you like to create today?</p>
 
         {/* Tab selector */}
         <div className="flex justify-center gap-4">
@@ -112,7 +112,7 @@ export default function GenerateProductPicker() {
         <div className="flex flex-col gap-4">
           <h3 className="text-center text-gray-700 font-medium relative">
             <span className="before:absolute before:left-0 before:right-0 before:top-1/2 before:h-px before:bg-gray-300"> </span>
-            <span className="bg-white/80 px-3 relative z-10">Example prompts</span>
+            <span className="px-3 relative z-10 bg-transparent">Example prompts</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
