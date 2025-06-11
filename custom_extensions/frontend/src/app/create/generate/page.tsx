@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Book, Layout, Film, HelpCircle, Shuffle, Sparkles, Plus } from "lucide-react";
+import { ArrowLeft, Shuffle, Sparkles, Plus } from "lucide-react";
 
 // Simple tab button
 const TabButton: React.FC<{
@@ -88,10 +88,10 @@ export default function GenerateProductPicker() {
 
         {/* Tab selector */}
         <div className="flex justify-center gap-4 mb-4">
-          <TabButton label="Course Outline" imgSrc="/icons/course_outline.png" active />
-          <TabButton label="Lesson Presentation" imgSrc="/icons/lesson_presentation.png" />
-          <TabButton label="Video Lesson Script" imgSrc="/icons/video_lesson_script.png" />
-          <TabButton label="Quiz" imgSrc="/icons/quiz.png" />
+          <TabButton label="Course Outline" imgSrc="/course_outline.png" active />
+          <TabButton label="Lesson Presentation" imgSrc="/lesson_presentation.png" />
+          <TabButton label="Video Lesson Script" imgSrc="/video_lesson_script.png" />
+          <TabButton label="Quiz" imgSrc="/quiz.png" />
         </div>
 
         {/* Dropdown chips */}
