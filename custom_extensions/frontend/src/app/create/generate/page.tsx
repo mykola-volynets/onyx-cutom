@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, MonitorPlay, BookOpen, FileText, Smartphone, Shuffle } from "lucide-react";
+import { ArrowLeft, Book, Layout, Film, HelpCircle, Shuffle } from "lucide-react";
 
 // Simple tab button
 const TabButton: React.FC<{
@@ -14,8 +14,8 @@ const TabButton: React.FC<{
   <button
     type="button"
     onClick={onClick}
-    className={`flex flex-col items-center gap-2 border rounded-md px-6 py-4 transition-colors min-w-[110px] ${
-      active ? "bg-white shadow text-brand-primary border-brand-primary" : "bg-white/60 text-gray-600 hover:bg-white"
+    className={`flex flex-col items-center gap-2 border rounded-md px-6 py-4 transition-colors min-w-[130px] ${
+      active ? "bg-white shadow text-brand-primary border-brand-primary" : "bg-white/70 text-gray-600 hover:bg-white"
     }`}
   >
     <Icon size={20} />
@@ -45,29 +45,27 @@ export default function GenerateProductPicker() {
     <main
       className="min-h-screen flex flex-col items-center p-6"
       style={{
-        background: "linear-gradient(180deg, #FFF9F5 0%, #ECECFF 30%, #BFD7FF 65%, #CCE8FF 100%)",
+        background: "linear-gradient(180deg, #FFF9F5 0%, #E1E8FF 25%, #A3C2FF 65%, #B4DCFF 100%)",
       }}
     >
       <div className="w-full max-w-3xl flex flex-col gap-8 text-gray-900">
-        {/* Top back button */}
-        <div className="flex items-center">
-          <Link
-            href="/create"
-            className="flex items-center gap-1 text-sm text-gray-700 hover:text-gray-900 rounded-full px-3 py-1 border border-gray-300 bg-white/70"
-          >
-            <ArrowLeft size={14} /> Back
-          </Link>
-        </div>
+        {/* back button absolute top-right */}
+        <Link
+          href="/create"
+          className="absolute top-6 right-6 flex items-center gap-1 text-sm text-brand-primary hover:text-brand-primary-hover rounded-full px-3 py-1 border border-brand-primary bg-white"
+        >
+          <ArrowLeft size={14} /> Back
+        </Link>
 
         <h1 className="text-4xl font-semibold text-center">Generate</h1>
         <p className="text-center text-gray-700 text-lg -mt-4">What would you like to create today?</p>
 
         {/* Tab selector */}
         <div className="flex justify-center gap-4">
-          <TabButton label="Presentation" Icon={MonitorPlay} active />
-          <TabButton label="Webpage" Icon={FileText} />
-          <TabButton label="Document" Icon={BookOpen} />
-          <TabButton label="Social" Icon={Smartphone} />
+          <TabButton label="Course Outline" Icon={Book} active />
+          <TabButton label="Lesson Presentation" Icon={Layout} />
+          <TabButton label="Video Lesson Script" Icon={Film} />
+          <TabButton label="Quiz" Icon={HelpCircle} />
         </div>
 
         {/* Dropdown chips */}
@@ -127,7 +125,7 @@ export default function GenerateProductPicker() {
                 key={ex}
                 type="button"
                 onClick={() => setPrompt(ex)}
-                className="text-left border border-gray-200 rounded-md bg-[#E8F3FF] px-4 py-3 text-sm hover:bg-white"
+                className="text-left border border-gray-200 rounded-md bg-[#D9ECFF] px-4 py-3 text-sm hover:bg-white"
               >
                 {ex}
               </button>
