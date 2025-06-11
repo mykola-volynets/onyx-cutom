@@ -222,7 +222,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
       
       let recommendationClasses = "";
       if (isRecommendation && !suppressRecommendationStripe) {
-        recommendationClasses = `pl-2.5 border-l-[3px] border-[#FF1414] py-1 rounded-md`;
+        recommendationClasses = `pl-2.5 border-l-[3px] border-[#FF1414] py-1 rounded-sm`;
       }
       const styledText = parseAndStyleText(text);
 
@@ -266,7 +266,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
 
       let containerClasses = `flex flex-col ${finalMb} `;
       if (hasRecommendation) {
-        containerClasses += `pl-2.5 border-l-[3px] border-[#FF1414] py-1 rounded-md`;
+        containerClasses += `pl-2.5 border-l-[3px] border-[#FF1414] py-1 rounded-sm`;
       }
 
       return (
@@ -320,7 +320,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
               if (isEditing && onTextChange && itemIsString) {
                 return (
                   <li key={index} className="flex items-start">
-                    {BulletIconToRender && !isNumbered && !isRecommendationPara && <BulletIconToRender />}
+                    {BulletIconToRender && !isNumbered && <BulletIconToRender />}
                     <input
                       type="text"
                       value={item}
@@ -336,7 +336,7 @@ const RenderBlock: React.FC<RenderBlockProps> = (props) => {
                   key={index}
                   className={`flex items-start ${THEME_COLORS.mutedText} text-xs leading-tight`}
                 >
-                  {!isNumbered && BulletIconToRender && !isRecommendationPara && <BulletIconToRender />}
+                  {!isNumbered && BulletIconToRender && <BulletIconToRender />}
                   <div className="flex-grow">
                     {itemIsString
                       ? <span className={isNumbered ? 'ml-1' : ''}>{styledItemText}</span>
