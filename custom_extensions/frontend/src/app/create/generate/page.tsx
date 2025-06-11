@@ -7,10 +7,11 @@ import { ArrowLeft, Book, Layout, Film, HelpCircle, Shuffle, Sparkles, Plus } fr
 // Simple tab button
 const TabButton: React.FC<{
   label: string;
-  Icon: React.ElementType;
+  Icon?: React.ElementType;
+  imgSrc?: string;
   active?: boolean;
   onClick?: () => void;
-}> = ({ label, Icon, active, onClick }) => (
+}> = ({ label, Icon, imgSrc, active, onClick }) => (
   <button
     type="button"
     onClick={onClick}
@@ -20,7 +21,11 @@ const TabButton: React.FC<{
         : "bg-white/70 text-gray-700 hover:bg-white"
     }`}
   >
-    <Icon size={20} />
+    {imgSrc ? (
+      <img src={imgSrc} alt={label} className="w-6 h-6" />
+    ) : (
+      Icon && <Icon size={20} />
+    )}
     <span className="text-sm font-medium">{label}</span>
   </button>
 );
@@ -82,15 +87,15 @@ export default function GenerateProductPicker() {
         <p className="text-center text-gray-600 text-lg -mt-1">What would you like to create today?</p>
 
         {/* Tab selector */}
-        <div className="flex justify-center gap-4">
-          <TabButton label="Course Outline" Icon={Book} active />
-          <TabButton label="Lesson Presentation" Icon={Layout} />
-          <TabButton label="Video Lesson Script" Icon={Film} />
-          <TabButton label="Quiz" Icon={HelpCircle} />
+        <div className="flex justify-center gap-4 mb-4">
+          <TabButton label="Course Outline" imgSrc="/icons/course_outline.png" active />
+          <TabButton label="Lesson Presentation" imgSrc="/icons/lesson_presentation.png" />
+          <TabButton label="Video Lesson Script" imgSrc="/icons/video_lesson_script.png" />
+          <TabButton label="Quiz" imgSrc="/icons/quiz.png" />
         </div>
 
         {/* Dropdown chips */}
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="flex flex-wrap justify-center gap-2 mb-2">
           <select
             value={modulesCount}
             onChange={(e) => setModulesCount(Number(e.target.value))}
@@ -133,7 +138,7 @@ export default function GenerateProductPicker() {
         <div
           className={`transition-all duration-300 origin-top ${prompt.trim().length === 0 ? 'opacity-100 translate-y-0 max-h-[500px]' : 'opacity-0 -translate-y-2 pointer-events-none max-h-0 overflow-hidden'}`}
         >
-          <div className="flex items-center gap-4 text-gray-600 font-medium text-base -mt-4">
+          <div className="flex items-center gap-4 text-gray-600 font-medium text-base mt-2">
             <hr className="flex-grow border-gray-300" />
             <span>Example prompts</span>
             <hr className="flex-grow border-gray-300" />
