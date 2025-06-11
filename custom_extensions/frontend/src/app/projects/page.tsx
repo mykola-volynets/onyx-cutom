@@ -32,13 +32,19 @@ export default function ProjectsPage() {
   return (
     <main className="p-4 md:p-8 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto w-full">
-        <div className="mb-6 flex">
+        <div className="mb-6 flex justify-between flex-wrap gap-4">
             <Link
                 href={chatUrl}
                 className="text-sm text-blue-600 hover:underline flex items-center px-4 py-2 w-fit bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition-colors"
             >
                 <ArrowLeft size={16} className="mr-2" />
                 Back to Chat
+            </Link>
+            <Link
+                href="/create"
+                className="text-sm flex items-center px-4 py-2 w-fit bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 transition-colors"
+            >
+                + Create New (AI)
             </Link>
         </div>
         <Suspense fallback={<div className="p-8 text-center font-['Inter',_sans-serif]">Loading Projects...</div>}>
