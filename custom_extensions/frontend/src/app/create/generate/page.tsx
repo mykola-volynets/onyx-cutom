@@ -48,7 +48,7 @@ export default function GenerateProductPicker() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-6">
+    <main className="min-h-screen flex flex-col items-center p-6 bg-gradient-to-b from-[#FFF9F5] via-[#ECECFF] via-[#C8E4FF] to-[#EAF6FF]">
       <div className="w-full max-w-4xl flex flex-col gap-10">
         <h1 className="text-3xl font-bold text-center">Select a product type</h1>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
