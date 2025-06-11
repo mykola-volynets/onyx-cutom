@@ -26,8 +26,6 @@
 }
 
 body {
-  /* Background is controlled via Tailwind utility (e.g. bg-app-gradient) so keep it transparent here. */
-  background: transparent;
   color: var(--foreground);
   font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
