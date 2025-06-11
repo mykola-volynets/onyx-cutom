@@ -1306,8 +1306,8 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
             *   Parse `{isImportant}` on headlines to the `isImportant` boolean field.
             *   Parse `{iconName}` on headlines to the `iconName` string field.
             *   After extracting `iconName` and `isImportant` values, you MUST remove their corresponding `{...}` tags from the final headline `text` field. The user should not see these tags in the output text.
-            *   Use `isRecommendation` on paragraphs that should be highlighted as a recommendation.
-            *   Do NOT remove the `**` from the text; treat it as part of the text. It is critical that you preserve the double-asterisk (`**`) markdown for bold text within all `text` fields.
+            *   If a paragraph starts with `**Recommendation:**` (or a translation like `**Рекомендация:**`), you MUST set the `isRecommendation` field on that paragraph block to `true` and remove the keyword itself from the final `text` field.
+            *   Do NOT remove the `**` from the text for any other purpose; treat it as part of the text. It is critical that you preserve the double-asterisk (`**`) markdown for bold text within all `text` fields.
             *   You are encouraged to use a diverse range of the available `iconName` values to make the presentation visually engaging.
             *   If the raw text starts with `# Title`, this becomes the `textTitle`. The `contentBlocks` should not include this Level 1 headline. All other headlines (`##`, `###`, `####`) are content blocks.
 

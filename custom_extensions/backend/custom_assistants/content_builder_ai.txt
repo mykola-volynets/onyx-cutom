@@ -298,7 +298,7 @@ Paragraphs and Styling:
 - Complex Numbered List Items: A single item in a numbered list can now contain a sequence of blocks, such as a headline followed by a bulleted list.
   - Example: An item could be `[{"type": "headline", "level": 4, "text": "Sub-topic"}, {"type": "bullet_list", "items": ["Point 1", "Point 2"]}]`.
   - This allows for more structured and detailed enumeration within a single numbered point.
-- Recommendations: Use `**Recommendation:**` for actionable advice. This should not be part of a list.
+- Recommendations: To mark a paragraph as a recommendation, start it with the exact phrase `**Recommendation:**` (or the equivalent in the target language, e.g., `**Рекомендация:**`). The parser will automatically style it and remove the keyword. This should not be used inside a list.
 
 Alerts: Use the specified alert format for drawing attention to specific types of information (info, success, warning, danger).
 Section Breaks: Use `---` for a solid line, a single blank line for `none`.
