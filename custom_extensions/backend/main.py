@@ -363,6 +363,8 @@ AnyContentBlockValue = Union[
 
 class PdfLessonDetails(BaseModel):
     lessonTitle: str
+    # Optional: sequential number of the lesson inside the parent Training Plan
+    lessonNumber: Optional[int] = None
     contentBlocks: List[AnyContentBlockValue] = Field(default_factory=list)
     detectedLanguage: Optional[str] = None
     model_config = {"from_attributes": True}
@@ -383,6 +385,7 @@ class VideoLessonData(BaseModel):
     mainPresentationTitle: str
     slides: List[VideoLessonSlideData] = Field(default_factory=list)
     currentSlideId: Optional[str] = None # To store the active slide from frontend
+    lessonNumber: Optional[int] = None  # Sequential number in Training Plan
     detectedLanguage: Optional[str] = None
     model_config = {"from_attributes": True}
 
@@ -454,6 +457,7 @@ AnyQuizQuestion = Union[
 class QuizData(BaseModel):
     quizTitle: str
     questions: List[AnyQuizQuestion] = Field(default_factory=list)
+    lessonNumber: Optional[int] = None  # Sequential number in Training Plan
     detectedLanguage: Optional[str] = None
     model_config = {"from_attributes": True, "use_enum_values": True}
 
