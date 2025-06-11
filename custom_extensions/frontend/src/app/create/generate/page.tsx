@@ -48,7 +48,7 @@ export default function GenerateProductPicker() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-6 bg-gray-50">
+    <main className="min-h-screen flex flex-col items-center p-6">
       <div className="w-full max-w-4xl flex flex-col gap-10">
         <h1 className="text-3xl font-bold text-center">Select a product type</h1>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
@@ -120,7 +120,7 @@ export default function GenerateProductPicker() {
             type="button"
             onClick={handleCourseOutlineStart}
             disabled={!prompt.trim()}
-            className="self-start px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="self-start px-5 py-2 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover disabled:opacity-50"
           >
             Continue
           </button>

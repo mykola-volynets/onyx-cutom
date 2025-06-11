@@ -3,6 +3,12 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Gradient stops sampled from Figma screenshots */
+  --gradient-start: #FFF9F5; /* light cream */
+  --gradient-mid1: #ECECFF; /* soft lavender */
+  --gradient-mid2: #C8E4FF; /* pastel sky blue */
+  --gradient-end: #EAF6FF;  /* very light blue */
 }
 
 @theme inline {

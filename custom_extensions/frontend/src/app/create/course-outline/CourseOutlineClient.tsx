@@ -78,7 +78,7 @@ export default function CourseOutlineClient() {
   };
 
   return (
-    <main className="min-h-screen p-6 bg-gray-50 flex flex-col items-center">
+    <main className="min-h-screen p-6 flex flex-col items-center">
       <div className="w-full max-w-5xl flex flex-col gap-8">
         <h1 className="text-3xl font-bold text-center">Course Outline Preview</h1>
 
@@ -127,7 +127,7 @@ export default function CourseOutlineClient() {
         <button
           type="button"
           onClick={handleGenerateFinal}
-          className="self-start mt-4 px-6 py-3 rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+          className="self-start mt-4 px-6 py-3 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover disabled:opacity-50"
           disabled={loading}
         >
           Generate
