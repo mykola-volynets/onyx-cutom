@@ -6,12 +6,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'brand-primary': '#2563eb', // blue used for buttons/icons
-        'brand-primary-hover': '#1e4ed8',
-        'brand-accent': '#0097ff',
+        'brand-primary': '#0076FF', // richer primary blue from Figma
+        'brand-primary-hover': '#005FDD',
+        'brand-accent': '#00A2FF',
       },
       backgroundImage: {
-        'app-gradient': 'linear-gradient(180deg,var(--gradient-start, #FFF9F5) 0%,var(--gradient-mid1, #ECECFF) 35%,var(--gradient-mid2, #C8E4FF) 70%,var(--gradient-end, #EAF6FF) 100%)',
+        'app-gradient': 'linear-gradient(180deg,var(--gradient-start, #FFF9F5) 0%,var(--gradient-mid1, #ECECFF) 30%,var(--gradient-mid2, #BFD7FF) 65%,var(--gradient-end, #CCE8FF) 100%)',
       },
     },
     fontFamily: {

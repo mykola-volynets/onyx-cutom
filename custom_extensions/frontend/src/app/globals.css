@@ -7,8 +7,8 @@
   /* Gradient stops sampled from Figma screenshots */
   --gradient-start: #FFF9F5; /* light cream */
   --gradient-mid1: #ECECFF; /* soft lavender */
-  --gradient-mid2: #C8E4FF; /* pastel sky blue */
-  --gradient-end: #EAF6FF;  /* very light blue */
+  --gradient-mid2: #BFD7FF; /* richer sky blue */
+  --gradient-end: #CCE8FF;  /* light blue */
 }
 
 @theme inline {

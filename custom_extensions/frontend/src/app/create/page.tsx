@@ -32,7 +32,7 @@ const OptionCard: React.FC<{
 
 export default function DataSourceLanding() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#FFF9F5] via-[#ECECFF] via-[#C8E4FF] to-[#EAF6FF]">
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-app-gradient">
       <div className="w-full max-w-3xl flex flex-col gap-10">
         <h1 className="text-3xl font-bold text-center">Choose a data source</h1>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
