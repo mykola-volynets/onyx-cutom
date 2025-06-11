@@ -130,13 +130,13 @@ export default function GenerateProductPicker() {
         {/* When no prompt, show examples + shuffle */}
         {prompt.trim().length === 0 ? (
           <>
-            <div className="flex items-center gap-4 text-gray-600 font-medium text-lg mt-6">
+            <div className="flex items-center gap-4 text-gray-600 font-medium text-lg mt-3">
               <hr className="flex-grow border-gray-300" />
               <span>Example prompts</span>
               <hr className="flex-grow border-gray-300" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 transition-all duration-300 ${prompt.trim().length===0? 'opacity-100 translate-y-0':'opacity-0 -translate-y-2'}`}>
               {examples.map((ex) => (
                 <button
                   key={ex}
@@ -149,7 +149,7 @@ export default function GenerateProductPicker() {
               ))}
             </div>
 
-            <div className="flex justify-center mt-4">
+            <div className="flex justify-center mt-3 transition-opacity duration-300 ${prompt.trim().length===0? 'opacity-100':'opacity-0'}">
               <button
                 type="button"
                 className="flex items-center gap-1 px-5 py-2 rounded-full bg-white text-brand-primary hover:bg-brand-primary/10 border border-gray-300 text-sm"
@@ -160,11 +160,11 @@ export default function GenerateProductPicker() {
             </div>
           </>
         ) : (
-          <div className="flex justify-center mt-6">
+          <div className="flex justify-center mt-4 transition-all duration-300">
             <button
               type="button"
               onClick={handleCourseOutlineStart}
-              className="px-8 py-4 rounded-full bg-brand-primary text-white hover:bg-brand-primary-hover text-lg font-medium"
+              className="px-8 py-4 rounded-full bg-brand-primary text-white hover:bg-brand-primary-hover active:scale-95 transition-transform duration-150 text-lg font-medium shadow"
             >
               Generate
             </button>
