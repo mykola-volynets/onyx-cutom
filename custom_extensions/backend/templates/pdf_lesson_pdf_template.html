@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>{% set segments = (lesson_data.lessonTitle if lesson_data and lesson_data.lessonTitle else 'PDF Lesson').split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</title>
     <style>
+        /* stylelint-disable */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
         html {
@@ -34,7 +35,7 @@
             --font-weight-bold: 700;
 
             --font-size-paragraph-small: 8pt; /* UPDATED */
-            --font-size-list-item: 7pt; 
+            --font-size-list-item: 8pt; 
             --font-size-base: 10pt;
             --line-height-base: 1.5; 
 
@@ -160,11 +161,12 @@
             gap: var(--space-md);
             border: 1px solid var(--color-primary-accent);
             background-color: var(--color-primary-accent-light-bg);
-            padding: var(--space-lg);
-            margin-bottom: var(--space-lg);
+            padding: var(--space-md);
+            margin-bottom: var(--space-md);
             border-radius: 5px;
             line-height: 1.5;
             letter-spacing: var(--letter-spacing-increased);
+            font-size: var(--font-size-list-item);
         }
 
         /* --- MODIFICATION 2: Removed absolute positioning from number circle --- */
@@ -222,7 +224,7 @@
 
 
         .mini-section-box-wrapper { margin-top: var(--space-xl); margin-bottom: var(--space-xl); page-break-inside: avoid; }
-        .mini-section-box { background-color: var(--color-primary-accent-light-bg); border: 1px solid var(--color-primary-accent); border-radius: 5px; padding: var(--space-md) var(--space-xl); }
+        .mini-section-box { background-color: #FEF2F2; border-left: 4px solid #F87171; border-radius: 5px; padding: var(--space-md) var(--space-xl); }
         .mini-section-box > .content-block-wrapper:first-child { margin-top: 0 !important; }
         .mini-section-box > .content-block-wrapper:first-child > .headline-block { margin-top: 0 !important; }
         .mini-section-box .content-block-wrapper, .mini-section-box .paragraph-block { max-width: 100%; }
@@ -241,6 +243,9 @@
         .headline-block, .alert-block, .mini-section-box-wrapper, li, .paragraph-block { page-break-inside: avoid; }
         .headline-block.h2 { page-break-before: auto; page-break-after: avoid; }
         hr.content-section-divider { page-break-before: auto; page-break-after: avoid;}
+        /* stylelint-enable */
+    } /* ensure all open selectors closed */
+    /* stylelint-enable */
     </style>
 </head>
 <body>
@@ -358,7 +363,15 @@
                                 {% if item_content is mapping %}
                                     {{ render_single_block_recursive_macro(item_content, depth + 1, true, false) }}
                                 {% elif item_content is string %}
-                                    <span>{% set segments = item_content.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
+                                    {# Auto-bold plain strings in numbered lists #}
+                                    {% if '**' in item_content %}
+                                        {% set _processed_str = item_content %}
+                                    {% else %}
+                                        {% set _processed_str = '**' ~ item_content ~ '**' %}
+                                    {% endif %}
+                                    <span>{% set segments = _processed_str.split('**') %}{% for segment in segments %}{% if loop.index0 is odd %}<span style="font-weight: var(--font-weight-medium); color: var(--color-text-black);">{{ segment }}</span>{% else %}{{ segment }}{% endif %}{% endfor %}</span>
+                                {% elif item_content is iterable %}
+                                    {{ render_single_block_recursive_macro(item_content, depth + 1, true, false) }}
                                 {% else %}
                                     <span class="error-message">Numbered list item content is not string or dict.</span>
                                 {% endif %}
