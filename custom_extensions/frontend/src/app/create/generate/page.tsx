@@ -77,7 +77,7 @@ export default function GenerateProductPicker() {
         </Link>
 
         <h1 className="text-5xl font-semibold text-center tracking-wide text-gray-700 mt-8">Generate</h1>
-        <p className="text-center text-gray-600 text-xl mt-0">What would you like to create today?</p>
+        <p className="text-center text-gray-600 text-xl -mt-1">What would you like to create today?</p>
 
         {/* Tab selector */}
         <div className="flex justify-center gap-4">
@@ -130,7 +130,7 @@ export default function GenerateProductPicker() {
         {/* When no prompt, show examples + shuffle */}
         {prompt.trim().length === 0 ? (
           <>
-            <div className="flex items-center gap-4 text-gray-600 font-medium text-lg mt-2">
+            <div className="flex items-center gap-4 text-gray-600 font-medium text-lg mt-0">
               <hr className="flex-grow border-gray-300" />
               <span>Example prompts</span>
               <hr className="flex-grow border-gray-300" />
@@ -164,7 +164,7 @@ export default function GenerateProductPicker() {
             <button
               type="button"
               onClick={handleCourseOutlineStart}
-              className="px-12 py-6 rounded-full bg-brand-primary-hover text-white hover:bg-brand-primary-dark active:scale-95 transition-all duration-200 text-xl font-semibold shadow-lg"
+              className="px-16 py-6 rounded-full bg-brand-primary text-white hover:bg-brand-primary-hover active:scale-95 transition-all duration-200 text-xl font-semibold shadow-lg"
             >
               Generate
             </button>
