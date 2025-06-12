@@ -2210,6 +2210,10 @@ async def create_onyx_chat_session(persona_id: int, cookies: Dict[str, str]) -> 
 async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[str, str]) -> str:
     """Send message via Onyx SSE and collect full assistant answer_piece."""
     async with httpx.AsyncClient(timeout=120.0) as client:
+        minimal_retrieval = {
+            "run_search": "always",
+            "real_time": False,
+        }
         resp = await client.post(
             f"{ONYX_API_SERVER_URL}/chat/send-message",
             json={
@@ -2217,7 +2221,7 @@ async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[
                 "message": message,
                 "parent_message_id": None,
                 "file_descriptors": [],
-                "retrieval_options": None,
+                "retrieval_options": minimal_retrieval,
             },
             cookies=cookies,
         )
