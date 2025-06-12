@@ -30,8 +30,8 @@ const OptionCard: React.FC<OptionCardProps> = ({
     <div
       className={`flex flex-col items-center justify-start rounded-xl overflow-hidden border transition-colors shadow-sm w-full h-full text-center ${
         disabled
-          ? "bg-white/60 text-gray-400 cursor-not-allowed border-gray-300 shadow-none"
-          : "bg-white/80 hover:bg-white text-gray-900 cursor-pointer border-gray-200"
+          ? "bg-white text-gray-400 cursor-not-allowed border-gray-300 shadow-none"
+          : "bg-white hover:bg-gray-50 text-gray-900 cursor-pointer border-gray-200"
       }`}
     >
       {/* "Folder" header */}
@@ -45,8 +45,8 @@ const OptionCard: React.FC<OptionCardProps> = ({
       </div>
       {/* Text area */}
       <div className="flex flex-col items-center gap-1 px-4 py-5">
-        <h3 className="font-semibold text-base sm:text-lg leading-tight">{title}</h3>
-        <p className="text-xs sm:text-sm text-gray-500 max-w-xs leading-normal">
+        <h3 className="font-semibold text-base sm:text-lg leading-tight text-gray-900">{title}</h3>
+        <p className="text-xs sm:text-sm text-gray-600 max-w-xs leading-normal">
           {description}
         </p>
       </div>
@@ -80,7 +80,7 @@ export default function DataSourceLanding() {
       <div className="w-full max-w-4xl flex flex-col gap-10 items-center">
         {/* Headings */}
         <div className="flex flex-col gap-2 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold">Create with AI</h1>
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">Create with AI</h1>
           <p className="text-base sm:text-lg text-gray-600">How would you like to get started?</p>
         </div>
 
@@ -107,30 +107,7 @@ export default function DataSourceLanding() {
           />
         </div>
 
-        {/* Recent prompts */}
-        <div className="w-full flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">Your recent prompts</h2>
-          {/* Static example row */}
-          <Link
-            href="#"
-            className="flex items-center justify-between bg-white/80 hover:bg-white transition-colors border border-gray-200 shadow-sm rounded-lg px-5 py-4"
-          >
-            <div className="flex flex-col">
-              <span className="font-medium">How to learn web development</span>
-              <span className="text-xs text-gray-500">Generate · 17 hours ago · DRAFT</span>
-            </div>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-5 h-5 text-gray-400"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
-        </div>
+        {/* Recent prompts section removed as per request */}
       </div>
     </main>
   );
