@@ -33,30 +33,45 @@ export default function CourseOutlineClient() {
     const fetchPreview = async () => {
       setLoading(true);
       setError(null);
-      try {
-        console.log("[CourseOutline] Sending preview request", {
-          prompt,
-          modules,
-          lessonsPerModule,
-          language,
-          url: `${CUSTOM_BACKEND_URL}/course-outline/preview`,
-        });
+      setPreview([]);
+      setRawOutline("");
 
-        const res = await fetch(`${CUSTOM_BACKEND_URL}/course-outline/preview`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt, modules, lessonsPerModule, language }),
-        });
-        console.log("[CourseOutline] preview response status", res.status);
-        if (!res.ok) {
-          const txt = await res.text();
-          console.error("[CourseOutline] preview error body", txt);
-          throw new Error(txt || `Request failed with ${res.status}`);
+      try {
+        const res = await fetch(
+          `${CUSTOM_BACKEND_URL}/course-outline/preview?stream=true`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt, modules, lessonsPerModule, language }),
+          }
+        );
+
+        if (!res.ok || !res.body) {
+          throw new Error(`Bad response ${res.status}`);
         }
-        const data = await res.json();
-        console.log("[CourseOutline] preview json", data);
-        setPreview(data.modules || []);
-        setRawOutline(data.raw || "");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = "";
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          // SSE chunks may contain multiple events
+          accumulated += chunk;
+          const parts = accumulated.split(/\n\n/);
+          accumulated = parts.pop() || "";
+          for (const evt of parts) {
+            if (evt.startsWith("data: ")) {
+              const dataStr = evt.replace(/^data: /, "");
+              if (dataStr === "[DONE]") {
+                setLoading(false);
+                break;
+              }
+              setRawOutline((prev) => prev + dataStr);
+            }
+          }
+        }
       } catch (e: any) {
         setError(e.message);
       } finally {

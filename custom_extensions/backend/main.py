@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Request, status, File, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from typing import List, Optional, Dict, Any, Union, Type, ForwardRef, Set, Literal
 from pydantic import BaseModel, Field, RootModel
@@ -17,6 +17,8 @@ import uuid
 import shutil
 import logging
 from locales.__init__ import LANG_CONFIG
+import asyncio
+import typing
 
 # --- CONTROL VARIABLE FOR PRODUCTION LOGGING ---
 # SET THIS TO True FOR PRODUCTION, False FOR DEVELOPMENT
@@ -2326,10 +2328,13 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
 async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request):
     logger.info(f"[wizard_outline_preview] prompt='{payload.prompt[:50]}...' modules={payload.modules} lessonsPerModule={payload.lessonsPerModule} lang={payload.language}")
     cookies = {ONYX_SESSION_COOKIE_NAME: request.cookies.get(ONYX_SESSION_COOKIE_NAME)}
+
+    # decide streaming
+    do_stream = request.query_params.get("stream", "false").lower() == "true"
+
     persona_id = await get_contentbuilder_persona_id(cookies)
-    logger.debug(f"[wizard_outline_preview] Using persona_id={persona_id}")
     chat_id = await create_onyx_chat_session(persona_id, cookies)
-    logger.debug(f"[wizard_outline_preview] Created chat_session_id={chat_id}")
+
     wizard_message = (
         "WIZARD_REQUEST\n" +
         json.dumps({
@@ -2340,12 +2345,45 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
             "language": payload.language,
         })
     )
-    logger.debug(f"[wizard_outline_preview] Wizard message length={len(wizard_message)}")
-    assistant_reply = await stream_chat_message(chat_id, wizard_message, cookies)
-    logger.debug(f"[wizard_outline_preview] Assistant reply length={len(assistant_reply)}")
-    modules_preview = _parse_outline_markdown(assistant_reply)
-    logger.debug(f"[wizard_outline_preview] Parsed modules count={len(modules_preview)}")
-    return {"modules": modules_preview, "raw": assistant_reply}
+
+    if not do_stream:
+        assistant_reply = await stream_chat_message(chat_id, wizard_message, cookies)
+        modules_preview = _parse_outline_markdown(assistant_reply)
+        return {"modules": modules_preview, "raw": assistant_reply}
+
+    # ---- streaming path ----
+
+    async def event_generator() -> typing.AsyncIterator[str]:
+        async with httpx.AsyncClient(timeout=None) as client:
+            payload = {
+                "chat_session_id": chat_id,
+                "message": wizard_message,
+                "parent_message_id": None,
+                "file_descriptors": [],
+                "user_file_ids": [],
+                "user_folder_ids": [],
+                "prompt_id": None,
+                "search_doc_ids": None,
+                "retrieval_options": {"run_search": "always", "real_time": False},
+                "stream_response": True,
+            }
+            async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=payload, cookies=cookies) as resp:
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data_line = line.removeprefix("data: ").strip()
+                    if data_line == "[DONE]":
+                        yield "event: done\ndata: [DONE]\n\n"
+                        break
+                    try:
+                        pkt = json.loads(data_line)
+                        if "answer_piece" in pkt:
+                            piece = pkt["answer_piece"].replace("\\n", "\n")
+                            yield f"data: {piece}\n\n"
+                    except Exception:
+                        continue
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 async def _ensure_training_plan_template(pool: asyncpg.Pool) -> int:
     async with pool.acquire() as conn:
