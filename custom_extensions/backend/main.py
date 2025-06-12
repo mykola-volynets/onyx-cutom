@@ -2263,16 +2263,47 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
     current = None
     for line in md.splitlines():
         line = line.strip()
+        # Detect module headings
         if line.startswith("## "):
-            # new module
-            title_part = line.lstrip("# ")
-            current = {"id": f"mod{len(modules)+1}", "title": title_part.split(":", 1)[-1].strip(), "lessons": []}
+            title_part = line.lstrip("# ").strip()
+            # allow both "Module X: Title" or plain title
+            if ":" in title_part:
+                title_part = title_part.split(":", 1)[-1].strip()
+            current = {
+                "id": f"mod{len(modules) + 1}",
+                "title": title_part,
+                "lessons": [],
+            }
             modules.append(current)
-        elif current and (line.startswith("- ") or line.startswith("1.") or line.startswith("* ") ) and "**" in line:
-            # lesson line
-            lesson_title = line.split("**", 2)[1]
-            current["lessons"].append(lesson_title)
+            continue
+
+        # Detect lesson lines if we're inside a module
+        if current and (line.startswith("- ") or line.startswith("* ") or line.lstrip().startswith("1.")):
+            # Remove list marker ("- ", "* ", "1. " etc.)
+            lesson_text = line.lstrip("-* ")
+            lesson_text = re.sub(r"^\d+\.\s*", "", lesson_text).strip()
+            # Strip bold markers if present
+            if lesson_text.startswith("**") and "**" in lesson_text[2:]:
+                lesson_text = lesson_text.split("**", 2)[1]
+            current["lessons"].append(lesson_text)
+            continue
+
+    if not modules:
+        tmp_module = {"id": "mod1", "title": "Outline", "lessons": []}
+        for line in md.splitlines():
+            if line.strip():
+                tmp_module["lessons"].append(line.strip())
+        modules.append(tmp_module)
+
     return modules
+
+    # Fallback: attempt a very naive parse if no headings detected
+    if not modules:
+        tmp_module = {"id": "mod1", "title": "Outline", "lessons": []}
+        for line in md.splitlines():
+            if line.strip():
+                tmp_module["lessons"].append(line.strip())
+        modules.append(tmp_module)
 
 # ----------------------- ENDPOINTS ---------------------------------------
 
