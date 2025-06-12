@@ -1236,7 +1236,7 @@ async def add_project_to_custom_db(project_data: ProjectCreateRequest, onyx_user
 
     2.  **`type: "paragraph"`**
         * `text` (string): Full paragraph text.
-        * `isRecommendation` (boolean, optional): If this paragraph functions as a "Recommendation" (often prefixed with "Рекомендация:" or "Recommendation:"), set this to `true`. Or set this to true if it is a concluding thoght in the very end of the lesson (this case applies only to one VERY last thought). Cannot be 'true' for ALL the elements in one list. HAS to be 'true' if starts with 'Recommendation' or similar and isn't a part of the buller list.
+        * `isRecommendation` (boolean, optional): If this paragraph is a 'recommendation' within a numbered list item, set this to `true`. Or set this to true if it is a concluding thoght in the very end of the lesson (this case applies only to one VERY last thought). Cannot be 'true' for ALL the elements in one list. HAS to be 'true' if starts with 'Recommendation' or similar and isn't a part of the buller list.
 
     3.  **`type: "bullet_list"`**
         * `items` (array of `ListItem`): Can be strings or other nested content blocks.
@@ -2208,42 +2208,32 @@ async def create_onyx_chat_session(persona_id: int, cookies: Dict[str, str]) -> 
         return data.get("chat_session_id") or data.get("chatSessionId")
 
 async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[str, str]) -> str:
-    """Send message via Onyx SSE and collect full assistant answer_piece."""
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    """Send message via Onyx non-streaming simple API and return the full answer."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
         minimal_retrieval = {
             "run_search": "always",
             "real_time": False,
         }
+        payload = {
+            "chat_session_id": chat_session_id,
+            "message": message,
+            "parent_message_id": None,
+            "file_descriptors": [],
+            "user_file_ids": [],
+            "user_folder_ids": [],
+            "prompt_id": None,
+            "search_doc_ids": None,
+            "retrieval_options": minimal_retrieval,
+            "stream_response": False,
+        }
         resp = await client.post(
-            f"{ONYX_API_SERVER_URL}/chat/send-message",
-            json={
-                "chat_session_id": chat_session_id,
-                "message": message,
-                "parent_message_id": None,
-                "file_descriptors": [],
-                "user_file_ids": [],
-                "user_folder_ids": [],
-                "prompt_id": None,
-                "search_doc_ids": None,
-                "retrieval_options": minimal_retrieval,
-            },
+            f"{ONYX_API_SERVER_URL}/chat/send-message-simple-api",
+            json=payload,
             cookies=cookies,
         )
         resp.raise_for_status()
-        full_answer = ""
-        async for line in resp.aiter_lines():
-            if not line or line.startswith("data: ") is False:
-                continue
-            raw = line.removeprefix("data: ")
-            if raw.strip() == "[DONE]":
-                break
-            try:
-                packet = json.loads(raw)
-            except Exception:
-                continue
-            if packet.get("answer_piece"):
-                full_answer += packet["answer_piece"]
-        return full_answer
+        data = resp.json()
+        return data.get("answer") or data.get("answer_citationless") or ""
 
 # ------------ utility to parse markdown outline (very simple) -------------
 
