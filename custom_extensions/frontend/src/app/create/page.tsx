@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { FileText, Sparkles, UploadCloud } from "lucide-react";
+import { FileText, Sparkles, UploadCloud, Home as HomeIcon } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Card shown on the landing page. It tries to mimic the folder-looking cards
@@ -60,7 +60,7 @@ const OptionCard: React.FC<OptionCardProps> = ({
 export default function DataSourceLanding() {
   return (
     <main
-      className="min-h-screen flex flex-col items-center pt-10 pb-20 px-6"
+      className="min-h-screen flex flex-col items-center pt-24 pb-20 px-6"
       style={{
         background:
           "linear-gradient(180deg, rgba(255,249,245,1) 0%, rgba(236,236,255,1) 30%, rgba(191,215,255,1) 60%, rgba(204,232,255,1) 100%)",
@@ -69,10 +69,10 @@ export default function DataSourceLanding() {
       {/* Top-left home button */}
       <Link
         href="/projects"
-        className="fixed top-4 left-4 flex items-center gap-1 text-sm font-medium bg-white/70 hover:bg-white backdrop-blur rounded-full px-3 py-1 shadow border border-gray-200"
+        className="fixed top-4 left-4 flex items-center gap-1 text-sm font-medium bg-white/70 hover:bg-white text-gray-900 backdrop-blur rounded-full px-3 py-1 shadow border border-gray-200"
       >
-        {/* Using Home icon from Lucide */}
-        <FileText size={14} className="-ml-0.5" />
+        {/* Home icon */}
+        <HomeIcon size={14} className="-ml-0.5" />
         Home
       </Link>
 
