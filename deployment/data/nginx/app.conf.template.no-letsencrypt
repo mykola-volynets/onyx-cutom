@@ -60,6 +60,10 @@ server {
 
         # need to use 1.1 to support chunked transfers
         proxy_http_version 1.1;
+        # Increase timeouts for long-running requests
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
         proxy_buffering off;
 
         # we don't want nginx trying to do something clever with
@@ -78,6 +82,11 @@ server {
         proxy_set_header Host $host;
 
         proxy_http_version 1.1;
+        # Increase timeouts for long-running requests
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
 
         # we don't want nginx trying to do something clever with
         # redirects, we set the Host: header above already.
@@ -102,6 +111,10 @@ server {
         proxy_set_header Host $host;
 
         proxy_http_version 1.1;
+        # Increase timeouts for long-running requests
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
         proxy_buffering off;
         # we don't want nginx trying to do something clever with
         # redirects, we set the Host: header above already.
