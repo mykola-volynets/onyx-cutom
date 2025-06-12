@@ -2227,7 +2227,7 @@ async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[
             "stream_response": False,
         }
         resp = await client.post(
-            f"{ONYX_API_SERVER_URL}/chat/send-message-simple-api",
+            f"{ONYX_API_SERVER_URL}/chat/send-message",
             json=payload,
             cookies=cookies,
         )
