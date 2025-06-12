@@ -2380,7 +2380,8 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
                         pkt = json.loads(line)
                         if "answer_piece" in pkt:
                             piece = pkt["answer_piece"].replace("\\n", "\n")
-                            logger.debug(f"[SSE] piece len={len(piece)}")
+                            # logger.debug(f"[SSE] piece len={len(piece)}")
+                            print(piece)
                             yield f"data: {piece}\n\n"
                     except Exception:
                         continue
