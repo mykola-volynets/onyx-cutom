@@ -11,7 +11,7 @@ import os
 import asyncpg
 from datetime import datetime, timezone
 import httpx
-# import traceback # No longer explicitly calling traceback.print_exc()
+from httpx import HTTPStatusError
 import json
 import uuid
 import shutil
@@ -2226,11 +2226,19 @@ async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[
             "retrieval_options": minimal_retrieval,
             "stream_response": False,
         }
-        resp = await client.post(
-            f"{ONYX_API_SERVER_URL}/chat/send-message",
-            json=payload,
-            cookies=cookies,
-        )
+        # Prefer the non-streaming simplified endpoint if available (much faster and avoids nginx timeouts)
+        simple_url = f"{ONYX_API_SERVER_URL}/api/chat/send-message-simple-api"
+        try:
+            resp = await client.post(simple_url, json=payload, cookies=cookies)
+            if resp.status_code == 404:
+                raise HTTPStatusError("simple api not found", request=resp.request, response=resp)
+        except HTTPStatusError:
+            # Fallback to the generic endpoint (may stream)
+            resp = await client.post(
+                f"{ONYX_API_SERVER_URL}/api/chat/send-message",
+                json=payload,
+                cookies=cookies,
+            )
         resp.raise_for_status()
         # Depending on deployment, Onyx may return SSE stream or JSON.
         ctype = resp.headers.get("content-type", "")
