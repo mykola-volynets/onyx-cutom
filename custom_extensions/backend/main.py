@@ -2369,9 +2369,9 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
             }
             async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=payload, cookies=cookies) as resp:
                 async for line in resp.aiter_lines():
-                    if not line.startswith("data: "):
+                    if not line.startswith("data:"):
                         continue
-                    data_line = line.removeprefix("data: ").strip()
+                    data_line = line.split("data:",1)[1].strip()
                     if data_line == "[DONE]":
                         yield "event: done\ndata: [DONE]\n\n"
                         break
