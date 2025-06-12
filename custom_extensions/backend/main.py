@@ -2369,7 +2369,7 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
             }
             async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=payload, cookies=cookies) as resp:
                 async for line in resp.aiter_lines():
-                    # print(line)
+                    print('\nline: \n', line)
                     # if not line.startswith("data:"):
                     #     continue
                     # data_line = line.split("data:",1)[1].strip()
@@ -2379,10 +2379,11 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
                     if 'answer_piece' in line:
                         try:
                             pkt = json.loads(line)
+                            print('\n pkt: \n', pkt)
                             if "answer_piece" in pkt:
                                 piece = pkt["answer_piece"].replace("\\n", "\n")
                                 # logger.debug(f"[SSE] piece len={len(piece)}")
-                                print(piece)
+                                print('\n piece: \n', piece)
                                 yield f"data: {piece}\n\n"
                         except Exception:
                             continue
