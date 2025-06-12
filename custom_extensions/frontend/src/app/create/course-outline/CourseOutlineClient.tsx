@@ -5,7 +5,7 @@
 // avoid IDE / build noise until shared tsconfig is wired up.
 
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 // Base URL so frontend can reach custom backend through nginx proxy
 const CUSTOM_BACKEND_URL =
@@ -28,6 +28,8 @@ export default function CourseOutlineClient() {
   const [rawOutline, setRawOutline] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   useEffect(() => {
     const fetchPreview = async () => {
@@ -102,7 +104,8 @@ export default function CourseOutlineClient() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      window.location.href = `/projects/view/${data.id}`;
+      // Navigate to the new project view without a full reload
+      router.push(`/projects/view/${data.id}`);
     } catch (e: any) {
       setError(e.message);
     } finally {
