@@ -49,6 +49,8 @@ export default function CourseOutlineClient() {
         if (!res.ok || !res.body) {
           throw new Error(`Bad response ${res.status}`);
         }
+        
+        console.log('\n res: \n', res)
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -57,6 +59,7 @@ export default function CourseOutlineClient() {
           const { value, done } = await reader.read();
           if (done) break;
           const chunk = decoder.decode(value, { stream: true });
+          console.log('\n chunk: \n', chunk)
           // SSE chunks may contain multiple events
           accumulated += chunk;
           const parts = accumulated.split(/\n\n/);
