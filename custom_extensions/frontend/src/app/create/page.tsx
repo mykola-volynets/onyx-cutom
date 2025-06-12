@@ -8,44 +8,53 @@ import { FileText, Sparkles, UploadCloud } from "lucide-react";
 // Card shown on the landing page. It tries to mimic the folder-looking cards
 // from the reference screenshot (image header + label area).
 // ---------------------------------------------------------------------------
-const OptionCard: React.FC<{
+interface OptionCardProps {
   Icon: React.ElementType;
   title: string;
   description: string;
   href?: string;
   disabled?: boolean;
   pillLabel?: string; // e.g. "POPULAR"
-}> = ({ Icon, title, description, href, disabled, pillLabel }) => {
-  const Wrapper = disabled || !href ? React.Fragment : Link;
+}
 
-  return (
-    <Wrapper {...(!(disabled || !href) && { href })}>
-      <div
-        className={`flex flex-col items-center justify-start rounded-xl overflow-hidden border transition-colors shadow-sm w-full h-full text-center ${
-          disabled
-            ? "bg-white/60 text-gray-400 cursor-not-allowed border-gray-300 shadow-none"
-            : "bg-white/80 hover:bg-white text-gray-900 cursor-pointer border-gray-200"
-        }`}
-      >
-        {/* "Folder" header */}
-        <div className="w-full h-28 bg-gradient-to-tr from-indigo-300/60 to-pink-200/60 flex items-center justify-center relative">
-          <Icon size={40} className="text-white drop-shadow-md" />
-          {pillLabel && (
-            <span className="absolute bottom-2 right-2 text-[10px] font-bold bg-white text-indigo-600 rounded-md px-1.5 py-0.5 shadow">
-              {pillLabel}
-            </span>
-          )}
-        </div>
-        {/* Text area */}
-        <div className="flex flex-col items-center gap-1 px-4 py-5">
-          <h3 className="font-semibold text-base sm:text-lg leading-tight">{title}</h3>
-          <p className="text-xs sm:text-sm text-gray-500 max-w-xs leading-normal">
-            {description}
-          </p>
-        </div>
+const OptionCard: React.FC<OptionCardProps> = ({
+  Icon,
+  title,
+  description,
+  href,
+  disabled,
+  pillLabel,
+}: OptionCardProps) => {
+  // Card content shared by both link and non-link versions
+  const cardContent = (
+    <div
+      className={`flex flex-col items-center justify-start rounded-xl overflow-hidden border transition-colors shadow-sm w-full h-full text-center ${
+        disabled
+          ? "bg-white/60 text-gray-400 cursor-not-allowed border-gray-300 shadow-none"
+          : "bg-white/80 hover:bg-white text-gray-900 cursor-pointer border-gray-200"
+      }`}
+    >
+      {/* "Folder" header */}
+      <div className="w-full h-28 bg-gradient-to-tr from-indigo-300/60 to-pink-200/60 flex items-center justify-center relative">
+        <Icon size={40} className="text-white drop-shadow-md" />
+        {pillLabel && (
+          <span className="absolute bottom-2 right-2 text-[10px] font-bold bg-white text-indigo-600 rounded-md px-1.5 py-0.5 shadow">
+            {pillLabel}
+          </span>
+        )}
       </div>
-    </Wrapper>
+      {/* Text area */}
+      <div className="flex flex-col items-center gap-1 px-4 py-5">
+        <h3 className="font-semibold text-base sm:text-lg leading-tight">{title}</h3>
+        <p className="text-xs sm:text-sm text-gray-500 max-w-xs leading-normal">
+          {description}
+        </p>
+      </div>
+    </div>
   );
+
+  if (disabled || !href) return cardContent;
+  return <Link href={href}>{cardContent}</Link>;
 };
 
 export default function DataSourceLanding() {
