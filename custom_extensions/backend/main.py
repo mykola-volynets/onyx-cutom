@@ -2186,7 +2186,7 @@ async def get_contentbuilder_persona_id(cookies: Dict[str, str]) -> int:
     if _CONTENTBUILDER_PERSONA_CACHE is not None:
         return _CONTENTBUILDER_PERSONA_CACHE
     async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(f"{ONYX_API_SERVER_URL}/api/persona", cookies=cookies)
+        resp = await client.get(f"{ONYX_API_SERVER_URL}/persona", cookies=cookies)
         resp.raise_for_status()
         personas = resp.json()
         # naive: first persona marked is_default_persona and has name 'ContentBuilder'
@@ -2199,7 +2199,7 @@ async def get_contentbuilder_persona_id(cookies: Dict[str, str]) -> int:
 async def create_onyx_chat_session(persona_id: int, cookies: Dict[str, str]) -> str:
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.post(
-            f"{ONYX_API_SERVER_URL}/api/chat/create-chat-session",
+            f"{ONYX_API_SERVER_URL}/chat/create-chat-session",
             json={"persona_id": persona_id, "description": None},
             cookies=cookies,
         )
@@ -2211,7 +2211,7 @@ async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[
     """Send message via Onyx SSE and collect full assistant answer_piece."""
     async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(
-            f"{ONYX_API_SERVER_URL}/api/chat/send-message",
+            f"{ONYX_API_SERVER_URL}/chat/send-message",
             json={
                 "chat_session_id": chat_session_id,
                 "message": message,
