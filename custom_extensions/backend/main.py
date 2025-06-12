@@ -2329,9 +2329,8 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
     logger.info(f"[wizard_outline_preview] prompt='{payload.prompt[:50]}...' modules={payload.modules} lessonsPerModule={payload.lessonsPerModule} lang={payload.language}")
     cookies = {ONYX_SESSION_COOKIE_NAME: request.cookies.get(ONYX_SESSION_COOKIE_NAME)}
 
-    # decide streaming
-    do_stream = request.query_params.get("stream", "false").lower() == "true"
-
+    # We now always accumulate the full answer first and return it at once (no SSE streaming)
+    
     persona_id = await get_contentbuilder_persona_id(cookies)
     chat_id = await create_onyx_chat_session(persona_id, cookies)
 
@@ -2346,50 +2345,40 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
         })
     )
 
-    if not do_stream:
-        assistant_reply = await stream_chat_message(chat_id, wizard_message, cookies)
-        modules_preview = _parse_outline_markdown(assistant_reply)
-        return {"modules": modules_preview, "raw": assistant_reply}
+    # --- collect streamed answer pieces ---
+    assistant_reply: str = ""
+    async with httpx.AsyncClient(timeout=None) as client:
+        send_payload = {
+            "chat_session_id": chat_id,
+            "message": wizard_message,
+            "parent_message_id": None,
+            "file_descriptors": [],
+            "user_file_ids": [],
+            "user_folder_ids": [],
+            "prompt_id": None,
+            "search_doc_ids": None,
+            "retrieval_options": {"run_search": "always", "real_time": False},
+            "stream_response": True,
+        }
+        async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=send_payload, cookies=cookies) as resp:
+            async for raw_line in resp.aiter_lines():
+                if not raw_line:
+                    continue
+                # Onyx may send either plain JSON lines or SSE lines beginning with "data: "
+                line = raw_line.strip()
+                if line.startswith("data:"):
+                    line = line.split("data:", 1)[1].strip()
+                if line == "[DONE]":
+                    break
+                try:
+                    pkt = json.loads(line)
+                    if "answer_piece" in pkt:
+                        assistant_reply += pkt["answer_piece"].replace("\\n", "\n")
+                except Exception:
+                    continue
 
-    # ---- streaming path ----
-
-    async def event_generator() -> typing.AsyncIterator[str]:
-        async with httpx.AsyncClient(timeout=None) as client:
-            payload = {
-                "chat_session_id": chat_id,
-                "message": wizard_message,
-                "parent_message_id": None,
-                "file_descriptors": [],
-                "user_file_ids": [],
-                "user_folder_ids": [],
-                "prompt_id": None,
-                "search_doc_ids": None,
-                "retrieval_options": {"run_search": "always", "real_time": False},
-                "stream_response": True,
-            }
-            async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=payload, cookies=cookies) as resp:
-                async for line in resp.aiter_lines():
-                    print('\nline: \n', line)
-                    # if not line.startswith("data:"):
-                    #     continue
-                    # data_line = line.split("data:",1)[1].strip()
-                    if line == "[DONE]":
-                        yield "event: done\ndata: [DONE]\n\n"
-                        break
-                    if 'answer_piece' in line:
-                        try:
-                            pkt = json.loads(line)
-                            print('\n pkt: \n', pkt)
-                            if "answer_piece" in pkt:
-                                piece = pkt["answer_piece"].replace("\\n", "\n")
-                                # logger.debug(f"[SSE] piece len={len(piece)}")
-                                if piece:
-                                    print('\n piece: \n', piece)
-                                    yield f"data: {piece}\n\n"
-                        except Exception:
-                            continue
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    modules_preview = _parse_outline_markdown(assistant_reply)
+    return {"modules": modules_preview, "raw": assistant_reply}
 
 async def _ensure_training_plan_template(pool: asyncpg.Pool) -> int:
     async with pool.acquire() as conn:
