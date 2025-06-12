@@ -2372,12 +2372,19 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
                     break
                 try:
                     pkt = json.loads(line)
+                    print('\n pkt: \n', pkt)
                     if "answer_piece" in pkt:
+                        print('\n piece: \n', pkt["answer_piece"].replace("\\n", "\n"))
                         assistant_reply += pkt["answer_piece"].replace("\\n", "\n")
                 except Exception:
                     continue
 
+    print('\n assistant_reply: \n', assistant_reply)
+
     modules_preview = _parse_outline_markdown(assistant_reply)
+
+    print('\n modules_preview: \n', modules_preview)
+
     return {"modules": modules_preview, "raw": assistant_reply}
 
 async def _ensure_training_plan_template(pool: asyncpg.Pool) -> int:
