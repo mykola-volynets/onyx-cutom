@@ -29,7 +29,7 @@ export default function CourseOutlineClient() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/chat/preview", {
+        const res = await fetch("/api/custom/course-outline/preview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt, modules, lessonsPerModule, language }),
@@ -47,7 +47,7 @@ export default function CourseOutlineClient() {
   }, []);
 
   const handleModuleChange = (index: number, value: string) => {
-    setPreview((prev) => {
+    setPreview((prev: ModulePreview[]) => {
       const copy = [...prev];
       copy[index].title = value;
       return copy;
@@ -58,13 +58,32 @@ export default function CourseOutlineClient() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/custom/projects/add", {
+      const outlineForBackend = {
+        mainTitle: prompt,
+        sections: preview.map((m: ModulePreview, idx: number) => ({
+          id: `№${idx + 1}`,
+          title: m.title,
+          totalHours: 0,
+          lessons: m.lessons.map((les: string) => ({
+            title: les,
+            check: { type: "no", text: "" },
+            contentAvailable: { type: "no", text: "" },
+            source: "",
+            hours: 0,
+          })),
+        })),
+        detectedLanguage: language,
+      };
+
+      const res = await fetch("/api/custom/course-outline/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          projectName: prompt,
-          design_template_id: 1, // TODO: replace with real id
-          aiResponse: JSON.stringify({ preview }),
+          prompt,
+          modules,
+          lessonsPerModule,
+          language,
+          editedOutline: outlineForBackend,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -103,7 +122,7 @@ export default function CourseOutlineClient() {
           {error && <p className="text-red-600">{error}</p>}
           {!loading && preview.length > 0 && (
             <div className="flex flex-col gap-4">
-              {preview.map((mod, idx) => (
+              {preview.map((mod: ModulePreview, idx: number) => (
                 <div key={mod.id} className="bg-white border rounded-lg p-4 shadow-sm">
                   <input
                     type="text"
@@ -112,7 +131,7 @@ export default function CourseOutlineClient() {
                     className="font-medium text-lg w-full border-none focus:ring-0"
                   />
                   <ul className="list-disc pl-6 mt-2 text-sm text-gray-700">
-                    {mod.lessons.map((les) => (
+                    {mod.lessons.map((les: string) => (
                       <li key={les}>{les}</li>
                     ))}
                   </ul>

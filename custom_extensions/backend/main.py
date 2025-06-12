@@ -2162,3 +2162,169 @@ ProjectDB.model_rebuild()
 MicroProductApiResponse.model_rebuild()
 ProjectDetailForEditResponse.model_rebuild()
 ProjectUpdateRequest.model_rebuild()
+
+# ========================= Wizard Course Outline Endpoints =========================
+
+class OutlineWizardPreview(BaseModel):
+    prompt: str
+    modules: int
+    lessonsPerModule: str
+    language: str = "en"
+
+class OutlineWizardFinalize(BaseModel):
+    prompt: str
+    modules: int
+    lessonsPerModule: str
+    language: str = "en"
+    editedOutline: Dict[str, Any]
+
+_CONTENTBUILDER_PERSONA_CACHE: Optional[int] = None
+
+async def get_contentbuilder_persona_id(cookies: Dict[str, str]) -> int:
+    """Return persona id of the default ContentBuilder assistant (cached)."""
+    global _CONTENTBUILDER_PERSONA_CACHE
+    if _CONTENTBUILDER_PERSONA_CACHE is not None:
+        return _CONTENTBUILDER_PERSONA_CACHE
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{ONYX_API_SERVER_URL}/api/persona", cookies=cookies)
+        resp.raise_for_status()
+        personas = resp.json()
+        # naive: first persona marked is_default_persona and has name 'ContentBuilder'
+        for p in personas:
+            if p.get("is_default_persona") or "contentbuilder" in p.get("name", "").lower():
+                _CONTENTBUILDER_PERSONA_CACHE = p["id"]
+                return _CONTENTBUILDER_PERSONA_CACHE
+    raise HTTPException(status_code=500, detail="Could not locate ContentBuilder persona")
+
+async def create_onyx_chat_session(persona_id: int, cookies: Dict[str, str]) -> str:
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.post(
+            f"{ONYX_API_SERVER_URL}/api/chat/create-chat-session",
+            json={"persona_id": persona_id, "description": None},
+            cookies=cookies,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("chat_session_id") or data.get("chatSessionId")
+
+async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[str, str]) -> str:
+    """Send message via Onyx SSE and collect full assistant answer_piece."""
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        resp = await client.post(
+            f"{ONYX_API_SERVER_URL}/api/chat/send-message",
+            json={
+                "chat_session_id": chat_session_id,
+                "message": message,
+                "parent_message_id": None,
+                "file_descriptors": [],
+                "retrieval_options": None,
+            },
+            cookies=cookies,
+        )
+        resp.raise_for_status()
+        full_answer = ""
+        async for line in resp.aiter_lines():
+            if not line or line.startswith("data: ") is False:
+                continue
+            raw = line.removeprefix("data: ")
+            if raw.strip() == "[DONE]":
+                break
+            try:
+                packet = json.loads(raw)
+            except Exception:
+                continue
+            if packet.get("answer_piece"):
+                full_answer += packet["answer_piece"]
+        return full_answer
+
+# ------------ utility to parse markdown outline (very simple) -------------
+
+def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
+    modules: List[Dict[str, Any]] = []
+    current = None
+    for line in md.splitlines():
+        line = line.strip()
+        if line.startswith("## "):
+            # new module
+            title_part = line.lstrip("# ")
+            current = {"id": f"mod{len(modules)+1}", "title": title_part.split(":", 1)[-1].strip(), "lessons": []}
+            modules.append(current)
+        elif current and (line.startswith("- ") or line.startswith("1.") or line.startswith("* ") ) and "**" in line:
+            # lesson line
+            lesson_title = line.split("**", 2)[1]
+            current["lessons"].append(lesson_title)
+    return modules
+
+# ----------------------- ENDPOINTS ---------------------------------------
+
+@app.post("/api/custom/course-outline/preview")
+async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request):
+    cookies = {ONYX_SESSION_COOKIE_NAME: request.cookies.get(ONYX_SESSION_COOKIE_NAME)}
+    if not cookies[ONYX_SESSION_COOKIE_NAME]:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    persona_id = await get_contentbuilder_persona_id(cookies)
+    chat_id = await create_onyx_chat_session(persona_id, cookies)
+    wizard_message = (
+        "WIZARD_REQUEST\n" +
+        json.dumps({
+            "product": "Course Outline",
+            "prompt": payload.prompt,
+            "modules": payload.modules,
+            "lessonsPerModule": payload.lessonsPerModule,
+            "language": payload.language,
+        })
+    )
+    assistant_reply = await stream_chat_message(chat_id, wizard_message, cookies)
+    modules_preview = _parse_outline_markdown(assistant_reply)
+    return {"modules": modules_preview, "raw": assistant_reply}
+
+async def _ensure_training_plan_template(pool: asyncpg.Pool) -> int:
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT id FROM design_templates WHERE component_name = $1 LIMIT 1", COMPONENT_NAME_TRAINING_PLAN)
+        if row:
+            return row["id"]
+        # create minimal template
+        row = await conn.fetchrow(
+            """
+            INSERT INTO design_templates (template_name, template_structuring_prompt, microproduct_type, component_name)
+            VALUES ($1, $2, $3, $4) RETURNING id;
+            """,
+            "Training Plan", DEFAULT_TRAINING_PLAN_JSON_EXAMPLE_FOR_LLM, "Training Plan", COMPONENT_NAME_TRAINING_PLAN
+        )
+        return row["id"]
+
+@app.post("/api/custom/course-outline/finalize")
+async def wizard_outline_finalize(payload: OutlineWizardFinalize, request: Request, pool: asyncpg.Pool = Depends(get_db_pool)):
+    cookies = {ONYX_SESSION_COOKIE_NAME: request.cookies.get(ONYX_SESSION_COOKIE_NAME)}
+    if not cookies[ONYX_SESSION_COOKIE_NAME]:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    persona_id = await get_contentbuilder_persona_id(cookies)
+    chat_id = await create_onyx_chat_session(persona_id, cookies)
+    wizard_message = (
+        "WIZARD_REQUEST\n" +
+        json.dumps({
+            "product": "Course Outline",
+            "prompt": payload.prompt,
+            "modules": payload.modules,
+            "lessonsPerModule": payload.lessonsPerModule,
+            "language": payload.language,
+            "editedOutline": payload.editedOutline,
+        })
+    )
+    assistant_reply = await stream_chat_message(chat_id, wizard_message, cookies)
+
+    # ensure template exists
+    template_id = await _ensure_training_plan_template(pool)
+
+    project_request = ProjectCreateRequest(
+        projectName=payload.prompt,
+        design_template_id=template_id,
+        microProductName=None,
+        aiResponse=assistant_reply,
+        chatSessionId=uuid.UUID(chat_id) if chat_id else None,
+    )
+    onyx_user_id = await get_current_onyx_user_id(request)
+    project_db = await add_project_to_custom_db(project_request, onyx_user_id, pool)  # type: ignore
+    return project_db
+
+# ======================= End Wizard Section ==============================
