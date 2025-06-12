@@ -7,6 +7,10 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+// Base URL so frontend can reach custom backend through nginx proxy
+const CUSTOM_BACKEND_URL =
+  process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || "/api/custom-projects-backend";
+
 interface ModulePreview {
   id: string;
   title: string;
@@ -29,7 +33,7 @@ export default function CourseOutlineClient() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/custom/course-outline/preview", {
+        const res = await fetch(`${CUSTOM_BACKEND_URL}/course-outline/preview`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt, modules, lessonsPerModule, language }),
@@ -75,7 +79,7 @@ export default function CourseOutlineClient() {
         detectedLanguage: language,
       };
 
-      const res = await fetch("/api/custom/course-outline/finalize", {
+      const res = await fetch(`${CUSTOM_BACKEND_URL}/course-outline/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
