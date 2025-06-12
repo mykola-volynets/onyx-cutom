@@ -70,6 +70,14 @@ export default function CourseOutlineClient() {
     });
   };
 
+  const handleLessonChange = (modIdx: number, lessonIdx: number, value: string) => {
+    setPreview((prev: ModulePreview[]) => {
+      const copy = [...prev];
+      copy[modIdx].lessons[lessonIdx] = value;
+      return copy;
+    });
+  };
+
   const handleGenerateFinal = async () => {
     setLoading(true);
     setError(null);
@@ -147,9 +155,16 @@ export default function CourseOutlineClient() {
                     onChange={(e) => handleModuleChange(idx, e.target.value)}
                     className="font-medium text-lg w-full border-none focus:ring-0"
                   />
-                  <ul className="list-disc pl-6 mt-2 text-sm text-gray-700">
-                    {mod.lessons.map((les: string) => (
-                      <li key={les}>{les}</li>
+                  <ul className="list-disc pl-6 mt-2 text-sm text-gray-800 space-y-1">
+                    {mod.lessons.map((les: string, lIdx: number) => (
+                      <li key={`m${idx}-l${lIdx}`} className="list-none">
+                        <input
+                          type="text"
+                          value={les}
+                          onChange={(e) => handleLessonChange(idx, lIdx, e.target.value)}
+                          className="w-full border-b border-gray-300 focus:border-brand-primary focus:outline-none text-sm py-0.5 bg-transparent"
+                        />
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -167,14 +182,14 @@ export default function CourseOutlineClient() {
         <section className="flex flex-col gap-3">
           <h2 className="text-xl font-semibold">Designs</h2>
           <div className="flex gap-4">
-            <button className="px-4 py-2 rounded-md border focus:outline-none bg-blue-600 text-white">Default</button>
+            <button className="px-4 py-2 rounded-md border focus:outline-none bg-brand-primary text-white hover:bg-brand-primary-hover transition-colors">Default</button>
           </div>
         </section>
 
         <button
           type="button"
           onClick={handleGenerateFinal}
-          className="self-start mt-4 px-6 py-3 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover disabled:opacity-50"
+          className="self-start mt-4 px-6 py-3 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover active:scale-95 shadow-lg transition transform disabled:opacity-50"
           disabled={loading}
         >
           Generate
