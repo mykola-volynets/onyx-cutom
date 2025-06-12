@@ -2210,62 +2210,64 @@ async def create_onyx_chat_session(persona_id: int, cookies: Dict[str, str]) -> 
 async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[str, str]) -> str:
     """Send message via Onyx non-streaming simple API and return the full answer."""
     logger.debug(f"[stream_chat_message] chat_id={chat_session_id} len(message)={len(message)}")
-    minimal_retrieval = {
-        "run_search": "always",
-        "real_time": False,
-    }
-    payload = {
-        "chat_session_id": chat_session_id,
-        "message": message,
-        "parent_message_id": None,
-        "file_descriptors": [],
-        "user_file_ids": [],
-        "user_folder_ids": [],
-        "prompt_id": None,
-        "search_doc_ids": None,
-        "retrieval_options": minimal_retrieval,
-        "stream_response": False,
-    }
-    # Prefer the non-streaming simplified endpoint if available (much faster and avoids nginx timeouts)
-    simple_url = f"{ONYX_API_SERVER_URL}/chat/send-message-simple-api"
-    logger.debug(f"[stream_chat_message] POST {simple_url} (preferred) ...")
-    try:
-        resp = await client.post(simple_url, json=payload, cookies=cookies)
-        if resp.status_code == 404:
-            raise HTTPStatusError("simple api not found", request=resp.request, response=resp)
-    except HTTPStatusError:
-        # Fallback to the generic endpoint (may stream)
-        logger.debug("[stream_chat_message] simple-api not available, falling back to generic endpoint")
-        resp = await client.post(
-            f"{ONYX_API_SERVER_URL}/chat/send-message",
-            json=payload,
-            cookies=cookies,
-        )
-    logger.debug(f"[stream_chat_message] Response status={resp.status_code} ctype={resp.headers.get('content-type')}")
-    resp.raise_for_status()
-    # Depending on deployment, Onyx may return SSE stream or JSON.
-    ctype = resp.headers.get("content-type", "")
-    if ctype.startswith("text/event-stream"):
-        full_answer = ""
-        async for line in resp.aiter_lines():
-            if not line or not line.startswith("data: "):
-                continue
-            payload = line.removeprefix("data: ").strip()
-            if payload == "[DONE]":
-                break
-            try:
-                packet = json.loads(payload)
-            except Exception:
-                continue
-            if packet.get("answer_piece"):
-                full_answer += packet["answer_piece"]
-        return full_answer
-    # Fallback JSON response
-    try:
-        data = resp.json()
-        return data.get("answer") or data.get("answer_citationless") or ""
-    except Exception:
-        return resp.text.strip()
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        minimal_retrieval = {
+            "run_search": "always",
+            "real_time": False,
+        }
+        payload = {
+            "chat_session_id": chat_session_id,
+            "message": message,
+            "parent_message_id": None,
+            "file_descriptors": [],
+            "user_file_ids": [],
+            "user_folder_ids": [],
+            "prompt_id": None,
+            "search_doc_ids": None,
+            "retrieval_options": minimal_retrieval,
+            "stream_response": False,
+        }
+        # Prefer the non-streaming simplified endpoint if available (much faster and avoids nginx timeouts)
+        simple_url = f"{ONYX_API_SERVER_URL}/chat/send-message-simple-api"
+        logger.debug(f"[stream_chat_message] POST {simple_url} (preferred) ...")
+        try:
+            resp = await client.post(simple_url, json=payload, cookies=cookies)
+            if resp.status_code == 404:
+                raise HTTPStatusError("simple api not found", request=resp.request, response=resp)
+        except HTTPStatusError:
+            logger.debug("[stream_chat_message] simple-api not available, falling back to generic endpoint")
+            # Fallback to the generic endpoint (may stream)
+            resp = await client.post(
+                f"{ONYX_API_SERVER_URL}/chat/send-message",
+                json=payload,
+                cookies=cookies,
+            )
+        logger.debug(f"[stream_chat_message] Response status={resp.status_code} ctype={resp.headers.get('content-type')}")
+        resp.raise_for_status()
+        # Depending on deployment, Onyx may return SSE stream or JSON.
+        ctype = resp.headers.get("content-type", "")
+        if ctype.startswith("text/event-stream"):
+            full_answer = ""
+            async for line in resp.aiter_lines():
+                if not line or not line.startswith("data: "):
+                    continue
+                payload = line.removeprefix("data: ").strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    packet = json.loads(payload)
+                except Exception:
+                    continue
+                if packet.get("answer_piece"):
+                    full_answer += packet["answer_piece"]
+            return full_answer
+        # Fallback JSON response
+        try:
+            data = resp.json()
+            return data.get("answer") or data.get("answer_citationless") or ""
+        except Exception:
+            return resp.text.strip()
 
 # ------------ utility to parse markdown outline (very simple) -------------
 
