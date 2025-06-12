@@ -132,9 +132,9 @@ export default function CourseOutlineClient() {
         <h1 className="text-3xl font-bold text-center">Course Outline Preview</h1>
 
         <div className="bg-white border rounded-lg p-6 shadow-sm flex flex-col gap-2">
-          <span className="text-sm text-gray-500">Prompt</span>
+          <span className="text-sm text-black">Prompt</span>
           <p className="font-medium">{prompt}</p>
-          <div className="flex gap-4 text-sm text-gray-600 flex-wrap mt-2">
+          <div className="flex gap-4 text-sm text-black flex-wrap mt-2">
             <span>Modules: {modules}</span>
             <span>Lessons/Module: {lessonsPerModule}</span>
             <span>Language: {language.toUpperCase()}</span>
@@ -143,7 +143,7 @@ export default function CourseOutlineClient() {
 
         <section className="flex flex-col gap-6">
           <h2 className="text-xl font-semibold">Outline</h2>
-          {loading && <p>Generating preview...</p>}
+          {loading && <p className="text-black">Generating preview...</p>}
           {error && <p className="text-red-600">{error}</p>}
           {!loading && preview.length > 0 && (
             <div className="flex flex-col gap-4">
@@ -153,16 +153,16 @@ export default function CourseOutlineClient() {
                     type="text"
                     value={mod.title}
                     onChange={(e) => handleModuleChange(idx, e.target.value)}
-                    className="font-medium text-lg w-full border-none focus:ring-0"
+                    className="font-medium text-lg w-full border-none focus:ring-0 text-black"
                   />
-                  <ul className="list-disc pl-6 mt-2 text-sm text-gray-800 space-y-1">
+                  <ul className="list-disc pl-6 mt-2 text-sm text-black space-y-1">
                     {mod.lessons.map((les: string, lIdx: number) => (
                       <li key={`m${idx}-l${lIdx}`} className="list-none">
                         <input
                           type="text"
                           value={les}
                           onChange={(e) => handleLessonChange(idx, lIdx, e.target.value)}
-                          className="w-full border-b border-gray-300 focus:border-brand-primary focus:outline-none text-sm py-0.5 bg-transparent"
+                          className="w-full border-none focus:outline-none text-sm py-0.5 bg-transparent text-black"
                         />
                       </li>
                     ))}
