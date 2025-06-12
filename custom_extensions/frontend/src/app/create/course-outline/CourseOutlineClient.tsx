@@ -5,6 +5,8 @@
 // avoid IDE / build noise until shared tsconfig is wired up.
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 // Base URL so frontend can reach custom backend through nginx proxy
@@ -60,7 +62,8 @@ export default function CourseOutlineClient() {
       }
     };
     fetchPreview();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prompt, modules, lessonsPerModule, language]);
 
   const handleModuleChange = (index: number, value: string) => {
     setPreview((prev: ModulePreview[]) => {
@@ -129,18 +132,57 @@ export default function CourseOutlineClient() {
         background: "linear-gradient(180deg, #FFFFFF 0%, #E4ECFF 30%, #BFD7FF 65%, #CCE8FF 100%)",
       }}
     >
-      <div className="w-full max-w-4xl flex flex-col gap-6">
-        <h1 className="text-3xl font-bold text-center">Course Outline Preview</h1>
+      <div className="w-full max-w-3xl flex flex-col gap-6 text-gray-900 relative">
+        {/* Back button */}
+        <Link
+          href="/create"
+          className="absolute top-6 left-6 flex items-center gap-1 text-sm text-brand-primary hover:text-brand-primary-hover rounded-full px-3 py-1 border border-gray-300 bg-white"
+        >
+          <ArrowLeft size={14} /> Back
+        </Link>
 
-        <div className="bg-white border rounded-xl p-6 shadow-sm flex flex-col gap-2">
-          <span className="text-sm text-black">Prompt</span>
-          <p className="font-medium">{prompt}</p>
-          <div className="flex gap-4 text-sm text-black flex-wrap mt-2">
-            <span>Modules: {modules}</span>
-            <span>Lessons/Module: {lessonsPerModule}</span>
-            <span>Language: {language.toUpperCase()}</span>
-          </div>
+        {/* Page title */}
+        <h1 className="text-5xl font-semibold text-center text-black mt-10">Generate</h1>
+
+        {/* Controls */}
+        <div className="flex flex-wrap justify-center gap-2">
+          <select
+            value={modules}
+            onChange={(e) => setModules(Number(e.target.value))}
+            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-black"
+          >
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>{n} Modules</option>
+            ))}
+          </select>
+          <select
+            value={lessonsPerModule}
+            onChange={(e) => setLessonsPerModule(e.target.value)}
+            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-black"
+          >
+            {["1-2", "3-4", "5-7", "8-10"].map((rng) => (
+              <option key={rng} value={rng}>{rng} per module</option>
+            ))}
+          </select>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="px-4 py-2 rounded-full border border-gray-300 bg-white/90 text-sm text-black"
+          >
+            <option value="en">English</option>
+            <option value="uk">Ukrainian</option>
+            <option value="es">Spanish</option>
+            <option value="ru">Russian</option>
+          </select>
         </div>
+
+        {/* Prompt textarea */}
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="w-full border border-gray-300 rounded-md p-3 h-14 resize-none bg-white/90 placeholder-gray-500"
+          placeholder="Describe what you'd like to make"
+        />
 
         <section className="flex flex-col gap-6">
           <h2 className="text-xl font-semibold">Outline</h2>
