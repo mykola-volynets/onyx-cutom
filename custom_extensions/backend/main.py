@@ -2209,64 +2209,68 @@ async def create_onyx_chat_session(persona_id: int, cookies: Dict[str, str]) -> 
 
 async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[str, str]) -> str:
     """Send message via Onyx non-streaming simple API and return the full answer."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        minimal_retrieval = {
-            "run_search": "always",
-            "real_time": False,
-        }
-        payload = {
-            "chat_session_id": chat_session_id,
-            "message": message,
-            "parent_message_id": None,
-            "file_descriptors": [],
-            "user_file_ids": [],
-            "user_folder_ids": [],
-            "prompt_id": None,
-            "search_doc_ids": None,
-            "retrieval_options": minimal_retrieval,
-            "stream_response": False,
-        }
-        # Prefer the non-streaming simplified endpoint if available (much faster and avoids nginx timeouts)
-        simple_url = f"{ONYX_API_SERVER_URL}/chat/send-message-simple-api"
-        try:
-            resp = await client.post(simple_url, json=payload, cookies=cookies)
-            if resp.status_code == 404:
-                raise HTTPStatusError("simple api not found", request=resp.request, response=resp)
-        except HTTPStatusError:
-            # Fallback to the generic endpoint (may stream)
-            resp = await client.post(
-                f"{ONYX_API_SERVER_URL}/chat/send-message",
-                json=payload,
-                cookies=cookies,
-            )
-        resp.raise_for_status()
-        # Depending on deployment, Onyx may return SSE stream or JSON.
-        ctype = resp.headers.get("content-type", "")
-        if ctype.startswith("text/event-stream"):
-            full_answer = ""
-            async for line in resp.aiter_lines():
-                if not line or not line.startswith("data: "):
-                    continue
-                payload = line.removeprefix("data: ").strip()
-                if payload == "[DONE]":
-                    break
-                try:
-                    packet = json.loads(payload)
-                except Exception:
-                    continue
-                if packet.get("answer_piece"):
-                    full_answer += packet["answer_piece"]
-            return full_answer
-        # Fallback JSON response
-        try:
-            data = resp.json()
-            return data.get("answer") or data.get("answer_citationless") or ""
-        except Exception:
-            return resp.text.strip()
+    logger.debug(f"[stream_chat_message] chat_id={chat_session_id} len(message)={len(message)}")
+    minimal_retrieval = {
+        "run_search": "always",
+        "real_time": False,
+    }
+    payload = {
+        "chat_session_id": chat_session_id,
+        "message": message,
+        "parent_message_id": None,
+        "file_descriptors": [],
+        "user_file_ids": [],
+        "user_folder_ids": [],
+        "prompt_id": None,
+        "search_doc_ids": None,
+        "retrieval_options": minimal_retrieval,
+        "stream_response": False,
+    }
+    # Prefer the non-streaming simplified endpoint if available (much faster and avoids nginx timeouts)
+    simple_url = f"{ONYX_API_SERVER_URL}/chat/send-message-simple-api"
+    logger.debug(f"[stream_chat_message] POST {simple_url} (preferred) ...")
+    try:
+        resp = await client.post(simple_url, json=payload, cookies=cookies)
+        if resp.status_code == 404:
+            raise HTTPStatusError("simple api not found", request=resp.request, response=resp)
+    except HTTPStatusError:
+        # Fallback to the generic endpoint (may stream)
+        logger.debug("[stream_chat_message] simple-api not available, falling back to generic endpoint")
+        resp = await client.post(
+            f"{ONYX_API_SERVER_URL}/chat/send-message",
+            json=payload,
+            cookies=cookies,
+        )
+    logger.debug(f"[stream_chat_message] Response status={resp.status_code} ctype={resp.headers.get('content-type')}")
+    resp.raise_for_status()
+    # Depending on deployment, Onyx may return SSE stream or JSON.
+    ctype = resp.headers.get("content-type", "")
+    if ctype.startswith("text/event-stream"):
+        full_answer = ""
+        async for line in resp.aiter_lines():
+            if not line or not line.startswith("data: "):
+                continue
+            payload = line.removeprefix("data: ").strip()
+            if payload == "[DONE]":
+                break
+            try:
+                packet = json.loads(payload)
+            except Exception:
+                continue
+            if packet.get("answer_piece"):
+                full_answer += packet["answer_piece"]
+        return full_answer
+    # Fallback JSON response
+    try:
+        data = resp.json()
+        return data.get("answer") or data.get("answer_citationless") or ""
+    except Exception:
+        return resp.text.strip()
 
 # ------------ utility to parse markdown outline (very simple) -------------
 
 def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
+    logger.debug(f"[_parse_outline_markdown] Raw MD length={len(md)}")
     modules: List[Dict[str, Any]] = []
     current = None
     for line in md.splitlines():
@@ -2297,6 +2301,7 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
             continue
 
     if not modules:
+        logger.debug("[_parse_outline_markdown] No module headings detected, using fallback parser")
         tmp_module = {"id": "mod1", "title": "Outline", "lessons": []}
         for line in md.splitlines():
             if line.strip():
@@ -2317,11 +2322,12 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
 
 @app.post("/api/custom/course-outline/preview")
 async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request):
+    logger.info(f"[wizard_outline_preview] prompt='{payload.prompt[:50]}...' modules={payload.modules} lessonsPerModule={payload.lessonsPerModule} lang={payload.language}")
     cookies = {ONYX_SESSION_COOKIE_NAME: request.cookies.get(ONYX_SESSION_COOKIE_NAME)}
-    if not cookies[ONYX_SESSION_COOKIE_NAME]:
-        raise HTTPException(status_code=401, detail="Not authenticated")
     persona_id = await get_contentbuilder_persona_id(cookies)
+    logger.debug(f"[wizard_outline_preview] Using persona_id={persona_id}")
     chat_id = await create_onyx_chat_session(persona_id, cookies)
+    logger.debug(f"[wizard_outline_preview] Created chat_session_id={chat_id}")
     wizard_message = (
         "WIZARD_REQUEST\n" +
         json.dumps({
@@ -2332,8 +2338,11 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
             "language": payload.language,
         })
     )
+    logger.debug(f"[wizard_outline_preview] Wizard message length={len(wizard_message)}")
     assistant_reply = await stream_chat_message(chat_id, wizard_message, cookies)
+    logger.debug(f"[wizard_outline_preview] Assistant reply length={len(assistant_reply)}")
     modules_preview = _parse_outline_markdown(assistant_reply)
+    logger.debug(f"[wizard_outline_preview] Parsed modules count={len(modules_preview)}")
     return {"modules": modules_preview, "raw": assistant_reply}
 
 async def _ensure_training_plan_template(pool: asyncpg.Pool) -> int:
