@@ -25,6 +25,7 @@ export default function CourseOutlineClient() {
   const [language, setLanguage] = useState<string>(params.get("lang") || "en");
 
   const [preview, setPreview] = useState<ModulePreview[]>([]);
+  const [rawOutline, setRawOutline] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +56,7 @@ export default function CourseOutlineClient() {
         const data = await res.json();
         console.log("[CourseOutline] preview json", data);
         setPreview(data.modules || []);
+        setRawOutline(data.raw || "");
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -156,6 +158,12 @@ export default function CourseOutlineClient() {
                 </div>
               ))}
             </div>
+          )}
+
+          {!loading && preview.length === 1 && preview[0].lessons.length === 0 && rawOutline && (
+            <pre className="whitespace-pre-wrap bg-gray-50 p-4 border rounded">
+              {rawOutline}
+            </pre>
           )}
         </section>
 
