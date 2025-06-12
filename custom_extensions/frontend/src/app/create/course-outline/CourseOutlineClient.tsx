@@ -123,15 +123,16 @@ export default function CourseOutlineClient() {
 
   return (
     <main
-      className="min-h-screen p-6 flex flex-col items-center"
+      /* Top-to-bottom pastel blue gradient identical to the reference */
+      className="min-h-screen py-12 px-4 flex flex-col items-center"
       style={{
-        background: "linear-gradient(180deg, #FFF9F5 0%, #ECECFF 30%, #BFD7FF 65%, #CCE8FF 100%)",
+        background: "linear-gradient(180deg, #FFFFFF 0%, #E4ECFF 30%, #BFD7FF 65%, #CCE8FF 100%)",
       }}
     >
-      <div className="w-full max-w-5xl flex flex-col gap-8">
+      <div className="w-full max-w-4xl flex flex-col gap-6">
         <h1 className="text-3xl font-bold text-center">Course Outline Preview</h1>
 
-        <div className="bg-white border rounded-lg p-6 shadow-sm flex flex-col gap-2">
+        <div className="bg-white border rounded-xl p-6 shadow-sm flex flex-col gap-2">
           <span className="text-sm text-black">Prompt</span>
           <p className="font-medium">{prompt}</p>
           <div className="flex gap-4 text-sm text-black flex-wrap mt-2">
@@ -148,7 +149,7 @@ export default function CourseOutlineClient() {
           {!loading && preview.length > 0 && (
             <div className="flex flex-col gap-4">
               {preview.map((mod: ModulePreview, idx: number) => (
-                <div key={mod.id} className="bg-white border rounded-lg p-4 shadow-sm">
+                <div key={mod.id} className="bg-white border rounded-xl p-4 shadow-sm">
                   <input
                     type="text"
                     value={mod.title}
@@ -182,14 +183,18 @@ export default function CourseOutlineClient() {
         <section className="flex flex-col gap-3">
           <h2 className="text-xl font-semibold">Designs</h2>
           <div className="flex gap-4">
-            <button className="px-4 py-2 rounded-md border focus:outline-none bg-brand-primary text-white hover:bg-brand-primary-hover transition-colors">Default</button>
+            <button
+              className="px-4 py-2 rounded-md border focus:outline-none bg-[#0066FF] text-white hover:bg-[#0054d6] transition-colors shadow-sm"
+            >
+              Default
+            </button>
           </div>
         </section>
 
         <button
           type="button"
           onClick={handleGenerateFinal}
-          className="self-start mt-4 px-6 py-3 rounded-md bg-brand-primary text-white hover:bg-brand-primary-hover active:scale-95 shadow-lg transition transform disabled:opacity-50"
+          className="self-start mt-6 px-8 py-3 rounded-md bg-[#0066FF] text-white hover:bg-[#0054d6] active:scale-95 shadow-lg transition-transform disabled:opacity-50"
           disabled={loading}
         >
           Generate
