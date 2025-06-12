@@ -33,13 +33,27 @@ export default function CourseOutlineClient() {
       setLoading(true);
       setError(null);
       try {
+        console.log("[CourseOutline] Sending preview request", {
+          prompt,
+          modules,
+          lessonsPerModule,
+          language,
+          url: `${CUSTOM_BACKEND_URL}/course-outline/preview`,
+        });
+
         const res = await fetch(`${CUSTOM_BACKEND_URL}/course-outline/preview`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt, modules, lessonsPerModule, language }),
         });
-        if (!res.ok) throw new Error(await res.text());
+        console.log("[CourseOutline] preview response status", res.status);
+        if (!res.ok) {
+          const txt = await res.text();
+          console.error("[CourseOutline] preview error body", txt);
+          throw new Error(txt || `Request failed with ${res.status}`);
+        }
         const data = await res.json();
+        console.log("[CourseOutline] preview json", data);
         setPreview(data.modules || []);
       } catch (e: any) {
         setError(e.message);
