@@ -2227,7 +2227,7 @@ async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[
             "stream_response": False,
         }
         # Prefer the non-streaming simplified endpoint if available (much faster and avoids nginx timeouts)
-        simple_url = f"{ONYX_API_SERVER_URL}/api/chat/send-message-simple-api"
+        simple_url = f"{ONYX_API_SERVER_URL}/chat/send-message-simple-api"
         try:
             resp = await client.post(simple_url, json=payload, cookies=cookies)
             if resp.status_code == 404:
@@ -2235,7 +2235,7 @@ async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[
         except HTTPStatusError:
             # Fallback to the generic endpoint (may stream)
             resp = await client.post(
-                f"{ONYX_API_SERVER_URL}/api/chat/send-message",
+                f"{ONYX_API_SERVER_URL}/chat/send-message",
                 json=payload,
                 cookies=cookies,
             )
