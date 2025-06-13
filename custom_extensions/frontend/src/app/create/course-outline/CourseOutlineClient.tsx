@@ -221,6 +221,11 @@ export default function CourseOutlineClient() {
   };
 
   const handleGenerateFinal = async () => {
+    // Stop any ongoing preview fetch so it doesn't flash / restart while finalizing
+    if (previewAbortRef.current) {
+      previewAbortRef.current.abort();
+    }
+
     setIsGenerating(true);
     setLoading(true);
     setError(null);
@@ -478,10 +483,10 @@ export default function CourseOutlineClient() {
             <h2 className="text-xl font-semibold">Designs</h2>
             <div className="flex gap-4">
               <button
-                className="px-4 py-2 rounded-md focus:outline-none bg-transparent hover:opacity-80 transition-opacity"
+                className="px-2 py-1 rounded-md focus:outline-none bg-transparent hover:opacity-80 transition-opacity"
                 title="Default design"
               >
-                <svg width="80" height="80" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-20">
+                <svg width="60" height="60" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-14 h-14">
                   <defs>
                     <clipPath id="circleClip">
                       <circle cx="80" cy="80" r="80" />
