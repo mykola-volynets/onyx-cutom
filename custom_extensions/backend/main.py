@@ -2308,6 +2308,7 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
     current: Optional[Dict[str, Any]] = None
 
     list_item_regex = re.compile(r"^(?:- |\* |\d+\.)")
+    _buf: List[str] = []  # buffer for current lesson lines
 
     def flush_current_lesson(buf: List[str]) -> Optional[str]:
         """Combine buffered lines into a single lesson string."""
@@ -2324,6 +2325,13 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
 
         # Module detection
         if line.startswith("## "):
+            # flush any buffered lesson into previous module before switching
+            if current:
+                last_lesson = flush_current_lesson(_buf)
+                if last_lesson:
+                    current["lessons"].append(last_lesson)
+                _buf = []
+
             title_part = line.lstrip("# ").strip()
             if ":" in title_part:
                 title_part = title_part.split(":", 1)[-1].strip()
@@ -2355,11 +2363,11 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
                     _buf.append(line)
                 continue
 
-    # flush buffer after loop
-    if current and '_buf' in locals():
-        ls_string = flush_current_lesson(_buf)
-        if ls_string:
-            current["lessons"].append(ls_string)
+    # flush buffer after loop to whichever module is active
+    if current:
+        last_lesson = flush_current_lesson(_buf)
+        if last_lesson:
+            current["lessons"].append(last_lesson)
 
     # Fallback when no module headings present
     if not modules:
