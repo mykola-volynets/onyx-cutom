@@ -21,11 +21,11 @@ interface ModulePreview {
 
 // Simple bouncing dots loading animation
 const LoadingAnimation: React.FC = () => (
-  <div className="flex items-center gap-1 mt-2" aria-label="Loading">
+  <div className="flex justify-center mt-4" aria-label="Loading">
     {[0, 1, 2].map((i) => (
       <span
         key={i}
-        className="w-2 h-2 bg-brand-primary rounded-full animate-bounce"
+        className="inline-block w-3 h-3 bg-[#0066FF] rounded-full animate-bounce"
         style={{ animationDelay: `${i * 0.2}s` }}
       />
     ))}
