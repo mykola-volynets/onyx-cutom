@@ -145,10 +145,7 @@ export default function CourseOutlineClient() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       // Navigate to the new project view without a full reload
-      await router.push(`/projects/view/${data.id}`);
-      // hide overlay after navigation
-      setIsGenerating(false);
-      setLoading(false);
+      router.push(`/projects/view/${data.id}`);
     } catch (e: any) {
       setError(e.message);
       // allow UI interaction again
