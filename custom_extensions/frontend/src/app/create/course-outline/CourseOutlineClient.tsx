@@ -4,7 +4,7 @@
 // app dir, so local tsconfig paths/types do not apply. Disable type-checking to
 // avoid IDE / build noise until shared tsconfig is wired up.
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -57,9 +57,20 @@ export default function CourseOutlineClient() {
 
   const router = useRouter();
 
+  // Keep a reference to the current in-flight preview request so we can cancel it
+  const previewAbortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     // Skip preview fetching while the user is finalizing the outline
     if (isGenerating) return;
+
+    // Abort any previously queued/in-flight request – we only want the very latest parameters
+    if (previewAbortRef.current) {
+      previewAbortRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    previewAbortRef.current = abortController;
 
     const fetchPreview = async () => {
       setLoading(true);
@@ -72,6 +83,7 @@ export default function CourseOutlineClient() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt, modules, lessonsPerModule, language }),
+          signal: abortController.signal,
         });
 
         if (!res.ok) {
@@ -83,6 +95,7 @@ export default function CourseOutlineClient() {
         setPreview(Array.isArray(data.modules) ? data.modules : []);
         setRawOutline(typeof data.raw === "string" ? data.raw : "");
       } catch (e: any) {
+        if (e.name === "AbortError") return; // request was cancelled – ignore
         setError(e.message);
       } finally {
         setLoading(false);
@@ -90,6 +103,11 @@ export default function CourseOutlineClient() {
     };
 
     fetchPreview();
+
+    // Cleanup: abort the request if the component unmounts or deps change before completion
+    return () => {
+      abortController.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt, modules, lessonsPerModule, language, isGenerating]);
 
