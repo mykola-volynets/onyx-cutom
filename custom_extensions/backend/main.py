@@ -45,10 +45,10 @@ COMPONENT_NAME_QUIZ = "QuizDisplay"
 COMPONENT_NAME_TEXT_PRESENTATION = "TextPresentationDisplay"
 
 # --- LLM Configuration for JSON Parsing ---
-LLM_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("COHERE_API_KEY")
-LLM_API_KEY_FALLBACK = os.getenv("OPENAI_API_KEY_FALLBACK") or os.getenv("COHERE_API_KEY_FALLBACK")
-LLM_API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-LLM_DEFAULT_MODEL = os.getenv("OPENAI_DEFAULT_MODEL", "gpt-4o")
+LLM_API_KEY = os.getenv("COHERE_API_KEY")
+LLM_API_KEY_FALLBACK = os.getenv("COHERE_API_KEY_FALLBACK")
+LLM_API_URL = os.getenv("COHERE_API_URL", "https://api.cohere.com/v1/chat")
+LLM_DEFAULT_MODEL = os.getenv("COHERE_DEFAULT_MODEL", "command-r-plus")
 
 DB_POOL = None
 
@@ -870,6 +870,11 @@ async def parse_ai_response_with_llm(
         return default_error_model_instance
 
     prompt_message = f"""
+You are a highly accurate text-to-JSON parsing assistant. Your task is to convert the *entirety* of the following unstructured text into a single, structured JSON object.
+Ensure *all* relevant information from the "Raw text to parse" is included in your JSON output.
+Pay close attention to data types: strings should be quoted, numerical values should be numbers, and lists should be arrays. Null values are not permitted for string fields; use an empty string "" instead if text is absent but the field itself is required according to the example structure.
+Maintain the original language of the input text for all textual content in the JSON.
+
 Specific Instructions for this Content Type ({target_model.__name__}):
 ---
 {dynamic_instructions}
@@ -888,19 +893,7 @@ Raw text to parse:
 Return ONLY the JSON object corresponding to the parsed text. Do not include any other explanatory text or markdown formatting (like ```json ... ```) around the JSON.
 The entire output must be a single, valid JSON object and must include all relevant data found in the input, with textual content in the original language.
     """
-    payload = {
-        "model": LLM_DEFAULT_MODEL,
-        "messages": [
-            {"role": "system", "content": """You are a highly accurate text-to-JSON parsing assistant. Your task is to convert the *entirety* of the following unstructured text into a single, structured JSON object.
-                                             Ensure *all* relevant information from the "Raw text to parse" is included in your JSON output.
-                                             Pay close attention to data types: strings should be quoted, numerical values should be numbers, and lists should be arrays. Null values are not permitted for string fields; use an empty string "" instead if text is absent but the field itself is required according to the example structure.
-                                             Maintain the original language of the input text for all textual content in the JSON."""},
-            {"role": "user", "content": prompt_message}
-        ],
-        "temperature": 0.2
-    }
-    # The payload will be assembled dynamically inside the provider loop to
-    # support both OpenAI and (legacy) Cohere formats.
+    payload = { "model": LLM_DEFAULT_MODEL, "message": prompt_message, "temperature": 0.2 }
     detected_lang_by_rules = detect_language(ai_response)
     last_exception = None
 
@@ -912,22 +905,8 @@ The entire output must be a single, valid JSON object and must include all relev
         try:
             # --- Attempt the API Call and Full Processing ---
             async with httpx.AsyncClient(timeout=120.0) as client:
-                retry_attempt = 0
-                while True:
-                    response = await client.post(LLM_API_URL, headers=headers, json=payload)
-                    # Break if not rate-limited
-                    if response.status_code != 429:
-                        response.raise_for_status()
-                        break
-                    # --- 429 Handling ---
-                    retry_attempt += 1
-                    if retry_attempt > 3:
-                        response.raise_for_status()  # will jump to except
-                    retry_after = float(response.headers.get("Retry-After", "1"))
-                    wait_time = min(2 ** (retry_attempt - 1), 8) * retry_after
-                    logger.warning(f"Rate limited (429). Waiting {wait_time}s before retry #{retry_attempt} for key #{attempt_number}.")
-                    await asyncio.sleep(wait_time)
-                # after loop we have a successful (non-429) response
+                response = await client.post(LLM_API_URL, headers=headers, json=payload)
+                response.raise_for_status()
             llm_api_response_data = response.json()
 
             # --- Process the Response ---
@@ -938,10 +917,6 @@ The entire output must be a single, valid JSON object and must include all relev
                 if last_message and "message" in last_message: json_text_output = last_message["message"]
             elif llm_api_response_data.get("generations") and isinstance(llm_api_response_data["generations"], list) and llm_api_response_data["generations"][0].get("text"):
                 json_text_output = llm_api_response_data["generations"][0]["text"]
-            elif llm_api_response_data.get("choices") and isinstance(llm_api_response_data["choices"], list):
-                choice0 = llm_api_response_data["choices"][0]
-                if choice0.get("message") and choice0["message"].get("content"):
-                    json_text_output = choice0["message"]["content"]
 
             if json_text_output is None:
                 # If the response structure is unexpected, raise an error to be caught below
