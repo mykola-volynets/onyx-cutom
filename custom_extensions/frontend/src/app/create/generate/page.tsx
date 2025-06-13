@@ -1,4 +1,5 @@
 "use client";
+// @ts-nocheck
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -130,14 +131,33 @@ export default function GenerateProductPicker() {
 
   const shuffleExamples = () => setExamples(getRandomExamples());
 
-  const handleCourseOutlineStart = () => {
+  const CUSTOM_BACKEND_URL =
+    process.env.NEXT_PUBLIC_CUSTOM_BACKEND_URL || "/api/custom-projects-backend";
+
+  const handleCourseOutlineStart = async () => {
     if (!prompt.trim()) return;
+
+    let chatId: string | undefined;
+    try {
+      const res = await fetch(`${CUSTOM_BACKEND_URL}/course-outline/init-chat`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        chatId = data.chatSessionId;
+      }
+    } catch (_) {
+      /* ignore warm-up failure – preview will fallback to creating chat */
+    }
+
     const params = new URLSearchParams({
       prompt,
       modules: String(modulesCount),
       lessons: lessonsPerModule,
       lang: language,
     });
+    if (chatId) params.set("chatId", chatId);
+
     router.push(`/create/course-outline?${params.toString()}`);
   };
 

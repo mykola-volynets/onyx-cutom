@@ -2182,12 +2182,14 @@ class OutlineWizardPreview(BaseModel):
     modules: int
     lessonsPerModule: str
     language: str = "en"
+    chatSessionId: Optional[str] = None
 
 class OutlineWizardFinalize(BaseModel):
     prompt: str
     modules: int
     lessonsPerModule: str
     language: str = "en"
+    chatSessionId: Optional[str] = None
     editedOutline: Dict[str, Any]
 
 _CONTENTBUILDER_PERSONA_CACHE: Optional[int] = None
@@ -2396,8 +2398,11 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
     logger.info(f"[wizard_outline_preview] prompt='{payload.prompt[:50]}...' modules={payload.modules} lessonsPerModule={payload.lessonsPerModule} lang={payload.language}")
     cookies = {ONYX_SESSION_COOKIE_NAME: request.cookies.get(ONYX_SESSION_COOKIE_NAME)}
 
-    persona_id = await get_contentbuilder_persona_id(cookies)
-    chat_id = await create_onyx_chat_session(persona_id, cookies)
+    if payload.chatSessionId:
+        chat_id = payload.chatSessionId
+    else:
+        persona_id = await get_contentbuilder_persona_id(cookies)
+        chat_id = await create_onyx_chat_session(persona_id, cookies)
 
     wizard_message = (
         "WIZARD_REQUEST\n" +
@@ -2476,8 +2481,11 @@ async def wizard_outline_finalize(payload: OutlineWizardFinalize, request: Reque
     cookies = {ONYX_SESSION_COOKIE_NAME: request.cookies.get(ONYX_SESSION_COOKIE_NAME)}
     if not cookies[ONYX_SESSION_COOKIE_NAME]:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    persona_id = await get_contentbuilder_persona_id(cookies)
-    chat_id = await create_onyx_chat_session(persona_id, cookies)
+    if payload.chatSessionId:
+        chat_id = payload.chatSessionId
+    else:
+        persona_id = await get_contentbuilder_persona_id(cookies)
+        chat_id = await create_onyx_chat_session(persona_id, cookies)
     wizard_message = (
         "WIZARD_REQUEST\n" +
         json.dumps({
@@ -2545,5 +2553,13 @@ async def wizard_outline_finalize(payload: OutlineWizardFinalize, request: Reque
         yield project_db.model_dump_json().encode() if hasattr(project_db, 'model_dump_json') else project_db.json().encode()
 
     return StreamingResponse(streamer(), media_type="application/json")
+
+@app.post("/api/custom/course-outline/init-chat")
+async def init_course_outline_chat(request: Request):
+    """Pre-create Chat Session & persona so subsequent preview calls are faster."""
+    cookies = request.cookies
+    persona_id = await get_contentbuilder_persona_id(cookies)
+    chat_id = await create_onyx_chat_session(persona_id, cookies)
+    return {"personaId": persona_id, "chatSessionId": chat_id}
 
 # ======================= End Wizard Section ==============================

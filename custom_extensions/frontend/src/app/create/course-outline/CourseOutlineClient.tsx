@@ -49,6 +49,9 @@ export default function CourseOutlineClient() {
   const [lessonsPerModule, setLessonsPerModule] = useState<string>(params.get("lessons") || "3-4");
   const [language, setLanguage] = useState<string>(params.get("lang") || "en");
 
+  // Optional pre-created chat session id (speeds up backend)
+  const chatId = params.get("chatId");
+
   const [preview, setPreview] = useState<ModulePreview[]>([]);
   const [rawOutline, setRawOutline] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -85,7 +88,7 @@ export default function CourseOutlineClient() {
         const res = await fetchWithRetry(`${CUSTOM_BACKEND_URL}/course-outline/preview`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt, modules, lessonsPerModule, language }),
+          body: JSON.stringify({ prompt, modules, lessonsPerModule, language, chatSessionId: chatId || undefined }),
           signal: abortController.signal,
         });
 
@@ -115,7 +118,7 @@ export default function CourseOutlineClient() {
       abortController.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompt, modules, lessonsPerModule, language, isGenerating]);
+  }, [prompt, modules, lessonsPerModule, language, isGenerating, chatId]);
 
   const handleModuleChange = (index: number, value: string) => {
     setPreview((prev: ModulePreview[]) => {
@@ -173,6 +176,7 @@ export default function CourseOutlineClient() {
           modules,
           lessonsPerModule,
           language,
+          chatSessionId: chatId || undefined,
           editedOutline: outlineForBackend,
         }),
       });
@@ -403,14 +407,16 @@ export default function CourseOutlineClient() {
                 className="px-4 py-2 rounded-md border focus:outline-none bg-transparent hover:opacity-80 transition-opacity"
                 title="Default design"
               >
-                <svg width="120" height="68" viewBox="0 0 299 169" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-24 h-auto">
-                <mask id="mask0_16_26" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="160">
-                <circle cx="80" cy="80" r="80" fill="#D9D9D9"/>
-                </mask>
-                <g mask="url(#mask0_16_26)">
-                <path d="M-66.3174 156.568C-68.6368 153.303 -70 149.31 -70 145V16C-70 4.95431 -61.0457 -4 -50 -4H209C213.133 -4 216.974 -2.74591 220.162 -0.597656L-66.3174 156.568ZM-50 165C-54.8776 165 -59.3464 163.253 -62.8174 160.352L224 3L223.684 2.42188C226.983 5.98821 229 10.7584 229 16V145C229 156.046 220.046 165 209 165H-50Z" fill="#FF1313"/>
-                <path d="M-50 165C-54.8776 165 -59.3464 163.253 -62.8174 160.352L224 3L223.684 2.42188C226.983 5.98821 229 10.7584 229 16V145C229 156.046 220.046 165 209 165H-50Z" fill="white"/>
-                </g>
+                <svg width="80" height="80" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-20">
+                  <defs>
+                    <clipPath id="circleClip">
+                      <circle cx="80" cy="80" r="80" />
+                    </clipPath>
+                  </defs>
+                  <g clipPath="url(#circleClip)">
+                    <path d="M-66.3174 156.568C-68.6368 153.303 -70 149.31 -70 145V16C-70 4.95431 -61.0457 -4 -50 -4H209C213.133 -4 216.974 -2.74591 220.162 -0.597656L-66.3174 156.568ZM-50 165C-54.8776 165 -59.3464 163.253 -62.8174 160.352L224 3L223.684 2.42188C226.983 5.98821 229 10.7584 229 16V145C229 156.046 220.046 165 209 165H-50Z" fill="#FF1313" />
+                    <path d="M-50 165C-54.8776 165 -59.3464 163.253 -62.8174 160.352L224 3L223.684 2.42188C226.983 5.98821 229 10.7584 229 16V145C229 156.046 220.046 165 209 165H-50Z" fill="white" />
+                  </g>
                 </svg>
               </button>
             </div>
