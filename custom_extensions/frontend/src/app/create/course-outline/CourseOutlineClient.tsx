@@ -75,15 +75,15 @@ export default function CourseOutlineClient() {
   // Build dynamic fake-thought list based on current params
   const makeThoughts = () => {
     const list: string[] = [];
-    list.push(`Analyzing request for “${prompt.slice(0, 40) || "Untitled"}”…`);
+    list.push(`Analyzing request for "${prompt.slice(0, 40) || "Untitled"}"...`);
     list.push(`Detected language: ${language.toUpperCase()}`);
-    list.push(`Planning ${modules} module${modules > 1 ? "s" : ""} with ${lessonsPerModule} lessons each…`);
+    list.push(`Planning ${modules} module${modules > 1 ? "s" : ""} with ${lessonsPerModule} lessons each...`);
     // shuffle little filler line
-    list.push("Consulting training knowledge base…");
+    list.push("Consulting training knowledge base...");
     for (let i = 0; i < modules; i++) {
-      list.push(`Building Module ${i + 1}…`);
+      list.push(`Building Module ${i + 1}...`);
     }
-    list.push("Finalizing outline…");
+    list.push("Finalizing outline...");
     return list;
   };
 
@@ -91,23 +91,51 @@ export default function CourseOutlineClient() {
   const [thoughtIdx, setThoughtIdx] = useState(0);
   const thoughtTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const rand = (min: number, max: number) => Math.random() * (max - min) + min;
+
+  const delayForThought = (text: string): number => {
+    if (text.startsWith("Analyzing")) return rand(3000, 8000);
+    if (text.startsWith("Detected language")) return rand(1500, 2500);
+    if (text.startsWith("Planning")) return rand(6000, 10000);
+    if (text.startsWith("Consulting")) return rand(5000, 8000);
+    if (text.startsWith("Building Module")) return rand(2000, 3000);
+    // Finalizing outline – stay until done
+    return 99999;
+  };
+
   // Cycle through thoughts whenever loading=true
   useEffect(() => {
     if (loading) {
       setThoughts(makeThoughts());
       setThoughtIdx(0);
-      if (thoughtTimerRef.current) clearInterval(thoughtTimerRef.current);
-      thoughtTimerRef.current = setInterval(() => {
-        setThoughtIdx((idx) => (idx + 1) % thoughts.length);
-      }, 1800);
+
+      const scheduleNext = (index: number) => {
+        const txt = thoughts[index];
+        const delay = delayForThought(txt);
+        if (thoughtTimerRef.current) clearTimeout(thoughtTimerRef.current);
+        if (txt.startsWith("Finalizing outline")) return; // keep until loading finishes
+        thoughtTimerRef.current = setTimeout(() => {
+          setThoughtIdx((prev) => {
+            const next = prev + 1;
+            if (next < thoughts.length) {
+              scheduleNext(next);
+              return next;
+            }
+            // reached end, stay on last (finalizing)
+            return prev;
+          });
+        }, delay);
+      };
+
+      scheduleNext(0);
     } else {
       if (thoughtTimerRef.current) {
-        clearInterval(thoughtTimerRef.current);
+        clearTimeout(thoughtTimerRef.current);
         thoughtTimerRef.current = null;
       }
     }
     return () => {
-      if (thoughtTimerRef.current) clearInterval(thoughtTimerRef.current);
+      if (thoughtTimerRef.current) clearTimeout(thoughtTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, modules, lessonsPerModule, prompt, language]);
@@ -450,7 +478,7 @@ export default function CourseOutlineClient() {
             <h2 className="text-xl font-semibold">Designs</h2>
             <div className="flex gap-4">
               <button
-                className="px-4 py-2 rounded-md border focus:outline-none bg-transparent hover:opacity-80 transition-opacity"
+                className="px-4 py-2 rounded-md focus:outline-none bg-transparent hover:opacity-80 transition-opacity"
                 title="Default design"
               >
                 <svg width="80" height="80" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-20">
