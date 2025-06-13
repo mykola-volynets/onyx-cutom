@@ -912,8 +912,22 @@ The entire output must be a single, valid JSON object and must include all relev
         try:
             # --- Attempt the API Call and Full Processing ---
             async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(LLM_API_URL, headers=headers, json=payload)
-                response.raise_for_status()
+                retry_attempt = 0
+                while True:
+                    response = await client.post(LLM_API_URL, headers=headers, json=payload)
+                    # Break if not rate-limited
+                    if response.status_code != 429:
+                        response.raise_for_status()
+                        break
+                    # --- 429 Handling ---
+                    retry_attempt += 1
+                    if retry_attempt > 3:
+                        response.raise_for_status()  # will jump to except
+                    retry_after = float(response.headers.get("Retry-After", "1"))
+                    wait_time = min(2 ** (retry_attempt - 1), 8) * retry_after
+                    logger.warning(f"Rate limited (429). Waiting {wait_time}s before retry #{retry_attempt} for key #{attempt_number}.")
+                    await asyncio.sleep(wait_time)
+                # after loop we have a successful (non-429) response
             llm_api_response_data = response.json()
 
             # --- Process the Response ---
