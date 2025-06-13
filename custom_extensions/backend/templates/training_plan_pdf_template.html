@@ -96,12 +96,19 @@
             'contentAvailability': "Content availability",
             'source': "Information source",
             'time': "Production hours"
+        },
+        'uk': {
+            'moduleAndLessons': "Модуль та уроки",
+            'knowledgeCheck': "Перевірка знань",
+            'contentAvailability': "Наявність контенту",
+            'source': "Джерело інформації",
+            'time': "Час"
         }
     } %}
     {% set headers = column_headers[lang] or column_headers['ru'] %}
-    {% set time_unit_singular = 'ч' if lang == 'ru' else 'h' %}
-    {% set time_unit_decimal_plural = 'ч' if lang == 'ru' else 'h' %}
-    {% set time_unit_general_plural = 'ч' if lang == 'ru' else 'h' %}
+    {% set time_unit_singular = 'ч' if lang == 'ru' else ('год' if lang == 'uk' else 'h') %}
+    {% set time_unit_decimal_plural = 'ч' if lang == 'ru' else ('год' if lang == 'uk' else 'h') %}
+    {% set time_unit_general_plural = 'ч' if lang == 'ru' else ('год' if lang == 'uk' else 'h') %}
 
     {% set MAX_SOURCE_LENGTH = 19 %} {# Define max length for single-word source text #}
 
