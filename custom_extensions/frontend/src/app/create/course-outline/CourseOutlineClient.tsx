@@ -32,6 +32,16 @@ const LoadingAnimation: React.FC = () => (
   </div>
 );
 
+// Helper to retry fetch up to 2 times on 504 Gateway Timeout
+async function fetchWithRetry(input: RequestInfo, init: RequestInit, retries = 2): Promise<Response> {
+  let attempt = 0;
+  while (true) {
+    const res = await fetch(input, init);
+    if (res.status !== 504 || attempt >= retries) return res;
+    attempt += 1;
+  }
+}
+
 export default function CourseOutlineClient() {
   const params = useSearchParams();
   const [prompt, setPrompt] = useState(params.get("prompt") || "");
@@ -58,7 +68,7 @@ export default function CourseOutlineClient() {
       setRawOutline("");
 
       try {
-        const res = await fetch(`${CUSTOM_BACKEND_URL}/course-outline/preview`, {
+        const res = await fetchWithRetry(`${CUSTOM_BACKEND_URL}/course-outline/preview`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt, modules, lessonsPerModule, language }),
@@ -131,7 +141,7 @@ export default function CourseOutlineClient() {
         detectedLanguage: language,
       };
 
-      const res = await fetch(`${CUSTOM_BACKEND_URL}/course-outline/finalize`, {
+      const res = await fetchWithRetry(`${CUSTOM_BACKEND_URL}/course-outline/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
