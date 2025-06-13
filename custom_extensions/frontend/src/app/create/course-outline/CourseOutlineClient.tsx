@@ -231,6 +231,7 @@ export default function CourseOutlineClient() {
   };
 
   return (
+    <>
     <main
       /* Top-to-bottom pastel blue gradient identical to the reference */
       className="min-h-screen py-12 px-4 flex flex-col items-center"
@@ -430,14 +431,12 @@ export default function CourseOutlineClient() {
         </div>
       )}
     </main>
+    <style jsx global>{`
+      @keyframes fadeInDown {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `}</style>
+    </>
   );
-}
-
-// ----------- Styled-JSX keyframes (only included once) ------------
-// eslint-disable-next-line @next/next/no-sync-scripts
-<style jsx global>{`
-@keyframes fadeInDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-`}</style> 
+} 
