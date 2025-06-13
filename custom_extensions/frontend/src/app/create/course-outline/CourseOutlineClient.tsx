@@ -145,7 +145,10 @@ export default function CourseOutlineClient() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       // Navigate to the new project view without a full reload
-      router.push(`/projects/view/${data.id}`);
+      await router.push(`/projects/view/${data.id}`);
+      // hide overlay after navigation
+      setIsGenerating(false);
+      setLoading(false);
     } catch (e: any) {
       setError(e.message);
       // allow UI interaction again
@@ -232,7 +235,7 @@ export default function CourseOutlineClient() {
                     value={mod.lessons.join("\n")}
                     onChange={(e) => handleLessonsTextareaChange(idx, e.target.value)}
                     className="w-full border border-gray-300 rounded-md p-2 text-sm text-black bg-gray-50 resize-none"
-                    rows={Math.max(mod.lessons.length, 3)}
+                    rows={Math.max(mod.lessons.join("\n").split(/\r?\n/).length, 5)}
                     placeholder="Enter lessons, each on new line"
                   />
                 </div>
