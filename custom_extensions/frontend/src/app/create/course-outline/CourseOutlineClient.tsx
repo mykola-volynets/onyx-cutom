@@ -1,5 +1,5 @@
 "use client";
-
+/* eslint-disable */
 // @ts-nocheck – this component is compiled by Next.js but lives outside the main
 // app dir, so local tsconfig paths/types do not apply. Disable type-checking to
 // avoid IDE / build noise until shared tsconfig is wired up.
@@ -19,16 +19,22 @@ interface ModulePreview {
   lessons: string[];
 }
 
-// Simple bouncing dots loading animation
-const LoadingAnimation: React.FC = () => (
-  <div className="flex justify-center mt-4" aria-label="Loading">
-    {[0, 1, 2].map((i) => (
-      <span
-        key={i}
-        className="inline-block w-3 h-3 bg-[#0066FF] rounded-full animate-bounce"
-        style={{ animationDelay: `${i * 0.2}s` }}
-      />
-    ))}
+// Simple bouncing dots loading animation (optionally with a status line)
+type LoadingProps = { message?: string };
+const LoadingAnimation: React.FC<LoadingProps> = ({ message }) => (
+  <div className="flex flex-col items-center mt-4" aria-label="Loading">
+    <div className="flex gap-1 mb-2">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="inline-block w-3 h-3 bg-[#0066FF] rounded-full animate-bounce"
+          style={{ animationDelay: `${i * 0.2}s` }}
+        />
+      ))}
+    </div>
+    {message && (
+      <p className="text-sm text-gray-600 select-none min-h-[1.25rem]">{message}</p>
+    )}
   </div>
 );
 
@@ -65,6 +71,46 @@ export default function CourseOutlineClient() {
 
   // Keep a reference to the current in-flight preview request so we can cancel it
   const previewAbortRef = useRef<AbortController | null>(null);
+
+  // Build dynamic fake-thought list based on current params
+  const makeThoughts = () => {
+    const list: string[] = [];
+    list.push(`Analyzing request for “${prompt.slice(0, 40) || "Untitled"}”…`);
+    list.push(`Detected language: ${language.toUpperCase()}`);
+    list.push(`Planning ${modules} module${modules > 1 ? "s" : ""} with ${lessonsPerModule} lessons each…`);
+    // shuffle little filler line
+    list.push("Consulting training knowledge base…");
+    for (let i = 0; i < modules; i++) {
+      list.push(`Building Module ${i + 1}…`);
+    }
+    list.push("Finalizing outline…");
+    return list;
+  };
+
+  const [thoughts, setThoughts] = useState<string[]>(makeThoughts());
+  const [thoughtIdx, setThoughtIdx] = useState(0);
+  const thoughtTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cycle through thoughts whenever loading=true
+  useEffect(() => {
+    if (loading) {
+      setThoughts(makeThoughts());
+      setThoughtIdx(0);
+      if (thoughtTimerRef.current) clearInterval(thoughtTimerRef.current);
+      thoughtTimerRef.current = setInterval(() => {
+        setThoughtIdx((idx) => (idx + 1) % thoughts.length);
+      }, 1800);
+    } else {
+      if (thoughtTimerRef.current) {
+        clearInterval(thoughtTimerRef.current);
+        thoughtTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (thoughtTimerRef.current) clearInterval(thoughtTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, modules, lessonsPerModule, prompt, language]);
 
   useEffect(() => {
     // Skip preview fetching while the user is finalizing the outline
@@ -297,7 +343,7 @@ export default function CourseOutlineClient() {
 
         <section className="flex flex-col gap-6">
           <h2 className="text-xl font-semibold">Outline</h2>
-          {loading && <LoadingAnimation />}
+          {loading && <LoadingAnimation message={thoughts[thoughtIdx]} />}
           {error && <p className="text-red-600">{error}</p>}
           {!loading && preview.length > 0 && (
             <div
