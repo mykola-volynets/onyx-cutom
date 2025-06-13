@@ -164,7 +164,7 @@ export default function CourseOutlineClient() {
         </Link>
 
         {/* Page title */}
-        <h1 className="text-5xl font-semibold text-center text-black mt-10">Generate</h1>
+        <h1 className="text-3xl font-semibold text-center text-black mt-10">Generate</h1>
 
         {/* Controls */}
         <div className="flex flex-wrap justify-center gap-2">
@@ -239,25 +239,29 @@ export default function CourseOutlineClient() {
           )}
         </section>
 
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold">Designs</h2>
-          <div className="flex gap-4">
-            <button
-              className="px-4 py-2 rounded-md border focus:outline-none bg-[#0066FF] text-white hover:bg-[#0054d6] transition-colors shadow-sm"
-            >
-              Default
-            </button>
-          </div>
-        </section>
+        {!loading && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-xl font-semibold">Designs</h2>
+            <div className="flex gap-4">
+              <button
+                className="px-4 py-2 rounded-md border focus:outline-none bg-[#0066FF] text-white hover:bg-[#0054d6] transition-colors shadow-sm"
+              >
+                Default
+              </button>
+            </div>
+          </section>
+        )}
 
-        <button
-          type="button"
-          onClick={handleGenerateFinal}
-          className="self-start mt-6 px-8 py-3 rounded-md bg-[#0066FF] text-white hover:bg-[#0054d6] active:scale-95 shadow-lg transition-transform disabled:opacity-50"
-          disabled={loading}
-        >
-          Generate
-        </button>
+        {!loading && (
+          <button
+            type="button"
+            onClick={handleGenerateFinal}
+            className="self-start mt-6 px-8 py-3 rounded-md bg-[#0066FF] text-white hover:bg-[#0054d6] active:scale-95 shadow-lg transition-transform disabled:opacity-50"
+            disabled={loading}
+          >
+            Generate
+          </button>
+        )}
       </div>
     </main>
   );
