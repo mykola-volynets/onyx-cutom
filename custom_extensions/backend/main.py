@@ -48,7 +48,7 @@ COMPONENT_NAME_TEXT_PRESENTATION = "TextPresentationDisplay"
 LLM_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("COHERE_API_KEY")
 LLM_API_KEY_FALLBACK = os.getenv("OPENAI_API_KEY_FALLBACK") or os.getenv("COHERE_API_KEY_FALLBACK")
 LLM_API_URL = os.getenv("OPENAI_API_URL", "https://api.openai.com/v1/chat/completions")
-LLM_DEFAULT_MODEL = os.getenv("OPENAI_DEFAULT_MODEL", "gpt-3.5-turbo-0125")
+LLM_DEFAULT_MODEL = os.getenv("OPENAI_DEFAULT_MODEL", "gpt-4o")
 
 DB_POOL = None
 
