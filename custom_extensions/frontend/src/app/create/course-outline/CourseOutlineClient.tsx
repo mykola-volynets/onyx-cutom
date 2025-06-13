@@ -274,7 +274,7 @@ export default function CourseOutlineClient() {
       {isGenerating && (
         <div className="fixed inset-0 bg-white/75 flex flex-col items-center justify-center z-50">
           <LoadingAnimation />
-          <p className="mt-4 text-gray-800 font-medium">Creating your project...</p>
+          <p className="mt-4 text-gray-800 font-medium">Creating your product...</p>
         </div>
       )}
     </main>

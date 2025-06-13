@@ -2423,15 +2423,47 @@ async def wizard_outline_finalize(payload: OutlineWizardFinalize, request: Reque
         "WIZARD_REQUEST\n" +
         json.dumps({
             "product": "Course Outline",
+            "action": "finalize",
             "prompt": payload.prompt,
             "modules": payload.modules,
             "lessonsPerModule": payload.lessonsPerModule,
             "language": payload.language,
             "editedOutline": payload.editedOutline,
-            "action": "finalize",
         })
     )
-    assistant_reply = await stream_chat_message(chat_id, wizard_message, cookies)
+
+    # --- collect streamed answer pieces exactly like in preview ---
+    assistant_reply: str = ""
+    async with httpx.AsyncClient(timeout=None) as client:
+        send_payload = {
+            "chat_session_id": chat_id,
+            "message": wizard_message,
+            "parent_message_id": None,
+            "file_descriptors": [],
+            "user_file_ids": [],
+            "user_folder_ids": [],
+            "prompt_id": None,
+            "search_doc_ids": None,
+            "retrieval_options": {"run_search": "always", "real_time": False},
+            "stream_response": True,
+        }
+        async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=send_payload, cookies=cookies) as resp:
+            async for raw_line in resp.aiter_lines():
+                if not raw_line:
+                    continue
+                line = raw_line.strip()
+                if line.startswith("data:"):
+                    line = line.split("data:", 1)[1].strip()
+                if line == "[DONE]":
+                    break
+                try:
+                    pkt = json.loads(line)
+                    if "answer_piece" in pkt:
+                        assistant_reply += pkt["answer_piece"].replace("\\n", "\n")
+                except Exception:
+                    continue
+
+    # Now assistant_reply holds the full outline in markdown
 
     # ensure template exists
     template_id = await _ensure_training_plan_template(pool)
