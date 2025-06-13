@@ -2396,8 +2396,6 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
     logger.info(f"[wizard_outline_preview] prompt='{payload.prompt[:50]}...' modules={payload.modules} lessonsPerModule={payload.lessonsPerModule} lang={payload.language}")
     cookies = {ONYX_SESSION_COOKIE_NAME: request.cookies.get(ONYX_SESSION_COOKIE_NAME)}
 
-    # We now always accumulate the full answer first and return it at once (no SSE streaming)
-    
     persona_id = await get_contentbuilder_persona_id(cookies)
     chat_id = await create_onyx_chat_session(persona_id, cookies)
 
@@ -2412,47 +2410,51 @@ async def wizard_outline_preview(payload: OutlineWizardPreview, request: Request
         })
     )
 
-    # --- collect streamed answer pieces ---
-    assistant_reply: str = ""
-    async with httpx.AsyncClient(timeout=None) as client:
-        send_payload = {
-            "chat_session_id": chat_id,
-            "message": wizard_message,
-            "parent_message_id": None,
-            "file_descriptors": [],
-            "user_file_ids": [],
-            "user_folder_ids": [],
-            "prompt_id": None,
-            "search_doc_ids": None,
-            "retrieval_options": {"run_search": "always", "real_time": False},
-            "stream_response": True,
-        }
-        async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=send_payload, cookies=cookies) as resp:
-            async for raw_line in resp.aiter_lines():
-                if not raw_line:
-                    continue
-                # Onyx may send either plain JSON lines or SSE lines beginning with "data: "
-                line = raw_line.strip()
-                if line.startswith("data:"):
-                    line = line.split("data:", 1)[1].strip()
-                if line == "[DONE]":
-                    break
-                try:
-                    pkt = json.loads(line)
-                    print('\n pkt: \n', pkt)
-                    if "answer_piece" in pkt:
-                        print('\n piece: \n', pkt["answer_piece"].replace("\\n", "\n"))
-                        assistant_reply += pkt["answer_piece"].replace("\\n", "\n")
-                except Exception:
-                    continue
+    # ---------- StreamingResponse with keep-alive -----------
+    async def streamer():
+        assistant_reply: str = ""
+        last_send = asyncio.get_event_loop().time()
 
-    print('\n assistant_reply: \n', assistant_reply)
+        async with httpx.AsyncClient(timeout=None) as client:
+            send_payload = {
+                "chat_session_id": chat_id,
+                "message": wizard_message,
+                "parent_message_id": None,
+                "file_descriptors": [],
+                "user_file_ids": [],
+                "user_folder_ids": [],
+                "prompt_id": None,
+                "search_doc_ids": None,
+                "retrieval_options": {"run_search": "always", "real_time": False},
+                "stream_response": True,
+            }
+            async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=send_payload, cookies=cookies) as resp:
+                async for raw_line in resp.aiter_lines():
+                    if not raw_line:
+                        continue
+                    line = raw_line.strip()
+                    if line.startswith("data:"):
+                        line = line.split("data:", 1)[1].strip()
+                    if line == "[DONE]":
+                        break
+                    try:
+                        pkt = json.loads(line)
+                        if "answer_piece" in pkt:
+                            assistant_reply += pkt["answer_piece"].replace("\\n", "\n")
+                    except Exception:
+                        continue
 
-    modules_preview = _parse_outline_markdown(assistant_reply)
+                    # send keep-alive every 8s
+                    now = asyncio.get_event_loop().time()
+                    if now - last_send > 8:
+                        yield b" "
+                        last_send = now
 
-    print('\n modules_preview: \n', modules_preview)
+        modules_preview = _parse_outline_markdown(assistant_reply)
+        final_json = json.dumps({"modules": modules_preview, "raw": assistant_reply}).encode()
+        yield final_json
 
-    return {"modules": modules_preview, "raw": assistant_reply}
+    return StreamingResponse(streamer(), media_type="application/json")
 
 async def _ensure_training_plan_template(pool: asyncpg.Pool) -> int:
     async with pool.acquire() as conn:
@@ -2490,50 +2492,58 @@ async def wizard_outline_finalize(payload: OutlineWizardFinalize, request: Reque
     )
 
     # --- collect streamed answer pieces exactly like in preview ---
-    assistant_reply: str = ""
-    async with httpx.AsyncClient(timeout=None) as client:
-        send_payload = {
-            "chat_session_id": chat_id,
-            "message": wizard_message,
-            "parent_message_id": None,
-            "file_descriptors": [],
-            "user_file_ids": [],
-            "user_folder_ids": [],
-            "prompt_id": None,
-            "search_doc_ids": None,
-            "retrieval_options": {"run_search": "always", "real_time": False},
-            "stream_response": True,
-        }
-        async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=send_payload, cookies=cookies) as resp:
-            async for raw_line in resp.aiter_lines():
-                if not raw_line:
-                    continue
-                line = raw_line.strip()
-                if line.startswith("data:"):
-                    line = line.split("data:", 1)[1].strip()
-                if line == "[DONE]":
-                    break
-                try:
-                    pkt = json.loads(line)
-                    if "answer_piece" in pkt:
-                        assistant_reply += pkt["answer_piece"].replace("\\n", "\n")
-                except Exception:
-                    continue
+    async def streamer():
+        assistant_reply: str = ""
+        last_send = asyncio.get_event_loop().time()
 
-    # Now assistant_reply holds the full outline in markdown
+        async with httpx.AsyncClient(timeout=None) as client:
+            send_payload = {
+                "chat_session_id": chat_id,
+                "message": wizard_message,
+                "parent_message_id": None,
+                "file_descriptors": [],
+                "user_file_ids": [],
+                "user_folder_ids": [],
+                "prompt_id": None,
+                "search_doc_ids": None,
+                "retrieval_options": {"run_search": "always", "real_time": False},
+                "stream_response": True,
+            }
+            async with client.stream("POST", f"{ONYX_API_SERVER_URL}/chat/send-message", json=send_payload, cookies=cookies) as resp:
+                async for raw_line in resp.aiter_lines():
+                    if not raw_line:
+                        continue
+                    line = raw_line.strip()
+                    if line.startswith("data:"):
+                        line = line.split("data:", 1)[1].strip()
+                    if line == "[DONE]":
+                        break
+                    try:
+                        pkt = json.loads(line)
+                        if "answer_piece" in pkt:
+                            assistant_reply += pkt["answer_piece"].replace("\\n", "\n")
+                    except Exception:
+                        continue
 
-    # ensure template exists
-    template_id = await _ensure_training_plan_template(pool)
+                    now = asyncio.get_event_loop().time()
+                    if now - last_send > 8:
+                        yield b" "
+                        last_send = now
 
-    project_request = ProjectCreateRequest(
-        projectName=payload.prompt,
-        design_template_id=template_id,
-        microProductName=None,
-        aiResponse=assistant_reply,
-        chatSessionId=uuid.UUID(chat_id) if chat_id else None,
-    )
-    onyx_user_id = await get_current_onyx_user_id(request)
-    project_db = await add_project_to_custom_db(project_request, onyx_user_id, pool)  # type: ignore
-    return project_db
+        template_id = await _ensure_training_plan_template(pool)
+
+        project_request = ProjectCreateRequest(
+            projectName=payload.prompt,
+            design_template_id=template_id,
+            microProductName=None,
+            aiResponse=assistant_reply,
+            chatSessionId=uuid.UUID(chat_id) if chat_id else None,
+        )
+        onyx_user_id = await get_current_onyx_user_id(request)
+        project_db = await add_project_to_custom_db(project_request, onyx_user_id, pool)  # type: ignore
+
+        yield project_db.model_dump_json().encode() if hasattr(project_db, 'model_dump_json') else project_db.json().encode()
+
+    return StreamingResponse(streamer(), media_type="application/json")
 
 # ======================= End Wizard Section ==============================
