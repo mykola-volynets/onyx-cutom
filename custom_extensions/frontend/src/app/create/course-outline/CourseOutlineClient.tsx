@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 // Base URL so frontend can reach custom backend through nginx proxy
@@ -54,6 +54,9 @@ export default function CourseOutlineClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Track which lesson rows are expanded: key format `${modIdx}-${lessonIdx}` -> boolean
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const router = useRouter();
 
@@ -187,6 +190,32 @@ export default function CourseOutlineClient() {
     }
   };
 
+  const toggleExpanded = (modIdx: number, lessonIdx: number) => {
+    const key = `${modIdx}-${lessonIdx}`;
+    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleLessonTitleChange = (modIdx: number, lessonIdx: number, newTitle: string) => {
+    setPreview((prev: ModulePreview[]) => {
+      const copy = [...prev];
+      const lines = copy[modIdx].lessons[lessonIdx].split(/\r?\n/);
+      lines[0] = newTitle;
+      copy[modIdx].lessons[lessonIdx] = lines.join("\n");
+      return copy;
+    });
+  };
+
+  const handleLessonDetailsChange = (modIdx: number, lessonIdx: number, newDetails: string) => {
+    setPreview((prev: ModulePreview[]) => {
+      const copy = [...prev];
+      const lines = copy[modIdx].lessons[lessonIdx].split(/\r?\n/);
+      const titleLine = lines[0] || "";
+      const detailLines = newDetails.split(/\r?\n/);
+      copy[modIdx].lessons[lessonIdx] = [titleLine, ...detailLines].join("\n");
+      return copy;
+    });
+  };
+
   return (
     <main
       /* Top-to-bottom pastel blue gradient identical to the reference */
@@ -271,18 +300,44 @@ export default function CourseOutlineClient() {
 
                   {/* Lessons list */}
                   <div className="flex flex-col gap-2 pl-11">
-                    {mod.lessons.map((les: string, lessonIdx: number) => (
-                      <div key={lessonIdx} className="flex items-start gap-2">
-                        <span className="w-6 text-right text-gray-600 select-none pt-1">{lessonIdx + 1}.</span>
-                        <input
-                          type="text"
-                          value={les}
-                          onChange={(e) => handleLessonChange(modIdx, lessonIdx, e.target.value)}
-                          className="flex-grow bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
-                          placeholder={`Lesson ${lessonIdx + 1}`}
-                        />
-                      </div>
-                    ))}
+                    {mod.lessons.map((les: string, lessonIdx: number) => {
+                      const lines = les.split(/\r?\n/);
+                      const titleLine = lines[0] || "";
+                      const detailLines = lines.slice(1).join("\n");
+                      const key = `${modIdx}-${lessonIdx}`;
+                      const isOpen = !!expanded[key];
+                      return (
+                        <div key={lessonIdx} className="flex flex-col gap-1">
+                          <div className="flex items-start gap-2">
+                            <span className="w-6 text-right text-gray-600 select-none pt-1">{lessonIdx + 1}.</span>
+                            <input
+                              type="text"
+                              value={titleLine}
+                              onChange={(e) => handleLessonTitleChange(modIdx, lessonIdx, e.target.value)}
+                              className="flex-grow bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
+                              placeholder={`Lesson ${lessonIdx + 1}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => toggleExpanded(modIdx, lessonIdx)}
+                              className={`transition-transform ${isOpen ? "rotate-180" : "rotate-0"}`}
+                              aria-label={isOpen ? "Collapse details" : "Expand details"}
+                            >
+                              <ChevronDown size={18} />
+                            </button>
+                          </div>
+                          {isOpen && (
+                            <textarea
+                              value={detailLines}
+                              onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, e.target.value)}
+                              className="ml-8 mt-1 bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] resize-none"
+                              rows={Math.max(detailLines.split(/\r?\n/).length, 3)}
+                              placeholder="Additional lesson details (one per line)"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
