@@ -252,22 +252,38 @@ export default function CourseOutlineClient() {
           {loading && <LoadingAnimation />}
           {error && <p className="text-red-600">{error}</p>}
           {!loading && preview.length > 0 && (
-            <div className="flex flex-col gap-4">
-              {preview.map((mod: ModulePreview, idx: number) => (
-                <div key={mod.id} className="bg-white border rounded-xl p-4 shadow-sm">
-                  <input
-                    type="text"
-                    value={mod.title}
-                    onChange={(e) => handleModuleChange(idx, e.target.value)}
-                    className="font-medium text-lg w-full border-none focus:ring-0 text-black mb-2"
-                  />
-                  <textarea
-                    value={mod.lessons.join("\n")}
-                    onChange={(e) => handleLessonsTextareaChange(idx, e.target.value)}
-                    className="w-full border border-gray-300 rounded-md p-2 text-sm text-black bg-gray-50 resize-none"
-                    rows={Math.max(mod.lessons.join("\n").split(/\r?\n/).length, 5)}
-                    placeholder="Enter lessons, each on new line"
-                  />
+            <div className="flex flex-col gap-6">
+              {preview.map((mod: ModulePreview, modIdx: number) => (
+                <div key={mod.id} className="bg-white border rounded-xl p-5 shadow-sm">
+                  {/* Module header with index badge */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-[#0066FF] text-white flex items-center justify-center font-semibold">
+                      {modIdx + 1}
+                    </span>
+                    <input
+                      type="text"
+                      value={mod.title}
+                      onChange={(e) => handleModuleChange(modIdx, e.target.value)}
+                      className="flex-grow font-medium text-lg border-none focus:ring-0 text-black"
+                      placeholder={`Module ${modIdx + 1} title`}
+                    />
+                  </div>
+
+                  {/* Lessons list */}
+                  <div className="flex flex-col gap-2 pl-11">
+                    {mod.lessons.map((les: string, lessonIdx: number) => (
+                      <div key={lessonIdx} className="flex items-start gap-2">
+                        <span className="w-6 text-right text-gray-600 select-none pt-1">{lessonIdx + 1}.</span>
+                        <input
+                          type="text"
+                          value={les}
+                          onChange={(e) => handleLessonChange(modIdx, lessonIdx, e.target.value)}
+                          className="flex-grow bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
+                          placeholder={`Lesson ${lessonIdx + 1}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
