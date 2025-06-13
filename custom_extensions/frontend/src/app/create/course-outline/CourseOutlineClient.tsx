@@ -148,8 +148,11 @@ export default function CourseOutlineClient() {
     } catch (e: any) {
       setError(e.message);
     } finally {
-      setLoading(false);
-      setIsGenerating(false);
+      /*
+       * Do NOT clear isGenerating/loading here.
+       * The component will unmount on router.push → redirect, so the overlay disappears automatically.
+       * Clearing now would allow preview refetch before the page navigates, causing visible flicker.
+       */
     }
   };
 
