@@ -227,7 +227,8 @@ export default function CourseOutlineClient() {
     }
 
     setIsGenerating(true);
-    setLoading(true);
+    // Ensure the preview spinner / fake-thoughts are not shown while we're in finalize mode
+    setLoading(false);
     setError(null);
     try {
       const outlineForBackend = {
@@ -483,10 +484,10 @@ export default function CourseOutlineClient() {
             <h2 className="text-xl font-semibold">Designs</h2>
             <div className="flex gap-4">
               <button
-                className="px-2 py-1 rounded-md focus:outline-none bg-transparent hover:opacity-80 transition-opacity"
+                className="px-1 py-0.5 rounded-md focus:outline-none bg-transparent hover:opacity-80 transition-opacity"
                 title="Default design"
               >
-                <svg width="60" height="60" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-14 h-14">
+                <svg width="40" height="40" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10">
                   <defs>
                     <clipPath id="circleClip">
                       <circle cx="80" cy="80" r="80" />
