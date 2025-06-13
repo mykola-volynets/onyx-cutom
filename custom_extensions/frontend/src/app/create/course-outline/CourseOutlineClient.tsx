@@ -295,7 +295,10 @@ export default function CourseOutlineClient() {
           {loading && <LoadingAnimation />}
           {error && <p className="text-red-600">{error}</p>}
           {!loading && preview.length > 0 && (
-            <div className="flex flex-col gap-6">
+            <div
+              className="flex flex-col gap-6"
+              style={{ animation: 'fadeInDown 0.25s ease-out both' }}
+            >
               {preview.map((mod: ModulePreview, modIdx: number) => (
                 <div key={mod.id} className="bg-white border rounded-xl p-5 shadow-sm">
                   {/* Module header with index badge */}
@@ -340,38 +343,41 @@ export default function CourseOutlineClient() {
                               <ChevronDown size={18} />
                             </button>
                           </div>
-                          {isOpen && (
-                            <div className="ml-8 mt-1 flex flex-col gap-1">
-                              {detailLines.split(/\r?\n/).map((ln, dIdx) => {
-                                const m = ln.match(/^\s*-?\s*\*\*(.+?)\*\*:\s*(.*)$/);
-                                if (m) {
-                                  const label = m[1];
-                                  const val = m[2];
-                                  return (
-                                    <div key={dIdx} className="flex items-center gap-2">
-                                      <span className="w-40 text-sm font-medium text-gray-700">{label}:</span>
-                                      <input
-                                        type="text"
-                                        value={val}
-                                        onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, dIdx, e.target.value)}
-                                        className="flex-grow bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
-                                      />
-                                    </div>
-                                  );
-                                }
-                                // fallback raw line
+                          <div
+                            className={
+                              `ml-8 mt-1 flex flex-col gap-1 overflow-hidden transition-all duration-200 ` +
+                              (isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0')
+                            }
+                          >
+                            {detailLines.split(/\r?\n/).map((ln, dIdx) => {
+                              const m = ln.match(/^\s*-?\s*\*\*(.+?)\*\*:\s*(.*)$/);
+                              if (m) {
+                                const label = m[1];
+                                const val = m[2];
                                 return (
-                                  <input
-                                    key={dIdx}
-                                    type="text"
-                                    value={ln}
-                                    onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, dIdx, e.target.value)}
-                                    className="bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
-                                  />
+                                  <div key={dIdx} className="flex items-center gap-2">
+                                    <span className="w-40 text-sm font-medium text-gray-700">{label}:</span>
+                                    <input
+                                      type="text"
+                                      value={val}
+                                      onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, dIdx, e.target.value)}
+                                      className="flex-grow bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
+                                    />
+                                  </div>
                                 );
-                              })}
-                            </div>
-                          )}
+                              }
+                              // fallback raw line
+                              return (
+                                <input
+                                  key={dIdx}
+                                  type="text"
+                                  value={ln}
+                                  onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, dIdx, e.target.value)}
+                                  className="bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
+                                />
+                              );
+                            })}
+                          </div>
                         </div>
                       );
                     })}
@@ -393,9 +399,13 @@ export default function CourseOutlineClient() {
             <h2 className="text-xl font-semibold">Designs</h2>
             <div className="flex gap-4">
               <button
-                className="px-4 py-2 rounded-md border focus:outline-none bg-[#0066FF] text-white hover:bg-[#0054d6] transition-colors shadow-sm"
+                className="px-4 py-2 rounded-md border focus:outline-none bg-transparent hover:opacity-80 transition-opacity"
+                title="Default design"
               >
-                Default
+                <svg width="120" height="68" viewBox="0 0 299 169" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-24 h-auto">
+                  <path d="M3.68262 160.568C1.36322 157.303 5.50006e-08 153.31 0 149V20C0 8.95431 8.95431 0 20 0H279C283.133 6.99169e-07 286.974 1.25409 290.162 3.40234L3.68262 160.568ZM20 169C15.1224 169 10.6536 167.253 7.18262 164.352L294 7L293.684 6.42188C296.983 9.98821 299 14.7584 299 20V149C299 160.046 290.046 169 279 169H20Z" fill="#FF1313"/>
+                  <path d="M20 169C15.1224 169 10.6536 167.253 7.18262 164.352L294 7L293.684 6.42188C296.983 9.98821 299 14.7584 299 20V149C299 160.046 290.046 169 279 169H20Z" fill="white"/>
+                </svg>
               </button>
             </div>
           </section>
@@ -421,4 +431,13 @@ export default function CourseOutlineClient() {
       )}
     </main>
   );
-} 
+}
+
+// ----------- Styled-JSX keyframes (only included once) ------------
+// eslint-disable-next-line @next/next/no-sync-scripts
+<style jsx global>{`
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+`}</style> 
