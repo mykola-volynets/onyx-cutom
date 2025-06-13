@@ -102,8 +102,9 @@ export default function CourseOutlineClient() {
   const handleLessonsTextareaChange = (modIdx: number, value: string) => {
     setPreview((prev: ModulePreview[]) => {
       const copy = [...prev];
-      // Split by newline, trim empty lines
-      copy[modIdx].lessons = value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      // Keep raw lines as-is during editing to prevent cursor jumps;
+      // Final cleanup happens just before we send to backend.
+      copy[modIdx].lessons = value.split(/\r?\n/);
       return copy;
     });
   };
@@ -147,12 +148,9 @@ export default function CourseOutlineClient() {
       router.push(`/projects/view/${data.id}`);
     } catch (e: any) {
       setError(e.message);
-    } finally {
-      /*
-       * Do NOT clear isGenerating/loading here.
-       * The component will unmount on router.push → redirect, so the overlay disappears automatically.
-       * Clearing now would allow preview refetch before the page navigates, causing visible flicker.
-       */
+      // allow UI interaction again
+      setIsGenerating(false);
+      setLoading(false);
     }
   };
 
@@ -234,7 +232,7 @@ export default function CourseOutlineClient() {
                     value={mod.lessons.join("\n")}
                     onChange={(e) => handleLessonsTextareaChange(idx, e.target.value)}
                     className="w-full border border-gray-300 rounded-md p-2 text-sm text-black bg-gray-50 resize-none"
-                    rows={mod.lessons.length || 3}
+                    rows={Math.max(mod.lessons.length, 3)}
                     placeholder="Enter lessons, each on new line"
                   />
                 </div>
