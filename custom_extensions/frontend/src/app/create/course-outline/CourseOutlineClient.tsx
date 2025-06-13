@@ -98,7 +98,10 @@ export default function CourseOutlineClient() {
         if (e.name === "AbortError") return; // request was cancelled – ignore
         setError(e.message);
       } finally {
-        setLoading(false);
+        // Only clear loading if THIS request wasn't aborted; another newer request may be in-flight.
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
