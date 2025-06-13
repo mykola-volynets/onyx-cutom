@@ -144,8 +144,8 @@ export default function CourseOutlineClient() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      // Navigate to the new project view without a full reload
-      router.push(`/projects/view/${data.id}`);
+      // Use hard navigation to guarantee full reload & stop preview logic
+      window.location.assign(`/projects/view/${data.id}`);
     } catch (e: any) {
       setError(e.message);
       // allow UI interaction again
