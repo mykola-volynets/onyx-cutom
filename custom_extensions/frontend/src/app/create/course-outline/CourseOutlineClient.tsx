@@ -19,6 +19,19 @@ interface ModulePreview {
   lessons: string[];
 }
 
+// Simple bouncing dots loading animation
+const LoadingAnimation: React.FC = () => (
+  <div className="flex items-center gap-1 mt-2" aria-label="Loading">
+    {[0, 1, 2].map((i) => (
+      <span
+        key={i}
+        className="w-2 h-2 bg-brand-primary rounded-full animate-bounce"
+        style={{ animationDelay: `${i * 0.2}s` }}
+      />
+    ))}
+  </div>
+);
+
 export default function CourseOutlineClient() {
   const params = useSearchParams();
   const [prompt, setPrompt] = useState(params.get("prompt") || "");
@@ -81,6 +94,15 @@ export default function CourseOutlineClient() {
     });
   };
 
+  const handleLessonsTextareaChange = (modIdx: number, value: string) => {
+    setPreview((prev: ModulePreview[]) => {
+      const copy = [...prev];
+      // Split by newline, trim empty lines
+      copy[modIdx].lessons = value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      return copy;
+    });
+  };
+
   const handleGenerateFinal = async () => {
     setLoading(true);
     setError(null);
@@ -135,8 +157,8 @@ export default function CourseOutlineClient() {
       <div className="w-full max-w-3xl flex flex-col gap-6 text-gray-900 relative">
         {/* Back button */}
         <Link
-          href="/create"
-          className="absolute top-6 left-6 flex items-center gap-1 text-sm text-brand-primary hover:text-brand-primary-hover rounded-full px-3 py-1 border border-gray-300 bg-white"
+          href="/create/generate"
+          className="fixed top-6 left-6 flex items-center gap-1 text-sm text-brand-primary hover:text-brand-primary-hover rounded-full px-3 py-1 border border-gray-300 bg-white z-20"
         >
           <ArrowLeft size={14} /> Back
         </Link>
@@ -186,7 +208,7 @@ export default function CourseOutlineClient() {
 
         <section className="flex flex-col gap-6">
           <h2 className="text-xl font-semibold">Outline</h2>
-          {loading && <p className="text-black">Generating preview...</p>}
+          {loading && <LoadingAnimation />}
           {error && <p className="text-red-600">{error}</p>}
           {!loading && preview.length > 0 && (
             <div className="flex flex-col gap-4">
@@ -196,20 +218,15 @@ export default function CourseOutlineClient() {
                     type="text"
                     value={mod.title}
                     onChange={(e) => handleModuleChange(idx, e.target.value)}
-                    className="font-medium text-lg w-full border-none focus:ring-0 text-black"
+                    className="font-medium text-lg w-full border-none focus:ring-0 text-black mb-2"
                   />
-                  <ul className="list-disc pl-6 mt-2 text-sm text-black space-y-1">
-                    {mod.lessons.map((les: string, lIdx: number) => (
-                      <li key={`m${idx}-l${lIdx}`} className="list-none">
-                        <input
-                          type="text"
-                          value={les}
-                          onChange={(e) => handleLessonChange(idx, lIdx, e.target.value)}
-                          className="w-full border-none focus:outline-none text-sm py-0.5 bg-transparent text-black"
-                        />
-                      </li>
-                    ))}
-                  </ul>
+                  <textarea
+                    value={mod.lessons.join("\n")}
+                    onChange={(e) => handleLessonsTextareaChange(idx, e.target.value)}
+                    className="w-full border border-gray-300 rounded-md p-2 text-sm text-black bg-gray-50 resize-none"
+                    rows={mod.lessons.length || 3}
+                    placeholder="Enter lessons, each on new line"
+                  />
                 </div>
               ))}
             </div>
