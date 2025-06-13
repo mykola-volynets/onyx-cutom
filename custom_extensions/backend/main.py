@@ -2284,15 +2284,41 @@ async def stream_chat_message(chat_session_id: str, message: str, cookies: Dict[
 # ------------ utility to parse markdown outline (very simple) -------------
 
 def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
-    logger.debug(f"[_parse_outline_markdown] Raw MD length={len(md)}")
+    """Parse the markdown outline produced by the assistant into a lightweight
+    list-of-modules representation expected by the wizard UI.
+
+    Rules we rely on (per STRICT MARKDOWN FORMATTING):
+    • Module headings begin with "## " (any language).
+    • Lesson titles are Top-level list items that appear *without* indentation
+      directly under a module and look like one of:
+          "1. **Lesson Title**"   (English/Ukr/Ukr numbered)
+          "- **Lesson Title**"    (Russian hyphen list)
+
+      Detail rows (Time, Content Coverage, etc.) are bullet items too, but they
+      are indented by two spaces in the markdown – we can tell the difference
+      by the presence of leading spaces *before* the list marker.
+
+    Approach:
+        – Preserve leading whitespace to measure indentation.
+        – Treat a line as a lesson item *only* when indentation == 0 and it
+          matches the list-item pattern.
+    """
+
     modules: List[Dict[str, Any]] = []
-    current = None
-    for line in md.splitlines():
-        line = line.strip()
-        # Detect module headings
+    current: Optional[Dict[str, Any]] = None
+
+    list_item_regex = re.compile(r"^(?:- |\* |\d+\.)")
+
+    for raw_line in md.splitlines():
+        if not raw_line.strip():
+            continue  # skip empty lines
+
+        indent = len(raw_line) - len(raw_line.lstrip())
+        line = raw_line.lstrip()
+
+        # Module detection
         if line.startswith("## "):
             title_part = line.lstrip("# ").strip()
-            # allow both "Module X: Title" or plain title
             if ":" in title_part:
                 title_part = title_part.split(":", 1)[-1].strip()
             current = {
@@ -2303,34 +2329,37 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
             modules.append(current)
             continue
 
-        # Detect lesson lines if we're inside a module
-        if current and (line.startswith("- ") or line.startswith("* ") or line.lstrip().startswith("1.")):
-            # Remove list marker ("- ", "* ", "1. " etc.)
-            lesson_text = line.lstrip("-* ")
-            lesson_text = re.sub(r"^\d+\.\s*", "", lesson_text).strip()
-            # Strip bold markers if present
+        # Lesson detection – only consider top-level list items (indent == 0)
+        if current and indent == 0 and list_item_regex.match(line):
+            # Remove list marker
+            lesson_text = re.sub(r"^(?:- |\* |\d+\.\s*)", "", line).strip()
+
+            # Extract text inside bold if present
             if lesson_text.startswith("**") and "**" in lesson_text[2:]:
-                lesson_text = lesson_text.split("**", 2)[1]
+                lesson_text = lesson_text.split("**", 2)[1].strip()
+
             current["lessons"].append(lesson_text)
             continue
 
+    # Fallback when no module headings present
     if not modules:
-        logger.debug("[_parse_outline_markdown] No module headings detected, using fallback parser")
         tmp_module = {"id": "mod1", "title": "Outline", "lessons": []}
-        for line in md.splitlines():
-            if line.strip():
-                tmp_module["lessons"].append(line.strip())
+        for raw_line in md.splitlines():
+            if not raw_line.strip():
+                continue
+            indent = len(raw_line) - len(raw_line.lstrip())
+            line = raw_line.lstrip()
+            if indent == 0 and list_item_regex.match(line):
+                txt = re.sub(r"^(?:- |\* |\d+\.\s*)", "", line).strip()
+                if txt.startswith("**") and "**" in txt[2:]:
+                    txt = txt.split("**", 2)[1].strip()
+                tmp_module["lessons"].append(txt)
+        if not tmp_module["lessons"]:
+            # As very last resort just dump all lines
+            tmp_module["lessons"] = [l.strip() for l in md.splitlines() if l.strip()]
         modules.append(tmp_module)
 
     return modules
-
-    # Fallback: attempt a very naive parse if no headings detected
-    if not modules:
-        tmp_module = {"id": "mod1", "title": "Outline", "lessons": []}
-        for line in md.splitlines():
-            if line.strip():
-                tmp_module["lessons"].append(line.strip())
-        modules.append(tmp_module)
 
 # ----------------------- ENDPOINTS ---------------------------------------
 
