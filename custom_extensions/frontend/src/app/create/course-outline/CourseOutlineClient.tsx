@@ -154,8 +154,10 @@ export default function CourseOutlineClient() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      // Use hard navigation to guarantee full reload & stop preview logic
-      window.location.assign(`/projects/view/${data.id}`);
+      // Navigate to the newly-created product view. Using router.push ensures Next.js automatically
+      // prefixes the configured `basePath` (e.g. "/custom-projects-ui") so we don't accidentally
+      // leave the custom frontend and hit the main app's /projects route.
+      router.push(`/projects/view/${data.id}`);
     } catch (e: any) {
       setError(e.message);
       // allow UI interaction again
