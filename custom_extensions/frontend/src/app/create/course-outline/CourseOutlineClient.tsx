@@ -43,10 +43,14 @@ export default function CourseOutlineClient() {
   const [rawOutline, setRawOutline] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const router = useRouter();
 
   useEffect(() => {
+    // Skip preview fetching while the user is finalizing the outline
+    if (isGenerating) return;
+
     const fetchPreview = async () => {
       setLoading(true);
       setError(null);
@@ -74,9 +78,10 @@ export default function CourseOutlineClient() {
         setLoading(false);
       }
     };
+
     fetchPreview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompt, modules, lessonsPerModule, language]);
+  }, [prompt, modules, lessonsPerModule, language, isGenerating]);
 
   const handleModuleChange = (index: number, value: string) => {
     setPreview((prev: ModulePreview[]) => {
@@ -104,6 +109,7 @@ export default function CourseOutlineClient() {
   };
 
   const handleGenerateFinal = async () => {
+    setIsGenerating(true);
     setLoading(true);
     setError(null);
     try {
@@ -143,6 +149,7 @@ export default function CourseOutlineClient() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -263,6 +270,13 @@ export default function CourseOutlineClient() {
           </button>
         )}
       </div>
+
+      {isGenerating && (
+        <div className="fixed inset-0 bg-white/75 flex flex-col items-center justify-center z-50">
+          <LoadingAnimation />
+          <p className="mt-4 text-gray-800 font-medium">Creating your project...</p>
+        </div>
+      )}
     </main>
   );
 } 

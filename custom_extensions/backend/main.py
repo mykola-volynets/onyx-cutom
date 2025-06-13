@@ -2428,6 +2428,7 @@ async def wizard_outline_finalize(payload: OutlineWizardFinalize, request: Reque
             "lessonsPerModule": payload.lessonsPerModule,
             "language": payload.language,
             "editedOutline": payload.editedOutline,
+            "action": "finalize",
         })
     )
     assistant_reply = await stream_chat_message(chat_id, wizard_message, cookies)

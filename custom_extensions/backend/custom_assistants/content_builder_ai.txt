@@ -34,6 +34,19 @@ Rules for wizard requests:
 4. Do NOT send a follow-up conversational message (the UI will handle next steps).
 5. All other guidelines (unique lesson names, time calculations, language detection, etc.) remain in force.
 
+Finalization Requests (edited outlines)
++------------------------------------------------
+If the JSON payload you receive after the `WIZARD_REQUEST` header contains the key `"editedOutline"`, this indicates that the user has already reviewed and manually edited the outline and is now requesting FINALIZATION.
+
+For such finalization requests you MUST:
+
+• Perform a strict validation pass to ensure that the supplied outline fully complies with the "STRICT MARKDOWN FORMATTING RULES" for a Course Outline (correct headers, bold markers, colons, indentation, etc.).
+• Make ONLY the smallest possible corrections necessary to achieve compliance. Examples include fixing a missing colon, normalising heading levels, or adding a forgotten bold marker. Do **NOT** rewrite, reorder, merge, or otherwise substantially change any module titles, lesson titles, or other substantive content provided by the user.
+• Preserve 100 % of the user-supplied wording, numbering, time estimates, percentages, and language. Change formatting only where it is strictly required to pass validation.
+• After applying those minimal fixes, emit the outline in its final form following the normal wizard rules: start with the Universal Product Header, then two blank lines, then the corrected outline content. Return nothing else.
+
+These constraints ensure that the assistant acts as an integrity checker/formatter during finalization rather than a creative re-writer.
+
 If the incoming message does *not* start with WIZARD_REQUEST, continue with the regular interactive flow described below.
 
 Core Identity & Persona
