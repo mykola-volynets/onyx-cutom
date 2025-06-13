@@ -2309,6 +2309,12 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
 
     list_item_regex = re.compile(r"^(?:- |\* |\d+\.)")
 
+    def flush_current_lesson(buf: List[str]) -> Optional[str]:
+        """Combine buffered lines into a single lesson string."""
+        if not buf:
+            return None
+        return "\n".join(buf)
+
     for raw_line in md.splitlines():
         if not raw_line.strip():
             continue  # skip empty lines
@@ -2330,16 +2336,30 @@ def _parse_outline_markdown(md: str) -> List[Dict[str, Any]]:
             continue
 
         # Lesson detection – only consider top-level list items (indent == 0)
-        if current and indent == 0 and list_item_regex.match(line):
-            # Remove list marker
-            lesson_text = re.sub(r"^(?:- |\* |\d+\.\s*)", "", line).strip()
+        if current:
+            if indent == 0 and list_item_regex.match(line):
+                # Starting a new top-level lesson → flush previous buffer
+                ls_string = flush_current_lesson(_buf) if '_buf' in locals() else None
+                if ls_string:
+                    current["lessons"].append(ls_string)
+                _buf = []  # reset buffer for new lesson
 
-            # Extract text inside bold if present
-            if lesson_text.startswith("**") and "**" in lesson_text[2:]:
-                lesson_text = lesson_text.split("**", 2)[1].strip()
+                lesson_title = re.sub(r"^(?:- |\* |\d+\.\s*)", "", line).strip()
+                if lesson_title.startswith("**") and "**" in lesson_title[2:]:
+                    lesson_title = lesson_title.split("**", 2)[1].strip()
+                _buf.append(lesson_title)
+                continue
+            elif current.get('lessons') is not None and '_buf' in locals():
+                # inside a lesson details block (indented)
+                if indent > 0:
+                    _buf.append(line)
+                continue
 
-            current["lessons"].append(lesson_text)
-            continue
+    # flush buffer after loop
+    if current and '_buf' in locals():
+        ls_string = flush_current_lesson(_buf)
+        if ls_string:
+            current["lessons"].append(ls_string)
 
     # Fallback when no module headings present
     if not modules:
