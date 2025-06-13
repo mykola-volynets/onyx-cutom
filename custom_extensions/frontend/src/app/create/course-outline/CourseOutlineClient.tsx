@@ -205,13 +205,27 @@ export default function CourseOutlineClient() {
     });
   };
 
-  const handleLessonDetailsChange = (modIdx: number, lessonIdx: number, newDetails: string) => {
+  const handleLessonDetailsChange = (modIdx: number, lessonIdx: number, detailIdx: number, newVal: string) => {
     setPreview((prev: ModulePreview[]) => {
       const copy = [...prev];
       const lines = copy[modIdx].lessons[lessonIdx].split(/\r?\n/);
-      const titleLine = lines[0] || "";
-      const detailLines = newDetails.split(/\r?\n/);
-      copy[modIdx].lessons[lessonIdx] = [titleLine, ...detailLines].join("\n");
+      // detail lines start from index 1
+      const original = lines[detailIdx + 1] || "";
+      const match = original.match(/^\s*-?\s*\*\*(.+?)\*\*:\s*(.*)$/);
+      if (match) {
+        const label = match[1];
+        lines[detailIdx + 1] = `- **${label}**: ${newVal}`;
+      } else {
+        // fallback keep original prefix until colon
+        const parts = original.split(":");
+        if (parts.length > 1) {
+          parts[1] = ` ${newVal}`;
+          lines[detailIdx + 1] = parts.join(":");
+        } else {
+          lines[detailIdx + 1] = newVal;
+        }
+      }
+      copy[modIdx].lessons[lessonIdx] = lines.join("\n");
       return copy;
     });
   };
@@ -327,13 +341,36 @@ export default function CourseOutlineClient() {
                             </button>
                           </div>
                           {isOpen && (
-                            <textarea
-                              value={detailLines}
-                              onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, e.target.value)}
-                              className="ml-8 mt-1 bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] resize-none"
-                              rows={Math.max(detailLines.split(/\r?\n/).length, 3)}
-                              placeholder="Additional lesson details (one per line)"
-                            />
+                            <div className="ml-8 mt-1 flex flex-col gap-1">
+                              {detailLines.split(/\r?\n/).map((ln, dIdx) => {
+                                const m = ln.match(/^\s*-?\s*\*\*(.+?)\*\*:\s*(.*)$/);
+                                if (m) {
+                                  const label = m[1];
+                                  const val = m[2];
+                                  return (
+                                    <div key={dIdx} className="flex items-center gap-2">
+                                      <span className="w-40 text-sm font-medium text-gray-700">{label}:</span>
+                                      <input
+                                        type="text"
+                                        value={val}
+                                        onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, dIdx, e.target.value)}
+                                        className="flex-grow bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
+                                      />
+                                    </div>
+                                  );
+                                }
+                                // fallback raw line
+                                return (
+                                  <input
+                                    key={dIdx}
+                                    type="text"
+                                    value={ln}
+                                    onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, dIdx, e.target.value)}
+                                    className="bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
+                                  />
+                                );
+                              })}
+                            </div>
                           )}
                         </div>
                       );
