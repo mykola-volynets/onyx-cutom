@@ -317,10 +317,10 @@ export default function CourseOutlineClient() {
   return (
     <>
     <main
-      /* Top-to-bottom pastel blue gradient identical to the reference */
+      /* Shared pastel gradient (identical to generate page) */
       className="min-h-screen py-12 px-4 flex flex-col items-center"
       style={{
-        background: "linear-gradient(180deg, #FFFFFF 0%, #E4ECFF 30%, #BFD7FF 65%, #CCE8FF 100%)",
+        background: "linear-gradient(180deg, #FFFFFF 0%, #CBDAFB 35%, #AEE5FA 70%, #FFFFFF 100%)",
       }}
     >
       <div className="w-full max-w-3xl flex flex-col gap-6 text-gray-900 relative">
@@ -381,14 +381,14 @@ export default function CourseOutlineClient() {
           {error && <p className="text-red-600">{error}</p>}
           {!loading && preview.length > 0 && (
             <div
-              className="flex flex-col gap-6"
+              className="bg-white border rounded-xl p-6 flex flex-col gap-6"
               style={{ animation: 'fadeInDown 0.25s ease-out both' }}
             >
               {preview.map((mod: ModulePreview, modIdx: number) => (
                 <div key={mod.id} className="flex rounded-xl shadow-sm overflow-hidden">
                   {/* Left colored bar with index */}
-                  <div className="w-12 bg-[#E5EEFF] flex items-start justify-center pt-4">
-                    <span className="text-[#0066FF] font-semibold text-lg select-none">{modIdx + 1}</span>
+                  <div className="w-10 bg-[#E5EEFF] flex items-start justify-center pt-3">
+                    <span className="text-gray-600 font-semibold text-base select-none">{modIdx + 1}</span>
                   </div>
 
                   {/* Main card */}
@@ -405,7 +405,8 @@ export default function CourseOutlineClient() {
                     {/* Lessons bullet list */}
                     <ul className="list-disc list-inside text-gray-900">
                       {mod.lessons.map((les: string, lessonIdx: number) => {
-                        const titleLine = les.split(/\r?\n/)[0] || "";
+                        const rawTitle = les.split(/\r?\n/)[0] || "";
+                        const titleLine = rawTitle.replace(/^\*?\s*/, "");
                         return (
                           <li key={lessonIdx} className="py-0.5">
                             <input
