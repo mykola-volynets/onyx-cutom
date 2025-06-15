@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronDown } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 // Base URL so frontend can reach custom backend through nginx proxy
@@ -385,87 +385,40 @@ export default function CourseOutlineClient() {
               style={{ animation: 'fadeInDown 0.25s ease-out both' }}
             >
               {preview.map((mod: ModulePreview, modIdx: number) => (
-                <div key={mod.id} className="bg-white border rounded-xl p-5 shadow-sm">
-                  {/* Module header with index badge */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-[#0066FF] text-white flex items-center justify-center font-semibold">
-                      {modIdx + 1}
-                    </span>
+                <div key={mod.id} className="flex rounded-xl shadow-sm overflow-hidden">
+                  {/* Left colored bar with index */}
+                  <div className="w-12 bg-[#E5EEFF] flex items-start justify-center pt-4">
+                    <span className="text-[#0066FF] font-semibold text-lg select-none">{modIdx + 1}</span>
+                  </div>
+
+                  {/* Main card */}
+                  <div className="flex-1 bg-white border border-gray-300 rounded-r-xl p-5">
+                    {/* Module title */}
                     <input
                       type="text"
                       value={mod.title}
                       onChange={(e) => handleModuleChange(modIdx, e.target.value)}
-                      className="flex-grow font-medium text-lg border-none focus:ring-0 text-black"
+                      className="w-full font-medium text-lg border-none focus:ring-0 text-gray-900 mb-3"
                       placeholder={`Module ${modIdx + 1} title`}
                     />
-                  </div>
 
-                  {/* Lessons list */}
-                  <div className="flex flex-col gap-2 pl-11">
-                    {mod.lessons.map((les: string, lessonIdx: number) => {
-                      const lines = les.split(/\r?\n/);
-                      const titleLine = lines[0] || "";
-                      const detailLines = lines.slice(1).join("\n");
-                      const key = `${modIdx}-${lessonIdx}`;
-                      const isOpen = !!expanded[key];
-                      return (
-                        <div key={lessonIdx} className="flex flex-col gap-1">
-                          <div className="flex items-start gap-2">
-                            <span className="w-6 text-right text-gray-600 select-none pt-1">{lessonIdx + 1}.</span>
+                    {/* Lessons bullet list */}
+                    <ul className="list-disc list-inside text-gray-900">
+                      {mod.lessons.map((les: string, lessonIdx: number) => {
+                        const titleLine = les.split(/\r?\n/)[0] || "";
+                        return (
+                          <li key={lessonIdx} className="py-0.5">
                             <input
                               type="text"
                               value={titleLine}
                               onChange={(e) => handleLessonTitleChange(modIdx, lessonIdx, e.target.value)}
-                              className="flex-grow bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
+                              className="w-full bg-transparent border-none p-0 text-sm text-gray-900 focus:outline-none focus:ring-0"
                               placeholder={`Lesson ${lessonIdx + 1}`}
                             />
-                            <button
-                              type="button"
-                              onClick={() => toggleExpanded(modIdx, lessonIdx)}
-                              className={`transition-transform ${isOpen ? "rotate-180" : "rotate-0"}`}
-                              aria-label={isOpen ? "Collapse details" : "Expand details"}
-                            >
-                              <ChevronDown size={18} />
-                            </button>
-                          </div>
-                          <div
-                            className={
-                              `ml-8 mt-1 flex flex-col gap-1 overflow-hidden transition-all duration-200 ` +
-                              (isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0')
-                            }
-                          >
-                            {detailLines.split(/\r?\n/).map((ln, dIdx) => {
-                              const m = ln.match(/^\s*-?\s*\*\*(.+?)\*\*:\s*(.*)$/);
-                              if (m) {
-                                const label = m[1];
-                                const val = m[2];
-                                return (
-                                  <div key={dIdx} className="flex items-center gap-2">
-                                    <span className="w-40 text-sm font-medium text-gray-700">{label}:</span>
-                                    <input
-                                      type="text"
-                                      value={val}
-                                      onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, dIdx, e.target.value)}
-                                      className="flex-grow bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
-                                    />
-                                  </div>
-                                );
-                              }
-                              // fallback raw line
-                              return (
-                                <input
-                                  key={dIdx}
-                                  type="text"
-                                  value={ln}
-                                  onChange={(e) => handleLessonDetailsChange(modIdx, lessonIdx, dIdx, e.target.value)}
-                                  className="bg-gray-50 border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF]"
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
                 </div>
               ))}
