@@ -387,7 +387,7 @@ export default function CourseOutlineClient() {
               {preview.map((mod: ModulePreview, modIdx: number) => (
                 <div key={mod.id} className="flex rounded-xl shadow-sm overflow-hidden">
                   {/* Left colored bar with index */}
-                  <div className="w-10 bg-[#E5EEFF] flex items-start justify-center pt-3">
+                  <div className="w-[70px] bg-[#E5EEFF] flex items-start justify-center pt-3">
                     <span className="text-gray-600 font-semibold text-base select-none">{modIdx + 1}</span>
                   </div>
 
@@ -405,8 +405,14 @@ export default function CourseOutlineClient() {
                     {/* Lessons bullet list */}
                     <ul className="list-disc list-inside text-gray-900">
                       {mod.lessons.map((les: string, lessonIdx: number) => {
-                        const rawTitle = les.split(/\r?\n/)[0] || "";
-                        const titleLine = rawTitle.replace(/^\*?\s*/, "");
+                        const lines = les.split(/\r?\n/);
+                        let first = (lines[0] || "").trim();
+                        let titleLine: string;
+                        if (first === "*" || first === "-" || first === "") {
+                          titleLine = (lines[1] || "").trim();
+                        } else {
+                          titleLine = first.replace(/^[\*\-]\s*/, "");
+                        }
                         return (
                           <li key={lessonIdx} className="py-0.5">
                             <input
@@ -441,16 +447,10 @@ export default function CourseOutlineClient() {
                 className="px-1 py-0.5 rounded-md focus:outline-none bg-transparent hover:opacity-80 transition-opacity"
                 title="Default design"
               >
-                <svg width="40" height="40" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10">
-                  <defs>
-                    <clipPath id="circleClip">
-                      <circle cx="80" cy="80" r="80" />
-                    </clipPath>
-                  </defs>
-                  <g clipPath="url(#circleClip)">
-                    <path d="M-66.3174 156.568C-68.6368 153.303 -70 149.31 -70 145V16C-70 4.95431 -61.0457 -4 -50 -4H209C213.133 -4 216.974 -2.74591 220.162 -0.597656L-66.3174 156.568ZM-50 165C-54.8776 165 -59.3464 163.253 -62.8174 160.352L224 3L223.684 2.42188C226.983 5.98821 229 10.7584 229 16V145C229 156.046 220.046 165 209 165H-50Z" fill="#FF1313" />
-                    <path d="M-50 165C-54.8776 165 -59.3464 163.253 -62.8174 160.352L224 3L223.684 2.42188C226.983 5.98821 229 10.7584 229 16V145C229 156.046 220.046 165 209 165H-50Z" fill="white" />
-                  </g>
+                <svg width="70" height="38" viewBox="0 0 416 222" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[70px] h-[38px]">
+                  <rect x="2" y="2" width="412" height="218" rx="7" fill="#FF1313" stroke="white" strokeWidth="4" />
+                  <rect x="33" y="33" width="350" height="158" fill="#FFFCF5" stroke="white" strokeWidth="2" />
+                  <path d="M67.3331 175V153.764H75.1101C76.6171 153.764 77.8649 154.012 78.8534 154.51C79.842 155.001 80.5816 155.668 81.0724 156.512C81.5633 157.348 81.8087 158.292 81.8087 159.342C81.8087 160.227 81.6462 160.974 81.3213 161.582C80.9964 162.184 80.5609 162.667 80.0148 163.034C79.4756 163.393 78.8811 163.656 78.2313 163.822V164.029C78.9364 164.064 79.6242 164.292 80.2947 164.714C80.9722 165.128 81.5322 165.719 81.9746 166.487C82.417 167.254 82.6382 168.187 82.6382 169.287C82.6382 170.372 82.3824 171.347 81.8709 172.211C81.3662 173.068 80.5851 173.749 79.5274 174.253C78.4697 174.751 77.1183 175 75.473 175H67.3331ZM70.5372 172.252H75.1619C76.6966 172.252 77.7957 171.955 78.4594 171.36C79.123 170.766 79.4548 170.023 79.4548 169.131C79.4548 168.46 79.2855 167.845 78.9467 167.285C78.608 166.725 78.1241 166.279 77.495 165.948C76.8729 165.616 76.1332 165.45 75.276 165.45H70.5372V172.252ZM70.5372 162.951H74.8301C75.5491 162.951 76.1954 162.813 76.7692 162.536C77.3499 162.26 77.8096 161.872 78.1483 161.375C78.4939 160.87 78.6668 160.276 78.6668 159.591C78.6668 158.713 78.3591 157.977 77.7439 157.383C77.1286 156.788 76.185 156.491 74.9131 156.491H70.5372V162.951Z" fill="#586367" />
                 </svg>
               </button>
             </div>
